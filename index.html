@@ -26,6 +26,7 @@
             align-items: center;
             overflow: hidden;
             position: relative;
+            padding: 20px;
         }
 
         .background-text {
@@ -34,11 +35,11 @@
             left: 0;
             width: 200%;
             height: 200%;
-            font-size: 120px;
+            font-size: 60px;
             font-weight: bold;
             color: rgba(255, 255, 255, 0.08);
             line-height: 1.1;
-            letter-spacing: 8px;
+            letter-spacing: 4px;
             overflow: hidden;
             z-index: 0;
             pointer-events: none;
@@ -50,7 +51,7 @@
         }
         
         .background-text div:nth-child(even) {
-            padding-left: 150px;
+            padding-left: 80px;
         }
 
         @keyframes scroll-diagonal {
@@ -65,7 +66,7 @@
         .container {
             position: relative;
             z-index: 1;
-            width: 90%;
+            width: 100%;
             max-width: 500px;
         }
 
@@ -73,46 +74,45 @@
             background: rgba(20, 20, 20, 0.95);
             border: 2px solid #333;
             border-radius: 12px;
-            padding: 40px;
+            padding: 30px 20px;
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             transition: transform 0.3s ease, border-color 0.3s ease;
         }
 
         .profile-card:hover {
-            transform: translateY(-5px);
             border-color: #555;
         }
 
         .profile-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
         .avatar {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0 auto 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 48px;
+            font-size: 40px;
             font-weight: bold;
             border: 3px solid #444;
             cursor: pointer;
             position: relative;
             transition: transform 0.3s ease, border-color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .avatar:hover {
-            transform: scale(1.05);
-            border-color: #667eea;
+        .avatar:active {
+            transform: scale(0.95);
         }
 
         .avatar::after {
-            content: 'click for rajnoha';
+            content: 'tap for rajnoha';
             position: absolute;
             bottom: -35px;
             left: 50%;
@@ -121,19 +121,15 @@
             color: #fff;
             padding: 6px 12px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             white-space: nowrap;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease;
         }
 
-        .avatar:hover::after {
-            opacity: 1;
-        }
-
         .username {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
             margin-bottom: 10px;
             letter-spacing: 1px;
@@ -156,7 +152,7 @@
 
         .status {
             color: #ff4757;
-            font-size: 16px;
+            font-size: 14px;
             padding: 8px 16px;
             border: 1px solid #ff4757;
             border-radius: 20px;
@@ -174,14 +170,16 @@
         }
 
         .info-section {
-            margin-top: 30px;
+            margin-top: 25px;
         }
 
         .info-item {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             padding: 12px 0;
             border-bottom: 1px solid #333;
+            gap: 10px;
         }
 
         .info-item:last-child {
@@ -190,20 +188,103 @@
 
         .info-label {
             color: #888;
-            font-size: 14px;
+            font-size: 13px;
+            flex-shrink: 0;
         }
 
         .info-value {
             color: #fff;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
+            text-align: right;
         }
 
         .footer {
-            margin-top: 30px;
+            margin-top: 25px;
             text-align: center;
-            font-size: 12px;
+            font-size: 11px;
             color: #555;
+        }
+
+        @media (min-width: 768px) {
+            .background-text {
+                font-size: 120px;
+                letter-spacing: 8px;
+            }
+            
+            .background-text div:nth-child(even) {
+                padding-left: 150px;
+            }
+
+            .profile-card {
+                padding: 40px;
+            }
+
+            .profile-header {
+                margin-bottom: 30px;
+            }
+
+            .avatar {
+                width: 120px;
+                height: 120px;
+                font-size: 48px;
+            }
+
+            .avatar::after {
+                content: 'click for rajnoha';
+                font-size: 12px;
+            }
+
+            .avatar:hover {
+                transform: scale(1.05);
+                border-color: #667eea;
+            }
+
+            .avatar:hover::after {
+                opacity: 1;
+            }
+
+            .profile-card:hover {
+                transform: translateY(-5px);
+            }
+
+            .username {
+                font-size: 28px;
+            }
+
+            .status {
+                font-size: 16px;
+            }
+
+            .info-section {
+                margin-top: 30px;
+            }
+
+            .info-label,
+            .info-value {
+                font-size: 14px;
+            }
+
+            .footer {
+                margin-top: 30px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .username {
+                font-size: 20px;
+            }
+
+            .status {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            .info-label,
+            .info-value {
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -211,7 +292,7 @@
     <div class="background-text" id="bgText"></div>
     
     <div class="container">
-        <div class="profile-card" data-tilt data-tilt-max="10" data-tilt-speed="400" data-tilt-perspective="1000">
+        <div class="profile-card" data-tilt-disable="true">
             <div class="profile-header">
                 <div class="avatar" onclick="window.location.href='rajnoha.html'">SR</div>
                 <div class="username">sebastian rosina</div>
@@ -240,9 +321,13 @@
         const text = 'I LOVE RADEK NEVARIL ';
         let html = '';
         
-        for (let i = 0; i < 100; i++) {
+        const isMobile = window.innerWidth < 768;
+        const rows = isMobile ? 50 : 100;
+        const cols = isMobile ? 5 : 10;
+        
+        for (let i = 0; i < rows; i++) {
             let lineText = '';
-            for (let j = 0; j < 10; j++) {
+            for (let j = 0; j < cols; j++) {
                 lineText += text;
             }
             html += `<div>${lineText}</div>`;
@@ -250,12 +335,14 @@
         
         bgText.innerHTML = html;
         
-        VanillaTilt.init(document.querySelector(".profile-card"), {
-            max: 10,
-            speed: 400,
-            glare: true,
-            "max-glare": 0.05,
-        });
+        if (window.innerWidth >= 768) {
+            VanillaTilt.init(document.querySelector(".profile-card"), {
+                max: 10,
+                speed: 400,
+                glare: true,
+                "max-glare": 0.05,
+            });
+        }
     </script>
 </body>
 </html>
