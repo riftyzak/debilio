@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .background-text {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 200%;
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.08);
+            line-height: 1.1;
+            letter-spacing: 8px;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+            animation: scroll-diagonal 40s linear infinite;
+        }
+        
+        .background-text div {
+            white-space: nowrap;
+        }
+        
+        .background-text div:nth-child(even) {
+            padding-left: 150px;
+        }
+
+        @keyframes scroll-diagonal {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .profile-card {
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-5px);
+            border-color: #555;
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            border: 3px solid #444;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .avatar:hover {
+            transform: scale(1.05);
+            border-color: #667eea;
+        }
+
+        .avatar::after {
+            content: 'click for rajnoha';
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .avatar:hover::after {
+            opacity: 1;
+        }
+
+        .username {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #fff, #667eea, #764ba2, #fff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% {
+                background-position: 0% center;
+            }
+            50% {
+                background-position: 100% center;
+            }
+        }
+
+        .status {
+            color: #ff4757;
+            font-size: 16px;
+            padding: 8px 16px;
+            border: 1px solid #ff4757;
+            border-radius: 20px;
+            display: inline-block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .info-section {
+            margin-top: 30px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .info-value {
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-text" id="bgText"></div>
+    
+    <div class="container">
+        <div class="profile-card" data-tilt data-tilt-max="10" data-tilt-speed="400" data-tilt-perspective="1000">
+            <div class="profile-header">
+                <div class="avatar" onclick="window.location.href='rajnoha.html'">SR</div>
+                <div class="username">sebastian rosina</div>
+                <div class="status">commits taxfraud</div>
+            </div>
+            
+            <div class="info-section">
+                <div class="info-item">
+                    <span class="info-label">Status</span>
+                    <span class="info-value">Gangster (retired pistolnik)</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Seen</span>
+                    <span class="info-value">Nove Mesto nad Vahom</span>
+                </div>
+            </div>
+            
+            <div class="footer">
+                est. 2025
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const bgText = document.getElementById('bgText');
+        const text = 'I LOVE RADEK NEVARIL ';
+        let html = '';
+        
+        for (let i = 0; i < 100; i++) {
+            let lineText = '';
+            for (let j = 0; j < 10; j++) {
+                lineText += text;
+            }
+            html += `<div>${lineText}</div>`;
+        }
+        
+        bgText.innerHTML = html;
+        
+        VanillaTilt.init(document.querySelector(".profile-card"), {
+            max: 10,
+            speed: 400,
+            glare: true,
+            "max-glare": 0.05,
+        });
+    </script>
+</body>
+</html>

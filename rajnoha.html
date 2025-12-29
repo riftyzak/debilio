@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rajnoha Gallery</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .background-text {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 200%;
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.08);
+            line-height: 1.1;
+            letter-spacing: 8px;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+            animation: scroll-diagonal 40s linear infinite;
+        }
+        
+        .background-text div {
+            white-space: nowrap;
+        }
+        
+        .background-text div:nth-child(even) {
+            padding-left: 150px;
+        }
+
+        @keyframes scroll-diagonal {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            z-index: 10;
+        }
+
+        .back-button:hover {
+            border-color: #667eea;
+            transform: translateX(-5px);
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #fff, #667eea, #764ba2, #fff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% {
+                background-position: 0% center;
+            }
+            50% {
+                background-position: 100% center;
+            }
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 18px;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .gallery-item {
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            overflow: hidden;
+        }
+
+        .gallery-item:hover {
+            border-color: #555;
+        }
+
+        .image-container {
+            width: 100%;
+            height: 300px;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-item:hover .image-container img {
+            transform: scale(1.05);
+        }
+
+        .placeholder-icon {
+            font-size: 48px;
+            color: #333;
+        }
+
+        .image-caption {
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .upload-note {
+            text-align: center;
+            color: #555;
+            font-size: 14px;
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px dashed #333;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-text" id="bgText"></div>
+    
+    <a href="index.html" class="back-button">← Back</a>
+
+    <div class="container">
+        <div class="header">
+            <div class="title">rajnoha</div>
+            <div class="subtitle">Gallery Collection</div>
+        </div>
+
+        <div class="gallery">
+            <div class="gallery-item" data-tilt data-tilt-max="5" data-tilt-speed="400">
+                <div class="image-container">
+                    <img src="/assets/1.webp" alt="Image 1">
+                </div>
+                <div class="image-caption">Laser Eyes</div>
+            </div>
+
+            <div class="gallery-item" data-tilt data-tilt-max="5" data-tilt-speed="400">
+                <div class="image-container">
+                    <img src="/assets/2.webp" alt="Image 2">
+                </div>
+                <div class="image-caption">alza.sk</div>
+            </div>
+
+            <div class="gallery-item" data-tilt data-tilt-max="5" data-tilt-speed="400">
+                <div class="image-container">
+                    <img src="/assets/3.webp" alt="Image 3">
+                </div>
+                <div class="image-caption">:rastohappy:</div>
+            </div>
+
+            <div class="gallery-item" data-tilt data-tilt-max="5" data-tilt-speed="400">
+                <div class="image-container">
+                    <img src="/assets/4.webp" alt="Image 4">
+                </div>
+                <div class="image-caption">gandalf?</div>
+            </div>
+
+            <div class="gallery-item" data-tilt data-tilt-max="5" data-tilt-speed="400">
+                <div class="image-container">
+                    <img src="/assets/5.webp" alt="Image 5">
+                </div>
+                <div class="image-caption">jumpscare</div>
+            </div>
+
+            <div class="gallery-item" data-tilt data-tilt-max="5" data-tilt-speed="400">
+                <div class="image-container">
+                    <img src="/assets/6.webp" alt="Image 6">
+                </div>
+                <div class="image-caption">alza.sk #2</div>
+            </div>
+        </div>
+
+        <div class="upload-note">
+            Exclusive gallery for rajnoha. Image uploads are restricted.
+        </div>
+    </div>
+
+    <script>
+        const bgText = document.getElementById('bgText');
+        const text = 'I LOVE RADEK NEVARIL ';
+        let html = '';
+        
+        // Create separate div elements for each line
+        for (let i = 0; i < 100; i++) {
+            let lineText = '';
+            for (let j = 0; j < 10; j++) {
+                lineText += text;
+            }
+            html += `<div>${lineText}</div>`;
+        }
+        
+        bgText.innerHTML = html;
+        
+        // Initialize vanilla-tilt for all gallery items
+        VanillaTilt.init(document.querySelectorAll(".gallery-item"), {
+            max: 5,
+            speed: 400,
+            glare: true,
+            "max-glare": 0.05,
+        });
+    </script>
+</body>
+</html>
