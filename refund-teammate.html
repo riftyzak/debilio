@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teammate Refund Request System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georama', sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .background-text {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 200%;
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.08);
+            line-height: 1.1;
+            letter-spacing: 8px;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+            animation: scroll-diagonal 40s linear infinite;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .background-text div {
+            white-space: nowrap;
+        }
+        
+        .background-text div:nth-child(even) {
+            padding-left: 150px;
+        }
+
+        @keyframes scroll-diagonal {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Georama', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            z-index: 10;
+        }
+
+        .back-button:hover {
+            border-color: #667eea;
+            transform: translateX(-5px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .title {
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4a90e2;
+            animation: slideColor 3s ease-in-out infinite;
+        }
+
+        @keyframes slideColor {
+            0%, 100% {
+                color: #4a90e2;
+            }
+            50% {
+                color: #357abd;
+            }
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .official-badge {
+            display: inline-block;
+            background: rgba(74, 144, 226, 0.1);
+            border: 1px solid #4a90e2;
+            color: #4a90e2;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+
+        .form-card {
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
+        }
+
+        .warning-box {
+            background: rgba(74, 144, 226, 0.1);
+            border: 2px solid #4a90e2;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 30px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .warning-box strong {
+            color: #4a90e2;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-label {
+            display: block;
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: 'Georama', sans-serif;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        .form-input.error {
+            border-color: #dc3545;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .reasons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .checkbox-item {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-item:hover {
+            border-color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .checkbox-item.selected {
+            border-color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #4a90e2;
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .submit-button {
+            width: 100%;
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            border: none;
+            color: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Georama', sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .submit-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, #555 0%, #444 100%);
+        }
+
+        .submit-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
+        }
+
+        .submit-button:active {
+            transform: translateY(0);
+        }
+
+        .policy-text {
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+            line-height: 1.6;
+            margin-top: 20px;
+        }
+
+        .result-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(20, 20, 20, 0.98);
+            border: 2px solid #4a90e2;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            display: none;
+            z-index: 1000;
+            opacity: 0;
+        }
+
+        .result-box.show {
+            display: block;
+            animation: popupIn 0.4s ease forwards;
+        }
+
+        @keyframes popupIn {
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            z-index: 999;
+        }
+
+        .overlay.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .result-title {
+            font-size: 24px;
+            color: #4a90e2;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .payment-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 25px 0;
+        }
+
+        .payment-option {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px 20px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .payment-option:hover {
+            border-color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .payment-option.selected {
+            border-color: #4a90e2;
+            background: rgba(74, 144, 226, 0.2);
+        }
+
+        .payment-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            min-width: 40px;
+        }
+
+        .confirm-button {
+            width: 100%;
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            border: none;
+            color: #fff;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: 'Georama', sans-serif;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 20px;
+        }
+
+        .confirm-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
+        }
+
+        .confirm-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, #555 0%, #444 100%);
+        }
+
+        .confirm-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .success-animation {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounceIn 0.6s ease;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .success-text {
+            font-size: 24px;
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .success-details {
+            color: #888;
+            font-size: 14px;
+            line-height: 1.8;
+            margin-top: 20px;
+        }
+
+        .close-popup {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-indicator {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #888;
+            font-size: 13px;
+        }
+
+        .step-indicator .current-step {
+            color: #4a90e2;
+            font-weight: bold;
+        }
+
+        .payment-details {
+            margin-top: 20px;
+            display: none;
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: 500px;
+            }
+        }
+
+        .payment-details.show {
+            display: block;
+        }
+
+        .crypto-select {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .crypto-option {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-size: 13px;
+        }
+
+        .crypto-option:hover {
+            border-color: #4a90e2;
+        }
+
+        .crypto-option.selected {
+            border-color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-label {
+            display: block;
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .detail-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-family: 'Georama', sans-serif;
+            font-size: 13px;
+            transition: border-color 0.3s ease;
+        }
+
+        .detail-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .close-popup:hover {
+            color: #fff;
+        }
+
+        .result-content {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .result-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-text" id="bgText"></div>
+    
+    <a href="index.html" class="back-button">← Back</a>
+
+    <div class="container">
+        <div class="header">
+            <div class="title">TEAMMATE REFUND REQUEST</div>
+            <div class="subtitle">Official Unmatched.gg Quality Assurance Division</div>
+            <span class="official-badge">CERTIFIED SYSTEM</span>
+        </div>
+
+        <div class="form-card" data-tilt data-tilt-max="3" data-tilt-speed="400">
+            <div class="warning-box">
+                <strong><i class="fas fa-exclamation-triangle"></i> NOTICE:</strong> This is an official request form for teammates who have failed to meet minimum HVH standards. All submissions are reviewed by our automated quality control system. Refunds are processed instantly upon verification of incompetence.
+            </div>
+
+            <div class="form-section">
+                <label class="form-label">Unmatched.gg Profile Link *</label>
+                <input 
+                    type="text" 
+                    class="form-input" 
+                    id="profileLink"
+                    placeholder="https://unmatched.gg/user/..."
+                >
+                <div class="error-message" id="profileError">Invalid profile link. Must be unmatched.gg/user/[USERID]</div>
+            </div>
+
+            <div class="form-section">
+                <label class="form-label">Refund Reason(s) * (Select all that apply)</label>
+                <div class="reasons-grid">
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="misses" value="misses">
+                        <label class="checkbox-label" for="misses">Misses every shot</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="braindead" value="braindead">
+                        <label class="checkbox-label" for="braindead">Braindead</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="iq" value="iq">
+                        <label class="checkbox-label" for="iq">0 IQ</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="lagcomp" value="lagcomp">
+                        <label class="checkbox-label" for="lagcomp">Can't lagcomp</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="cheat" value="cheat">
+                        <label class="checkbox-label" for="cheat">Pasted cheat</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="skeetless" value="skeetless">
+                        <label class="checkbox-label" for="skeetless">Skeetless</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="baim" value="baim">
+                        <label class="checkbox-label" for="baim">Big talk small dick</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="config" value="config">
+                        <label class="checkbox-label" for="config">Pasted config</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="movement" value="movement">
+                        <label class="checkbox-label" for="movement">Can't bhop</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="toxic" value="toxic">
+                        <label class="checkbox-label" for="toxic">Bad nade locations</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="afk" value="afk">
+                        <label class="checkbox-label" for="afk">AFK half the game</label>
+                    </div>
+                    <div class="checkbox-item" onclick="toggleCheckbox(this)">
+                        <input type="checkbox" id="resolver" value="resolver">
+                        <label class="checkbox-label" for="resolver">Resolver broken</label>
+                    </div>
+                </div>
+            </div>
+
+            <button class="submit-button" id="submitBtn" onclick="submitRequest()" disabled>Submit Refund Request</button>
+
+            <div class="policy-text">
+                By submitting this form, you acknowledge that the teammate in question has failed to meet basic HVH performance standards. Our system will automatically generate a roast report and notify the unmatched.gg community of their inadequacy. No actual refunds are provided because you can't refund stupidity.
+            </div>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <button class="close-popup" onclick="closePopup()">×</button>
+            <div id="popupContent">
+                <div class="step-indicator">Step <span class="current-step">1</span> of 2: Select Payment Method</div>
+                <div class="result-title">Select Refund Method</div>
+                <div class="result-content">
+                    <p style="color: #888; font-size: 13px; text-align: center; margin-bottom: 20px;">
+                        Choose your preferred refund method:
+                    </p>
+                    <div class="payment-methods">
+                        <div class="payment-option" onclick="selectPayment('paypal')">
+                            <div class="payment-icon"><i class="fab fa-paypal"></i></div>
+                            <div>
+                                <strong>PayPal</strong><br>
+                                <span style="font-size: 12px; color: #888;">Fast and secure payment</span>
+                            </div>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment('crypto')">
+                            <div class="payment-icon"><i class="fab fa-bitcoin"></i></div>
+                            <div>
+                                <strong>Cryptocurrency</strong><br>
+                                <span style="font-size: 12px; color: #888;">BTC, ETH, USDT, LTC</span>
+                            </div>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment('bank')">
+                            <div class="payment-icon"><i class="fas fa-university"></i></div>
+                            <div>
+                                <strong>Bank Transfer</strong><br>
+                                <span style="font-size: 12px; color: #888;">SEPA/IBAN transfer</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="overlay" id="overlay" onclick="closePopup()"></div>
+    </div>
+
+    <script>
+        const bgText = document.getElementById('bgText');
+        const text = 'I LOVE RADEK NEVARIL ';
+        let html = '';
+        
+        for (let i = 0; i < 100; i++) {
+            let lineText = '';
+            for (let j = 0; j < 10; j++) {
+                lineText += text;
+            }
+            html += `<div>${lineText}</div>`;
+        }
+        
+        bgText.innerHTML = html;
+
+        function checkFormValidity() {
+            const profileLink = document.getElementById('profileLink').value.trim();
+            const profileInput = document.getElementById('profileLink');
+            const profileError = document.getElementById('profileError');
+            const checkboxes = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // Validate profile link format
+            const unmatchedRegex = /^(https?:\/\/)?(www\.)?unmatched\.gg\/user\/[\w-]+$/i;
+            const isValidProfile = unmatchedRegex.test(profileLink);
+            
+            if (profileLink && !isValidProfile) {
+                profileInput.classList.add('error');
+                profileError.classList.add('show');
+            } else {
+                profileInput.classList.remove('error');
+                profileError.classList.remove('show');
+            }
+            
+            if (isValidProfile && checkboxes.length > 0) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+
+        document.getElementById('profileLink').addEventListener('input', checkFormValidity);
+
+        let selectedPaymentMethod = null;
+        let currentProfileLink = '';
+        let currentReasons = [];
+        let selectedCrypto = null;
+        let paymentDetailsValid = false;
+
+        function selectPayment(method) {
+            document.querySelectorAll('.payment-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            event.target.closest('.payment-option').classList.add('selected');
+            selectedPaymentMethod = method;
+            selectedCrypto = null;
+            paymentDetailsValid = false;
+            
+            // Move to step 2
+            setTimeout(() => {
+                showPaymentDetailsStep(method);
+            }, 300);
+        }
+
+        function showPaymentDetailsStep(method) {
+            let detailsHTML = '';
+            
+            if (method === 'paypal') {
+                detailsHTML = `
+                    <div class="step-indicator">Step <span class="current-step">2</span> of 2: Enter Payment Details</div>
+                    <div class="result-title">PayPal Details</div>
+                    <div class="result-content">
+                        <div class="input-group">
+                            <label class="input-label"><i class="fab fa-paypal"></i> PayPal Email Address</label>
+                            <input type="email" class="detail-input" id="paypalEmail" placeholder="your.email@example.com" oninput="validatePaymentDetails()">
+                        </div>
+                        <button class="confirm-button" id="confirmBtn" onclick="processRefund()" disabled>
+                            Process Refund
+                        </button>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <a href="#" onclick="goBackToMethods(); return false;" style="color: #888; font-size: 13px; text-decoration: none;">
+                                <i class="fas fa-arrow-left"></i> Back to payment methods
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else if (method === 'crypto') {
+                detailsHTML = `
+                    <div class="step-indicator">Step <span class="current-step">2</span> of 2: Enter Payment Details</div>
+                    <div class="result-title">Cryptocurrency Details</div>
+                    <div class="result-content">
+                        <div class="input-group">
+                            <label class="input-label"><i class="fab fa-bitcoin"></i> Select Cryptocurrency</label>
+                            <div class="crypto-select">
+                                <div class="crypto-option" onclick="selectCrypto('BTC')">
+                                    <i class="fab fa-bitcoin"></i> Bitcoin (BTC)
+                                </div>
+                                <div class="crypto-option" onclick="selectCrypto('ETH')">
+                                    <i class="fab fa-ethereum"></i> Ethereum (ETH)
+                                </div>
+                                <div class="crypto-option" onclick="selectCrypto('USDT')">
+                                    <i class="fas fa-dollar-sign"></i> Tether (USDT)
+                                </div>
+                                <div class="crypto-option" onclick="selectCrypto('LTC')">
+                                    <i class="fab fa-btc"></i> Litecoin (LTC)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group" id="cryptoAddressGroup" style="display: none;">
+                            <label class="input-label"><i class="fas fa-wallet"></i> <span id="cryptoLabel">Wallet</span> Address</label>
+                            <input type="text" class="detail-input" id="cryptoAddress" placeholder="Enter your wallet address" oninput="validatePaymentDetails()">
+                        </div>
+                        <button class="confirm-button" id="confirmBtn" onclick="processRefund()" disabled>
+                            Process Refund
+                        </button>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <a href="#" onclick="goBackToMethods(); return false;" style="color: #888; font-size: 13px; text-decoration: none;">
+                                <i class="fas fa-arrow-left"></i> Back to payment methods
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else if (method === 'bank') {
+                detailsHTML = `
+                    <div class="step-indicator">Step <span class="current-step">2</span> of 2: Enter Payment Details</div>
+                    <div class="result-title">Bank Transfer Details</div>
+                    <div class="result-content">
+                        <div class="input-group">
+                            <label class="input-label"><i class="fas fa-user"></i> Account Holder Name</label>
+                            <input type="text" class="detail-input" id="accountName" placeholder="Sebastian Rosina" oninput="validatePaymentDetails()">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label"><i class="fas fa-university"></i> IBAN</label>
+                            <input type="text" class="detail-input" id="accountNumber" placeholder="SK31 1200 0000 1987 4263 7541" oninput="validatePaymentDetails()">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label"><i class="fas fa-code"></i> BIC / SWIFT Code</label>
+                            <input type="text" class="detail-input" id="swiftCode" placeholder="TATRSKBXXXX" oninput="validatePaymentDetails()">
+                        </div>
+                        <button class="confirm-button" id="confirmBtn" onclick="processRefund()" disabled>
+                            Process Refund
+                        </button>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <a href="#" onclick="goBackToMethods(); return false;" style="color: #888; font-size: 13px; text-decoration: none;">
+                                <i class="fas fa-arrow-left"></i> Back to payment methods
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('popupContent').innerHTML = detailsHTML;
+        }
+
+        function goBackToMethods() {
+            selectedPaymentMethod = null;
+            selectedCrypto = null;
+            paymentDetailsValid = false;
+            document.getElementById('popupContent').innerHTML = `
+                <div class="step-indicator">Step <span class="current-step">1</span> of 2: Select Payment Method</div>
+                <div class="result-title">Select Refund Method</div>
+                <div class="result-content">
+                    <p style="color: #888; font-size: 13px; text-align: center; margin-bottom: 20px;">
+                        Choose your preferred refund method:
+                    </p>
+                    <div class="payment-methods">
+                        <div class="payment-option" onclick="selectPayment('paypal')">
+                            <div class="payment-icon"><i class="fab fa-paypal"></i></div>
+                            <div>
+                                <strong>PayPal</strong><br>
+                                <span style="font-size: 12px; color: #888;">Fast and secure payment</span>
+                            </div>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment('crypto')">
+                            <div class="payment-icon"><i class="fab fa-bitcoin"></i></div>
+                            <div>
+                                <strong>Cryptocurrency</strong><br>
+                                <span style="font-size: 12px; color: #888;">BTC, ETH, USDT, LTC</span>
+                            </div>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment('bank')">
+                            <div class="payment-icon"><i class="fas fa-university"></i></div>
+                            <div>
+                                <strong>Bank Transfer</strong><br>
+                                <span style="font-size: 12px; color: #888;">SEPA/IBAN transfer</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectCrypto(crypto) {
+            document.querySelectorAll('.crypto-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            event.target.closest('.crypto-option').classList.add('selected');
+            selectedCrypto = crypto;
+            document.getElementById('cryptoLabel').textContent = crypto;
+            document.getElementById('cryptoAddressGroup').style.display = 'block';
+            document.getElementById('cryptoAddress').value = '';
+            validatePaymentDetails();
+        }
+
+        function validatePaymentDetails() {
+            let valid = false;
+            
+            if (selectedPaymentMethod === 'paypal') {
+                const email = document.getElementById('paypalEmail').value.trim();
+                valid = email.includes('@') && email.includes('.');
+            } else if (selectedPaymentMethod === 'crypto') {
+                const address = document.getElementById('cryptoAddress').value.trim();
+                valid = selectedCrypto && address.length > 20;
+            } else if (selectedPaymentMethod === 'bank') {
+                const name = document.getElementById('accountName').value.trim();
+                const account = document.getElementById('accountNumber').value.trim();
+                const swift = document.getElementById('swiftCode').value.trim();
+                valid = name && account && swift;
+            }
+            
+            paymentDetailsValid = valid;
+            document.getElementById('confirmBtn').disabled = !valid;
+        }
+
+        function closePopup() {
+            document.getElementById('resultBox').classList.remove('show');
+            document.getElementById('overlay').classList.remove('show');
+            selectedPaymentMethod = null;
+            selectedCrypto = null;
+            paymentDetailsValid = false;
+            setTimeout(() => {
+                document.getElementById('popupContent').innerHTML = `
+                    <div class="step-indicator">Step <span class="current-step">1</span> of 2: Select Payment Method</div>
+                    <div class="result-title">Select Refund Method</div>
+                    <div class="result-content">
+                        <p style="color: #888; font-size: 13px; text-align: center; margin-bottom: 20px;">
+                            Choose your preferred refund method:
+                        </p>
+                        <div class="payment-methods">
+                            <div class="payment-option" onclick="selectPayment('paypal')">
+                                <div class="payment-icon"><i class="fab fa-paypal"></i></div>
+                                <div>
+                                    <strong>PayPal</strong><br>
+                                    <span style="font-size: 12px; color: #888;">Fast and secure payment</span>
+                                </div>
+                            </div>
+                            <div class="payment-option" onclick="selectPayment('crypto')">
+                                <div class="payment-icon"><i class="fab fa-bitcoin"></i></div>
+                                <div>
+                                    <strong>Cryptocurrency</strong><br>
+                                    <span style="font-size: 12px; color: #888;">BTC, ETH, USDT, LTC</span>
+                                </div>
+                            </div>
+                            <div class="payment-option" onclick="selectPayment('bank')">
+                                <div class="payment-icon"><i class="fas fa-university"></i></div>
+                                <div>
+                                    <strong>Bank Transfer</strong><br>
+                                    <span style="font-size: 12px; color: #888;">SEPA/IBAN transfer</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }, 300);
+        }
+
+        function toggleCheckbox(element) {
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            element.classList.toggle('selected', checkbox.checked);
+            checkFormValidity();
+        }
+
+        function submitRequest() {
+            const profileLink = document.getElementById('profileLink').value.trim();
+            const checkboxes = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
+            
+            if (!profileLink || checkboxes.length === 0) {
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Processing...';
+
+            currentProfileLink = profileLink;
+            currentReasons = Array.from(checkboxes).map(cb => {
+                return cb.parentElement.querySelector('.checkbox-label').textContent;
+            });
+
+            setTimeout(() => {
+                document.getElementById('resultBox').classList.add('show');
+                document.getElementById('overlay').classList.add('show');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Refund Request';
+            }, 1000);
+        }
+
+        function processRefund() {
+            if (!selectedPaymentMethod || !paymentDetailsValid) return;
+
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="loading-spinner"></span>Processing...';
+
+            const paymentNames = {
+                'paypal': 'PayPal',
+                'crypto': selectedCrypto ? `Cryptocurrency (${selectedCrypto})` : 'Cryptocurrency',
+                'bank': 'Bank Transfer'
+            };
+
+            const processingTimes = {
+                'paypal': '1-2 business days',
+                'crypto': '15-30 minutes (network confirmations)',
+                'bank': '3-5 business days'
+            };
+
+            let paymentInfo = '';
+            if (selectedPaymentMethod === 'paypal') {
+                paymentInfo = document.getElementById('paypalEmail').value;
+            } else if (selectedPaymentMethod === 'crypto') {
+                paymentInfo = document.getElementById('cryptoAddress').value;
+            } else if (selectedPaymentMethod === 'bank') {
+                const name = document.getElementById('accountName').value;
+                const account = document.getElementById('accountNumber').value;
+                paymentInfo = `${name} - ${account.substring(0, 20)}...`;
+            }
+
+            setTimeout(() => {
+                const successHTML = `
+                    <div class="success-animation">
+                        <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="success-text">REFUND REQUEST SUBMITTED</div>
+                        <div style="color: #888; font-size: 14px; margin-bottom: 20px;">
+                            Your refund has been processed successfully
+                        </div>
+                        <div style="background: rgba(0, 0, 0, 0.5); border-radius: 8px; padding: 20px; text-align: left;">
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #888; font-size: 12px;"><i class="fas fa-user"></i> PROFILE:</span><br>
+                                <span style="font-size: 13px;">${currentProfileLink}</span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #888; font-size: 12px;"><i class="fas fa-credit-card"></i> REFUND METHOD:</span><br>
+                                <span style="font-size: 13px; color: #4a90e2;">${paymentNames[selectedPaymentMethod]}</span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #888; font-size: 12px;"><i class="fas fa-wallet"></i> PAYMENT DESTINATION:</span><br>
+                                <span style="font-size: 12px; word-break: break-all;">${paymentInfo}</span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #888; font-size: 12px;"><i class="fas fa-exclamation-triangle"></i> VIOLATIONS:</span><br>
+                                <span style="font-size: 13px;">${currentReasons.length} reason(s) documented</span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #888; font-size: 12px;"><i class="fas fa-dollar-sign"></i> REFUND AMOUNT:</span><br>
+                                <span style="font-size: 18px; color: #4a90e2; font-weight: bold;">$0.00 USD</span>
+                            </div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                                <span style="color: #888; font-size: 12px;"><i class="far fa-clock"></i> PROCESSING TIME:</span><br>
+                                <span style="font-size: 13px;">${processingTimes[selectedPaymentMethod]}</span>
+                            </div>
+                        </div>
+                        <div class="success-details">
+                            <i class="fas fa-info-circle"></i> Your refund request has been logged in our system.<br>
+                            This player has been flagged and added to the community watch list.<br><br>
+                            <span style="color: #555; font-size: 12px;">
+                                <i class="fas fa-ban"></i> Note: The refund amount of $0.00 accurately reflects the value lost from playing with this teammate. You cannot be compensated for time wasted.
+                            </span>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('popupContent').innerHTML = successHTML;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
