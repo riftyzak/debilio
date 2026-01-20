@@ -1,11 +1,12 @@
-export async function onRequest(context) {
+export async function onRequestGet(context) {
+  const slug = context.params.slug; // <-- gets the [slug] from the URL
   const url = new URL(context.request.url);
-  const assetUrl = new URL("/rosina-shop/product.html", url);
 
-  const res = await context.env.ASSETS.fetch(assetUrl.toString(), context.request);
+  // Rewrite to the static product page and pass slug as query param
+  url.pathname = "/rosina-shop/product.html";
+  url.search = "";
+  url.searchParams.set("slug", slug);
 
-  const headers = new Headers(res.headers);
-  headers.set("content-type", "text/html; charset=utf-8");
-
-  return new Response(res.body, { status: res.status, headers });
+  // Fetch the static asset through Pages
+  return fetch(url.toString(), context.request);
 }
