@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Georama', sans-serif;
@@ -37,12 +42,23 @@
             animation: scroll-diagonal 50s linear infinite;
             font-family: 'Courier New', monospace;
         }
-        .background-text div { white-space: nowrap; }
-        .background-text div:nth-child(even) { padding-left: 150px; }
+
+        .background-text div {
+            white-space: nowrap;
+        }
+
+        .background-text div:nth-child(even) {
+            padding-left: 150px;
+        }
 
         @keyframes scroll-diagonal {
-            0% { transform: translate3d(0, 0, 0); }
-            100% { transform: translate3d(-33.333%, -33.333%, 0); }
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(-33.333%, -33.333%, 0);
+            }
         }
 
         .container {
@@ -53,9 +69,9 @@
         }
 
         .back-button {
-            position: absolute;
-            top: -20px;
-            left: 0;
+            position: fixed;
+            top: 20px;
+            left: 20px;
             background: rgba(20, 20, 20, 0.95);
             border: 2px solid #333;
             color: #fff;
@@ -66,10 +82,19 @@
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
+            z-index: 100;
         }
-        .back-button:hover { border-color: #4a90e2; transform: translateX(-5px); }
 
-        .header { text-align: center; margin-bottom: 40px; margin-top: 40px; }
+        .back-button:hover {
+            border-color: #4a90e2;
+            transform: translateX(-5px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            margin-top: 40px;
+        }
 
         .title {
             font-size: 48px;
@@ -84,8 +109,15 @@
         }
 
         @keyframes gradient-shift {
-            0%, 100% { background-position: 0% center; }
-            50% { background-position: 100% center; }
+
+            0%,
+            100% {
+                background-position: 0% center;
+            }
+
+            50% {
+                background-position: 100% center;
+            }
         }
 
         .cart-button {
@@ -102,7 +134,10 @@
             transition: all 0.3s ease;
             z-index: 100;
         }
-        .cart-button:hover { border-color: #4a90e2; }
+
+        .cart-button:hover {
+            border-color: #4a90e2;
+        }
 
         .cart-count {
             background: #4a90e2;
@@ -127,7 +162,11 @@
             padding: 25px;
             transition: all 0.3s ease;
         }
-        .product-card:hover { border-color: #4a90e2; transform: translateY(-5px); }
+
+        .product-card:hover {
+            border-color: #4a90e2;
+            transform: translateY(-5px);
+        }
 
         .product-image {
             width: 100%;
@@ -140,11 +179,34 @@
             margin-bottom: 20px;
             overflow: hidden;
         }
-        .product-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-        .product-name { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #fff; }
-        .product-description { font-size: 14px; color: #888; margin-bottom: 20px; line-height: 1.6; }
-        .product-price { font-size: 24px; color: #4a90e2; font-weight: bold; margin-bottom: 15px; }
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .product-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .product-description {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .product-price {
+            font-size: 24px;
+            color: #4a90e2;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
 
         /* Reuse existing button style (we'll use it as "View product") */
         .add-to-cart {
@@ -164,7 +226,11 @@
             gap: 10px;
             text-decoration: none;
         }
-        .add-to-cart:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); }
+
+        .add-to-cart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
+        }
 
         .cart-modal {
             position: fixed;
@@ -179,7 +245,10 @@
             align-items: center;
             justify-content: center;
         }
-        .cart-modal.show { display: flex; }
+
+        .cart-modal.show {
+            display: flex;
+        }
 
         .cart-content {
             background: rgba(20, 20, 20, 0.98);
@@ -199,7 +268,11 @@
             margin-bottom: 30px;
         }
 
-        .cart-title { font-size: 28px; font-weight: bold; color: #4a90e2; }
+        .cart-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
 
         .close-cart {
             background: none;
@@ -209,7 +282,10 @@
             cursor: pointer;
             transition: color 0.3s ease;
         }
-        .close-cart:hover { color: #fff; }
+
+        .close-cart:hover {
+            color: #fff;
+        }
 
         .cart-item {
             background: rgba(0, 0, 0, 0.5);
@@ -223,13 +299,24 @@
             gap: 12px;
         }
 
-        .cart-item-info { flex: 1; }
-        .cart-item-name { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
-        .cart-item-price { font-size: 18px; color: #4a90e2; }
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .cart-item-price {
+            font-size: 18px;
+            color: #4a90e2;
+        }
 
         .qty {
             width: 70px;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             border: 2px solid #333;
             color: #fff;
             padding: 8px 10px;
@@ -247,11 +334,22 @@
             font-size: 14px;
             transition: all 0.3s ease;
         }
-        .remove-item:hover { background: #c82333; }
 
-        .promo-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; }
+        .remove-item:hover {
+            background: #c82333;
+        }
 
-        .promo-input { display: flex; gap: 10px; margin-bottom: 15px; }
+        .promo-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+
+        .promo-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
 
         .promo-input input {
             flex: 1;
@@ -263,7 +361,11 @@
             font-family: 'Georama', sans-serif;
             font-size: 14px;
         }
-        .promo-input input:focus { outline: none; border-color: #4a90e2; }
+
+        .promo-input input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
 
         .apply-promo {
             background: #4a90e2;
@@ -283,13 +385,38 @@
             border-radius: 4px;
             display: none;
         }
-        .promo-message.success { background: rgba(74, 144, 226, 0.2); color: #4a90e2; display: block; }
-        .promo-message.error { background: rgba(220, 53, 69, 0.2); color: #dc3545; display: block; }
 
-        .cart-total { margin-top: 30px; padding-top: 20px; border-top: 2px solid #333; }
+        .promo-message.success {
+            background: rgba(74, 144, 226, 0.2);
+            color: #4a90e2;
+            display: block;
+        }
 
-        .total-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; }
-        .total-row.final { font-size: 24px; font-weight: bold; color: #4a90e2; margin-top: 15px; }
+        .promo-message.error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            display: block;
+        }
+
+        .cart-total {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #333;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .total-row.final {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4a90e2;
+            margin-top: 15px;
+        }
 
         .checkout-button {
             width: 100%;
@@ -304,11 +431,20 @@
             transition: all 0.3s ease;
             margin-top: 20px;
         }
-        .checkout-button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); }
 
-        .empty-cart { text-align: center; padding: 40px; color: #888; }
+        .checkout-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
+        }
+
+        .empty-cart {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
     </style>
 </head>
+
 <body>
     <div class="background-text" id="bgText"></div>
 
@@ -454,11 +590,10 @@
             grid.innerHTML = products.map(product => `
                 <div class="product-card">
                     <div class="product-image">
-                        ${
-                            product.image_url
-                                ? `<img src="${product.image_url}" alt="${escapeHtml(product.title)}" loading="lazy">`
-                                : `<div style="font-size:48px;color:#333;">🛍️</div>`
-                        }
+                        ${product.image_url
+                    ? `<img src="${product.image_url}" alt="${escapeHtml(product.title)}" loading="lazy">`
+                    : `<div style="font-size:48px;color:#333;">🛍️</div>`
+                }
                     </div>
                     <div class="product-name">${escapeHtml(product.title)}</div>
                     <div class="product-description">${escapeHtml(product.description || "")}</div>
@@ -706,4 +841,5 @@
         })();
     </script>
 </body>
+
 </html>

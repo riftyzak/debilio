@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,11 +43,11 @@
             pointer-events: none;
             animation: scroll-diagonal 40s linear infinite;
         }
-        
+
         .background-text div {
             white-space: nowrap;
         }
-        
+
         .background-text div:nth-child(even) {
             padding-left: 80px;
         }
@@ -55,6 +56,7 @@
             0% {
                 transform: translate(0, 0);
             }
+
             100% {
                 transform: translate(-50%, -50%);
             }
@@ -109,9 +111,12 @@
         }
 
         @keyframes gradient-shift {
-            0%, 100% {
+
+            0%,
+            100% {
                 background-position: 0% center;
             }
+
             50% {
                 background-position: 100% center;
             }
@@ -128,6 +133,14 @@
             gap: 20px;
             margin-top: 30px;
         }
+
+        .gallery-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            -webkit-tap-highlight-color: transparent;
+        }
+
 
         .gallery-item {
             background: rgba(20, 20, 20, 0.95);
@@ -288,9 +301,10 @@
         }
     </style>
 </head>
+
 <body>
     <div class="background-text" id="bgText"></div>
-    
+
     <a href="/" class="back-button">← Back</a>
 
     <div class="container">
@@ -314,12 +328,15 @@
                 <div class="image-caption">alza.sk</div>
             </div>
 
-            <div class="gallery-item" data-tilt-disable="true">
-                <div class="image-container">
-                    <img src="/assets/3.webp" alt="Image 3">
+            <a class="gallery-link" href="/rosina-shop">
+                <div class="gallery-item" data-tilt-disable="true">
+                    <div class="image-container">
+                        <img src="/assets/3.webp" alt="Image 3">
+                    </div>
+                    <div class="image-caption">:rastohappy:</div>
                 </div>
-                <div class="image-caption">:rastohappy:</div>
-            </div>
+            </a>
+
 
             <div class="gallery-item" data-tilt-disable="true">
                 <div class="image-container">
@@ -352,11 +369,11 @@
         const bgText = document.getElementById('bgText');
         const text = 'I LOVE RADEK NEVARIL ';
         let html = '';
-        
+
         const isMobile = window.innerWidth < 768;
         const rows = isMobile ? 50 : 100;
         const cols = isMobile ? 5 : 10;
-        
+
         for (let i = 0; i < rows; i++) {
             let lineText = '';
             for (let j = 0; j < cols; j++) {
@@ -364,9 +381,9 @@
             }
             html += `<div>${lineText}</div>`;
         }
-        
+
         bgText.innerHTML = html;
-        
+
         if (window.innerWidth >= 768) {
             VanillaTilt.init(document.querySelectorAll(".gallery-item"), {
                 max: 5,
@@ -377,4 +394,5 @@
         }
     </script>
 </body>
+
 </html>
