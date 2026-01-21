@@ -525,7 +525,7 @@
             const data = await res.json();
             return (data || []).map(p => ({ ...p, price_eur: Number(p.price_eur) }));
         }
-
+        let products = [];
         // =========================
         // Shop render (NO add-to-cart here, only View product)
         // =========================
