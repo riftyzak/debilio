@@ -418,7 +418,6 @@
     // Init
     // =========================
     (async () => {
-      updateCartBadge();
 
       const slug = getSlugFromPath();
       if (!slug) {
@@ -441,7 +440,7 @@
       renderProduct(currentProduct);
     })();
   </script>
-  <script src="./cart.js"></script>
+  <script src="../cart.js"></script>
 </body>
 
 </html>
