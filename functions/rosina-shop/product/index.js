@@ -13,7 +13,6 @@ export async function onRequestGet(context) {
     return context.env.ASSETS.fetch(req);
   }
 
-  // No slug: serve the shop homepage as an asset (NO redirect)
   const req = new Request("https://assets.local/rosina-shop/index.html", {
     method: "GET",
     headers: context.request.headers,
