@@ -1,3 +1,8 @@
+(function(){
+  // Prevent double-loading
+  if (window.__rosinaCartLoaded) return;
+  window.__rosinaCartLoaded = true;
+
 const CART_KEY = "rosina_cart_v1";
 const PROMO_KEY = "rosina_promo_v1";
 
@@ -6,11 +11,6 @@ const PROMOS = {
   sebastian: { type: "discount", rate: 0.1337, label: "Discount (13.37%)" },
   robrt007main: { type: "fixed", fixedTotal: 777, label: "Special Price" },
 };
-
-function promoAllowed() {
-  return document.body && document.body.dataset && document.body.dataset.allowPromo === "true";
-}
-
 
 let appliedPromo = loadPromo();
 let cart = loadCart();
@@ -34,7 +34,6 @@ function saveCart() {
 }
 
 function loadPromo() {
-  if (!promoAllowed()) return null;
   const code = (localStorage.getItem(PROMO_KEY) || "").trim().toLowerCase();
   return code && PROMOS[code] ? { code } : null;
 }
@@ -327,13 +326,12 @@ function buyNow(productId) {
 }
 
 function renderPromoControls() {
-  if (!promoAllowed()) return;
   const input = document.getElementById("promoCode");
   const msg = document.getElementById("promoMessage");
   const btn = document.getElementById("promoBtn");
   if (!input || !msg || !btn) return;
 
-  if (promoAllowed() && appliedPromo) {
+  if (appliedPromo) {
     input.value = appliedPromo.code.toUpperCase();
     input.disabled = true;
     btn.textContent = "Remove";
@@ -351,12 +349,11 @@ function renderPromoControls() {
 }
 
 function applyOrRemovePromo() {
-  if (!promoAllowed()) return;
   const input = document.getElementById("promoCode");
   const msg = document.getElementById("promoMessage");
   if (!input || !msg) return;
 
-  if (promoAllowed() && appliedPromo) {
+  if (appliedPromo) {
     appliedPromo = null;
     savePromo();
     renderPromoControls();
@@ -509,7 +506,6 @@ window.applyOrRemovePromo = applyOrRemovePromo;
 window.addEventListener("DOMContentLoaded", () => {
   injectCartStyles();
   updateCartBadge();
-  appliedPromo = loadPromo();
   renderPromoControls();
 
   const input = document.getElementById("promoCode");
@@ -523,3 +519,10 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+  // Export key functions for inline onclick handlers
+  window.toggleCart = toggleCart;
+  window.applyOrRemovePromo = applyOrRemovePromo;
+  window.addToCart = addToCart;
+  window.buyNow = buyNow;
+})();
