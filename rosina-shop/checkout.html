@@ -254,12 +254,7 @@
 
   <a href="/rosina-shop/" class="back-button"><i class="fas fa-arrow-left"></i> Back to shop</a>
 
-  <button class="cart-button" onclick="toggleCart()">
-    <i class="fas fa-shopping-cart"></i> Cart
-    <span class="cart-count" id="cartCount">0</span>
-  </button>
-
-  <div class="container">
+    <div class="container">
     <div class="header">
       <div class="title">Checkout</div>
       <div class="sub">Review your order and choose payment.</div>
@@ -295,22 +290,7 @@
     </div>
   </div>
 
-  <div class="cart-modal" id="cartModal">
-    <div class="cart-content">
-      <div class="cart-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h2 class="cart-title">Your Cart</h2>
-        <button class="close-cart" onclick="toggleCart()"
-          style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;">×</button>
-      </div>
-
-      <div id="cartItems"></div>
-
-      <div class="cart-total" id="cartTotal" style="margin-top:20px;"></div>
-      <a href="checkout.html" class="checkout-link">Go to Checkout</a>
-    </div>
-  </div>
-
-  <script>
+    <script>
     // Background
     const bgText = document.getElementById('bgText');
     const text = 'I LOVE RADEK NEVARIL ';
@@ -327,10 +307,10 @@
     const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
     const FN_BASE = `${SUPABASE_URL}/functions/v1`;
 
-    const CART_KEY = "rosina_cart_v1";
-    const PROMO_KEY = "rosina_promo_v1";
+    const CART_KEY_LOCAL = "rosina_cart_v1";
+    const PROMO_KEY_LOCAL = "rosina_promo_v1";
 
-    const PROMOS = {
+    const PROMOS_LOCAL = {
       xrs: { type: "multiplier", multiplier: 2 },
       sebastian: { type: "discount", rate: 0.1337 },
       robrt007main: { type: "fixed", fixedTotal: 777 }
@@ -345,13 +325,13 @@
     }
 
     function loadCart() {
-      try { return JSON.parse(localStorage.getItem(CART_KEY) || "[]"); }
+      try { return JSON.parse(localStorage.getItem(CART_KEY_LOCAL) || "[]"); }
       catch { return []; }
     }
 
     function loadPromoCode() {
-      const code = (localStorage.getItem(PROMO_KEY) || "").trim().toLowerCase();
-      return code && PROMOS[code] ? code : null;
+      const code = (localStorage.getItem(PROMO_KEY_LOCAL) || "").trim().toLowerCase();
+      return code && PROMOS_LOCAL[code] ? code : null;
     }
 
     function moneyEUR(v) { return `€${Number(v).toFixed(2)}`; }
