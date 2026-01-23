@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -14,8 +16,8 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
 
-    body{
-      font-family:'Georama', sans-serif;
+    body {
+      font-family: "Georama", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:#000;
       color:#fff;
       min-height:100vh;
@@ -355,18 +357,20 @@
       button{ font-size:12px; padding:9px 12px; }
       .preview{ height:180px; }
     }
+  
+    /* Force the animated background text to stay Courier New */
+    .background-text, .bg-text, .bg-letters, .bg-line, .bg-word { font-family: "Courier New", Courier, monospace !important; }
   </style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// Use the SAME project credentials you use on your storefront.
-  const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>  // Use the SAME project credentials you use on your storefront.
+  const SUPABASE_URL = "https://euqvwswzbowbxweufaet.sb.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
   const BUCKET = "product-images";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  const $ = (id) => document.getElementById(id);
+  const sb = window.sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (id) => document.getElementById(id);
 
   let slugManuallyEdited = false;
 
@@ -399,7 +403,7 @@
   }
 
   async function refreshUI(){
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
 
     if (!session){
       $("authCard").style.display = "block";
@@ -420,7 +424,7 @@
     const email = $("email").value.trim();
     const password = $("pass").value;
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) return setStatus("Login error: " + error.message, "error");
 
     setStatus("Logged in ✅", "ok");
@@ -428,7 +432,7 @@
   }
 
   async function signOut(){
-    await supabase.auth.signOut();
+    await sb.auth.signOut();
     setStatus("Logged out.");
     await refreshUI();
   }
@@ -544,13 +548,13 @@
     const name = `${crypto.randomUUID()}.${ext}`;
     const path = `products/${name}`;
 
-    const { error: upErr } = await supabase.storage
+    const { error: upErr } = await sb.storage
       .from(BUCKET)
       .upload(path, file, { upsert:false, contentType:file.type });
 
     if (upErr) throw upErr;
 
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
     return pub?.publicUrl || null;
   }
 
@@ -580,8 +584,8 @@
       setStatus("Saving…");
 
       const { error } = id
-        ? await supabase.from("products").update(payload).eq("id", id)
-        : await supabase.from("products").insert(payload);
+        ? await sb.from("products").update(payload).eq("id", id)
+        : await sb.from("products").insert(payload);
 
       if (error) return setStatus("Save error: " + error.message, "error");
 
@@ -597,7 +601,7 @@
     if (!confirm("Delete this product?")) return;
 
     setStatus("Deleting…");
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    const { error } = await sb.from("products").delete().eq("id", id);
     if (error) return setStatus("Delete error: " + error.message, "error");
 
     setStatus("Deleted ✅", "ok");
