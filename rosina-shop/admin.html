@@ -280,32 +280,32 @@
     }
 
     button.primary {
-  /* Make Login/Save match the other buttons */
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid #333;
-  font-weight: inherit;
-  letter-spacing: 0;
-  text-transform: none;
-  padding: 10px 14px;
-}
+      /* Make Login/Save match the other buttons */
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #333;
+      font-weight: inherit;
+      letter-spacing: 0;
+      text-transform: none;
+      padding: 10px 14px;
+    }
 
-button.primary:hover {
-  border-color: #667eea;
-  transform: translateY(-1px);
-}
+    button.primary:hover {
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
 
-button.danger {
-  /* No red outline until hover (like blue hover on normal buttons) */
-  border-color: #333;
-  color: #ff4757;
-}
+    button.danger {
+      /* No red outline until hover (like blue hover on normal buttons) */
+      border-color: #333;
+      color: #ff4757;
+    }
 
-button.danger:hover {
-  border-color: #ff6b81;
-  color: #ff6b81;
-}
+    button.danger:hover {
+      border-color: #ff6b81;
+      color: #ff6b81;
+    }
 
-button.ghost {
+    button.ghost {
       border-color: #333;
       color: #aaa;
     }
@@ -513,80 +513,79 @@ button.ghost {
     .bg-word {
       font-family: "Courier New", Courier, monospace !important;
     }
-  
-/* Custom delete modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-  padding: 16px;
-}
 
-.modal {
-  width: min(520px, 100%);
-  background: rgba(20, 20, 20, 0.98);
-  border: 2px solid #333;
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-  overflow: hidden;
-  backdrop-filter: blur(12px);
-}
+    /* Custom delete modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 16px;
+    }
 
-.modal-head {
-  padding: 16px 18px 10px;
-  border-bottom: 1px solid #2a2a2a;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
+    .modal {
+      width: min(520px, 100%);
+      background: rgba(20, 20, 20, 0.98);
+      border: 2px solid #333;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
 
-.modal-title {
-  font-size: 14px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #fff;
-  font-weight: 700;
-}
+    .modal-head {
+      padding: 16px 18px 10px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
 
-.modal-body {
-  padding: 14px 18px 6px;
-  color: #bbb;
-  font-size: 13px;
-  line-height: 1.6;
-}
+    .modal-title {
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+      font-weight: 700;
+    }
 
-.modal-actions {
-  padding: 12px 18px 18px;
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
+    .modal-body {
+      padding: 14px 18px 6px;
+      color: #bbb;
+      font-size: 13px;
+      line-height: 1.6;
+    }
 
-.modal-close {
-  border: 2px solid #333;
-  background: rgba(0,0,0,0.35);
-  color: #aaa;
-  border-radius: 10px;
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
+    .modal-actions {
+      padding: 12px 18px 18px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
 
-.modal-close:hover {
-  border-color: #667eea;
-  transform: translateY(-1px);
-}
+    .modal-close {
+      border: 2px solid #333;
+      background: rgba(0, 0, 0, 0.35);
+      color: #aaa;
+      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
+    .modal-close:hover {
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -772,38 +771,38 @@ button.ghost {
     }
 
 
-function openDeleteModal(id, title = "") {
-  if (!id) return;
-  lastFocusEl = document.activeElement;
+    function openDeleteModal(id, title = "") {
+      if (!id) return;
+      lastFocusEl = document.activeElement;
 
-  pendingDeleteId = id;
-  pendingDeleteTitle = title || "";
-  const label = $("deleteTarget");
-  label.textContent = pendingDeleteTitle ? `“${pendingDeleteTitle}”` : "this product";
+      pendingDeleteId = id;
+      pendingDeleteTitle = title || "";
+      const label = $("deleteTarget");
+      label.textContent = pendingDeleteTitle ? `“${pendingDeleteTitle}”` : "this product";
 
-  const overlay = $("deleteOverlay");
-  overlay.style.display = "flex";
-  overlay.setAttribute("aria-hidden", "false");
-  overlay.inert = false;
+      const overlay = $("deleteOverlay");
+      overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+      overlay.inert = false;
 
-  // Focus cancel for easy escape
-  $("deleteCancelBtn").focus();
-}
+      // Focus cancel for easy escape
+      $("deleteCancelBtn").focus();
+    }
 
-function closeDeleteModal() {
-  const overlay = $("deleteOverlay");
-  overlay.style.display = "none";
-  overlay.setAttribute("aria-hidden", "true");
-  overlay.inert = true;
+    function closeDeleteModal() {
+      const overlay = $("deleteOverlay");
+      overlay.style.display = "none";
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.inert = true;
 
-  pendingDeleteId = null;
-  pendingDeleteTitle = "";
-  if (lastFocusEl && typeof lastFocusEl.focus === "function") lastFocusEl.focus();
-  lastFocusEl = null;
-}
+      pendingDeleteId = null;
+      pendingDeleteTitle = "";
+      if (lastFocusEl && typeof lastFocusEl.focus === "function") lastFocusEl.focus();
+      lastFocusEl = null;
+    }
 
 
-async function confirmDeleteModal() {
+    async function confirmDeleteModal() {
       if (!pendingDeleteId) return closeDeleteModal();
       const id = pendingDeleteId;
       closeDeleteModal();
@@ -905,17 +904,27 @@ async function confirmDeleteModal() {
       $("productForm").onsubmit = saveProduct;
       $("clearBtn").onclick = clearForm;
 
-
-// Delete modal wiring
-$("deleteCancelBtn").onclick = closeDeleteModal;
-$("deleteConfirmBtn").onclick = confirmDeleteModal;
-$("deleteCloseBtn").onclick = closeDeleteModal;
-$("deleteOverlay").addEventListener("click", (e) => {
-  if (e.target === $("deleteOverlay")) closeDeleteModal();
-});
-window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && $("deleteOverlay").style.display === "flex") closeDeleteModal();
-});
+      ["email", "pass"].forEach((id) => {
+        const el = $(id);
+        if (!el) return;
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            signIn();
+          }
+        });
+      });
+      
+      // Delete modal wiring
+      $("deleteCancelBtn").onclick = closeDeleteModal;
+      $("deleteConfirmBtn").onclick = confirmDeleteModal;
+      $("deleteCloseBtn").onclick = closeDeleteModal;
+      $("deleteOverlay").addEventListener("click", (e) => {
+        if (e.target === $("deleteOverlay")) closeDeleteModal();
+      });
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && $("deleteOverlay").style.display === "flex") closeDeleteModal();
+      });
 
       // Title -> slug (keeps updating until you manually touch slug)
       $("title").addEventListener("input", () => {
@@ -1082,25 +1091,25 @@ window.addEventListener("keydown", (e) => {
     </div>
   </div>
 
-<!-- Custom Delete Modal -->
-<div id="deleteOverlay" class="modal-overlay" aria-hidden="true" inert>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
-    <div class="modal-head">
-      <div id="deleteTitle" class="modal-title">Delete product</div>
-      <button id="deleteCloseBtn" class="modal-close" type="button" aria-label="Close">✕</button>
-    </div>
-    <div class="modal-body">
-      This will permanently delete <b id="deleteTarget">this product</b> from the database.
-      <div class="small" style="margin-top:8px; color:#888;">
-        Tip: if you only want to hide it from the public site, edit it and set <b>Active=false</b>.
+  <!-- Custom Delete Modal -->
+  <div id="deleteOverlay" class="modal-overlay" aria-hidden="true" inert>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+      <div class="modal-head">
+        <div id="deleteTitle" class="modal-title">Delete product</div>
+        <button id="deleteCloseBtn" class="modal-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        This will permanently delete <b id="deleteTarget">this product</b> from the database.
+        <div class="small" style="margin-top:8px; color:#888;">
+          Tip: if you only want to hide it from the public site, edit it and set <b>Active=false</b>.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="deleteCancelBtn" class="ghost" type="button">Cancel</button>
+        <button id="deleteConfirmBtn" class="danger" type="button">Delete</button>
       </div>
     </div>
-    <div class="modal-actions">
-      <button id="deleteCancelBtn" class="ghost" type="button">Cancel</button>
-      <button id="deleteConfirmBtn" class="danger" type="button">Delete</button>
-    </div>
   </div>
-</div>
 
 </body>
 
