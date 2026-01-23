@@ -738,8 +738,10 @@
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
 
-      // When editing an existing product, consider slug as "manual"
-      slugManuallyEdited = true;
+      const auto = slugify(data.title || "");
+      const existing = (data.slug || "").trim();
+
+      slugManuallyEdited = !!existing && existing !== auto;
 
       renderPreview(data.image_url || "");
       setStatus("Editing: " + (data.title || data.id), "ok");
@@ -914,7 +916,7 @@
           }
         });
       });
-      
+
       // Delete modal wiring
       $("deleteCancelBtn").onclick = closeDeleteModal;
       $("deleteConfirmBtn").onclick = confirmDeleteModal;
