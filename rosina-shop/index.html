@@ -81,8 +81,11 @@
             font-size: 14px;
             transition: all 0.3s ease;
             text-decoration: none;
-            display: inline-block;
             z-index: 100;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+
         }
 
         .back-button:hover {
@@ -461,18 +464,35 @@
             padding: 40px;
             color: #888;
         }
-    
-
-    @media (max-width: 480px){
-      body{ padding: 40px 14px 20px !important; }
-      .background-text{ font-size: 72px !important; letter-spacing: 5px !important; }
-      .back-button{ padding: 10px 16px !important; font-size: 13px !important; }
-      .cart-button{ padding: 10px 16px !important; font-size: 14px !important; }
-    }
 
 
-        .sub{ color:#888; font-size:16px; }
-</style>
+        @media (max-width: 480px) {
+            body {
+                padding: 40px 14px 20px !important;
+            }
+
+            .background-text {
+                font-size: 72px !important;
+                letter-spacing: 5px !important;
+            }
+
+            .back-button {
+                padding: 10px 16px !important;
+                font-size: 13px !important;
+            }
+
+            .cart-button {
+                padding: 10px 16px !important;
+                font-size: 14px !important;
+            }
+        }
+
+
+        .sub {
+            color: #888;
+            font-size: 16px;
+        }
+    </style>
 </head>
 
 <body>
@@ -502,7 +522,7 @@
             </div>
 
             <div id="cartItems"></div>
-<div class="cart-total" id="cartTotal"></div>
+            <div class="cart-total" id="cartTotal"></div>
             <a href="checkout.html" class="checkout-link">Go to Checkout</a>
         </div>
     </div>
