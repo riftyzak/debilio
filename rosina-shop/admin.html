@@ -365,11 +365,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>  // Use the SAME project credentials you use on your storefront.
-  const SUPABASE_URL = "https://euqvwswzbowbxweufaet.sb.co";
+  const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
   const BUCKET = "product-images";
-  const sb = window.sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
 
   let slugManuallyEdited = false;
@@ -439,7 +439,7 @@ const $ = (id) => document.getElementById(id);
 
   async function loadProducts(){
     setStatus("Loading products…");
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from("products")
       .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
       .order("created_at", { ascending:false });
