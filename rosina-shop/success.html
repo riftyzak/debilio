@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Success • Rosina Shop</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body{
+      font-family:'Georama', sans-serif;
+      background:#000;
+      color:#fff;
+      min-height:100vh;
+      padding:90px 20px 30px;
+      overflow-x:hidden;
+      position:relative;
+    }
+
+    .background-text{
+      position:fixed; top:0; left:0;
+      width:320%; height:320%;
+      font-size:120px; font-weight:bold;
+      color:rgba(255,255,255,0.08);
+      line-height:1.1; letter-spacing:8px;
+      overflow:hidden; z-index:0;
+      pointer-events:none;
+      animation:scroll-diagonal 50s linear infinite;
+      font-family:'Courier New', monospace;
+    }
+    .background-text div{ white-space:nowrap; }
+    .background-text div:nth-child(even){ padding-left:150px; }
+
+    @keyframes scroll-diagonal{
+      0%{ transform:translate3d(0,0,0); }
+      100%{ transform:translate3d(-33.333%, -33.333%, 0); }
+    }
+
+    @keyframes gradient-shift{
+      0%,100%{ background-position:0% center; }
+      50%{ background-position:100% center; }
+    }
+
+    .container{
+      position:relative; z-index:1;
+      max-width:900px;
+      margin:0 auto;
+      text-align:center;
+    }
+
+    .title{
+      font-size:48px;
+      font-weight:700;
+      margin-bottom:10px;
+      background: linear-gradient(90deg, #fff, #4a90e2, #357abd, #fff);
+      background-size:200% auto;
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      animation:gradient-shift 3s ease infinite;
+    }
+
+    .sub{ color:#888; margin-bottom:26px; }
+
+    .card{
+      background:rgba(20,20,20,0.95);
+      border:2px solid #333;
+      border-radius:14px;
+      padding:22px;
+      text-align:left;
+    }
+
+    .row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 0;
+      border-bottom:1px solid #222;
+      flex-wrap:wrap;
+    }
+    .row:last-child{ border-bottom:none; }
+
+    .k{ color:#888; }
+    .v{ font-weight:700; word-break:break-all; }
+
+    .btn{
+      margin-top:18px;
+      width:100%;
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      border:none;
+      color:#fff;
+      padding:14px;
+      border-radius:10px;
+      font-size:15px;
+      font-weight:700;
+      cursor:pointer;
+      transition: all 0.3s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      text-decoration:none;
+    }
+    .btn:hover{ transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); }
+
+    .muted{ margin-top:12px; color:#888; font-size:12px; line-height:1.6; }
+
+    @media (max-width: 480px){
+      body{ padding:80px 14px 20px; }
+      .background-text{ font-size:72px; letter-spacing:5px; }
+      .title{ font-size:38px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="background-text" id="bgText"></div>
+
+  <div class="container">
+    <div class="title">Order successful</div>
+    <div class="sub">Thanks — your cart was cleared.</div>
+
+    <div class="card">
+      <div class="row">
+        <div class="k">Provider</div>
+        <div class="v" id="provider">—</div>
+      </div>
+      <div class="row">
+        <div class="k">Session / Charge ID</div>
+        <div class="v" id="sid">—</div>
+      </div>
+      <div class="row">
+        <div class="k">Time</div>
+        <div class="v" id="time">—</div>
+      </div>
+
+      <a class="btn" href="/rosina-shop/"><i class="fas fa-arrow-left"></i> Back to shop</a>
+      <div class="muted">
+        If you paid with crypto, confirmation can take a moment depending on the network. If anything looks wrong, contact support.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Background
+    const bgText = document.getElementById('bgText');
+    const text = 'I LOVE RADEK NEVARIL ';
+    let html = '';
+    for (let i = 0; i < 80; i++) {
+      let lineText = '';
+      for (let j = 0; j < 8; j++) lineText += text;
+      html += `<div>${lineText}</div>`;
+    }
+    bgText.innerHTML = html;
+
+    // Clear cart on success
+    const CART_KEY = "rosina_cart_v1";
+    const PROMO_KEY = "rosina_promo_v1";
+    try { localStorage.removeItem(CART_KEY); } catch (_) {}
+    try { localStorage.removeItem(PROMO_KEY); } catch (_) {}
+
+    // Show ids if present
+    const sp = new URLSearchParams(window.location.search);
+    const sessionId = sp.get("session_id") || sp.get("charge_id") || sp.get("id") || "";
+    document.getElementById("sid").textContent = sessionId || "—";
+    document.getElementById("provider").textContent = (sessionId && sessionId.startsWith("cs_")) ? "Stripe" : "Stripe / Coinbase";
+    document.getElementById("time").textContent = new Date().toLocaleString();
+  </script>
+</body>
+</html>

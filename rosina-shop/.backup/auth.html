@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Auth Callback</title>
+  <style>
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+      color:#fff;
+      font-family:'Courier New', monospace;
+      padding:20px;
+    }
+    .card{
+      width:min(720px, 100%);
+      background:rgba(20,20,20,0.95);
+      border:2px solid #333;
+      border-radius:12px;
+      padding:18px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    }
+    h1{
+      margin:0 0 10px 0;
+      font-size:22px;
+      background:linear-gradient(90deg, #fff, #667eea, #764ba2, #fff);
+      background-size:200% auto;
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      animation:shift 3s ease infinite;
+    }
+    @keyframes shift{
+      0%,100%{ background-position:0% center; }
+      50%{ background-position:100% center; }
+    }
+    .muted{ color:#aaa; font-size:13px; line-height:1.5; }
+    .row{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
+    a,button{
+      border:2px solid #333;
+      background:rgba(0,0,0,0.5);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      font-family:'Courier New', monospace;
+      font-size:13px;
+      text-decoration:none;
+    }
+    a:hover,button:hover{ border-color:#667eea; }
+    .ok{ color:#2ecc71; }
+    .err{ color:#ff4757; }
+    code{ color:#bbb; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>auth callback</h1>
+    <div id="msg" class="muted">Finishing sign-in…</div>
+    <div class="row">
+      <a id="goAdmin" href="/rosina-shop/admin">Go to Admin</a>
+      <a href="/rosina-shop/">Go to Shop</a>
+    </div>
+    <div class="muted" style="margin-top:10px">
+      If you got here from an email confirmation link, this page completes the session in your browser.
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    // Use the SAME values as in your admin.html / storefront
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const msg = document.getElementById("msg");
+
+    function set(text, cls="") {
+      msg.className = "muted " + cls;
+      msg.textContent = text;
+    }
+
+    async function run() {
+      try {
+        // If Supabase returned tokens in the URL hash, this will store the session.
+        // In supabase-js v2, getSession() will reflect the stored session after the callback.
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) {
+          set("Auth error: " + error.message, "err");
+          return;
+        }
+
+        if (!data.session) {
+          // Some flows rely on code exchange; this handles it if present
+          // (No harm if it isn't present)
+          try {
+            await supabase.auth.exchangeCodeForSession(window.location.href);
+          } catch (_) {}
+        }
+
+        const { data: after } = await supabase.auth.getSession();
+
+        if (after.session) {
+          set("Signed in as " + after.session.user.email + " ✅", "ok");
+          // Auto-forward to admin after a short moment
+          setTimeout(() => {
+            window.location.href = "/rosina-shop/admin.html";
+          }, 900);
+        } else {
+          set("No active session found. If you were confirming email, try opening the link again.", "err");
+        }
+      } catch (e) {
+        set("Unexpected error: " + (e?.message || String(e)), "err");
+      }
+    }
+
+    run();
+  </script>
+</body>
+</html>
