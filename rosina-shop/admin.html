@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Admin</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
-
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -16,7 +14,7 @@
     * { margin:0; padding:0; box-sizing:border-box; }
 
     body{
-      font-family:'Georama', sans-serif;
+      font-family:'Courier New', monospace;
       background:#000;
       color:#fff;
       min-height:100vh;
@@ -60,7 +58,7 @@
       padding:10px 18px;
       border-radius:8px;
       cursor:pointer;
-      font-family:'Georama', sans-serif;
+      font-family:'Courier New', monospace;
       font-size:13px;
       transition:all 0.3s ease;
       text-decoration:none;
@@ -181,7 +179,7 @@
       color:#fff;
       padding:12px 14px;
       border-radius:8px;
-      font-family:'Georama', sans-serif;
+      font-family:'Courier New', monospace;
       font-size:14px;
       transition:border-color 0.3s ease;
       outline:none;
@@ -203,7 +201,7 @@
       padding:10px 14px;
       border-radius:8px;
       cursor:pointer;
-      font-family:'Georama', sans-serif;
+      font-family:'Courier New', monospace;
       font-size:13px;
       transition:all 0.2s ease;
       -webkit-tap-highlight-color:transparent;
@@ -358,17 +356,15 @@
     }
   </style>
 
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-  // Use the SAME project credentials you use on your storefront.
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+// Use the SAME project credentials you use on your storefront.
   const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
   const BUCKET = "product-images";
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  const $ = (id) => document.getElementById(id);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (id) => document.getElementById(id);
 
   let slugManuallyEdited = false;
 
@@ -401,7 +397,7 @@
   }
 
   async function refreshUI(){
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
 
     if (!session){
       $("authCard").style.display = "block";
@@ -422,7 +418,7 @@
     const email = $("email").value.trim();
     const password = $("pass").value;
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) return setStatus("Login error: " + error.message, "error");
 
     setStatus("Logged in ✅", "ok");
@@ -430,7 +426,7 @@
   }
 
   async function signOut(){
-    await supabase.auth.signOut();
+    await sb.auth.signOut();
     setStatus("Logged out.");
     await refreshUI();
   }
@@ -546,13 +542,13 @@
     const name = `${crypto.randomUUID()}.${ext}`;
     const path = `products/${name}`;
 
-    const { error: upErr } = await supabase.storage
+    const { error: upErr } = await sb.storage
       .from(BUCKET)
       .upload(path, file, { upsert:false, contentType:file.type });
 
     if (upErr) throw upErr;
 
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
     return pub?.publicUrl || null;
   }
 
@@ -582,8 +578,8 @@
       setStatus("Saving…");
 
       const { error } = id
-        ? await supabase.from("products").update(payload).eq("id", id)
-        : await supabase.from("products").insert(payload);
+        ? await sb.from("products").update(payload).eq("id", id)
+        : await sb.from("products").insert(payload);
 
       if (error) return setStatus("Save error: " + error.message, "error");
 
@@ -599,7 +595,7 @@
     if (!confirm("Delete this product?")) return;
 
     setStatus("Deleting…");
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    const { error } = await sb.from("products").delete().eq("id", id);
     if (error) return setStatus("Delete error: " + error.message, "error");
 
     setStatus("Deleted ✅", "ok");
@@ -663,7 +659,7 @@
 
     await refreshUI();
   });
-</script>
+  </script>
 </head>
 
 <body>
