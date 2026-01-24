@@ -1,3 +1,8 @@
+(function(){
+  // Prevent double-loading
+  if (window.__rosinaCartLoaded) return;
+  window.__rosinaCartLoaded = true;
+
 const CART_KEY = "rosina_cart_v1";
 const PROMO_KEY = "rosina_promo_v1";
 
@@ -514,3 +519,10 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+  // Export key functions for inline onclick handlers
+  window.toggleCart = toggleCart;
+  window.applyOrRemovePromo = applyOrRemovePromo;
+  window.addToCart = addToCart;
+  window.buyNow = buyNow;
+})();

@@ -81,8 +81,11 @@
             font-size: 14px;
             transition: all 0.3s ease;
             text-decoration: none;
-            display: inline-block;
             z-index: 100;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+
         }
 
         .back-button:hover {
@@ -154,14 +157,16 @@
             text-align: center;
             padding: 12px 14px;
             border-radius: 10px;
-            background: #111;
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
             color: #fff;
             text-decoration: none;
             font-weight: 700;
+            transition: all 0.3s ease;
         }
 
         .checkout-link:hover {
-            opacity: .92;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
         }
 
 
@@ -459,6 +464,34 @@
             padding: 40px;
             color: #888;
         }
+
+
+        @media (max-width: 480px) {
+            body {
+                padding: 40px 14px 20px !important;
+            }
+
+            .background-text {
+                font-size: 72px !important;
+                letter-spacing: 5px !important;
+            }
+
+            .back-button {
+                padding: 10px 16px !important;
+                font-size: 13px !important;
+            }
+
+            .cart-button {
+                padding: 10px 16px !important;
+                font-size: 14px !important;
+            }
+        }
+
+
+        .sub {
+            color: #888;
+            font-size: 16px;
+        }
     </style>
 </head>
 
@@ -470,7 +503,7 @@
 
         <div class="header">
             <div class="title">Rosina Shop</div>
-            <p style="color: #888;">Premium Services & Products</p>
+            <div class="sub">Retired Pistolnik Store</div>
         </div>
 
         <button class="cart-button" onclick="toggleCart()">
@@ -489,15 +522,6 @@
             </div>
 
             <div id="cartItems"></div>
-
-            <div class="promo-section">
-                <div class="promo-input">
-                    <input type="text" id="promoCode" placeholder="Enter promo code">
-                    <button class="apply-promo" id="promoBtn" onclick="applyOrRemovePromo()">Apply</button>
-                </div>
-                <div class="promo-message" id="promoMessage"></div>
-            </div>
-
             <div class="cart-total" id="cartTotal"></div>
             <a href="checkout.html" class="checkout-link">Go to Checkout</a>
         </div>

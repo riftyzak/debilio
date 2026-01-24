@@ -1,9 +1,14 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@200;300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -11,456 +16,687 @@
   <link rel="manifest" href="/site.webmanifest">
 
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    body{
-      font-family:'Courier New', monospace;
-      background:#000;
-      color:#fff;
-      min-height:100vh;
-      padding:80px 15px 40px;
-      overflow-x:hidden;
-      position:relative;
+    body {
+      font-family: "Georama", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+      padding: 80px 15px 40px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
     }
 
     /* Background watermark text like your other pages :contentReference[oaicite:4]{index=4} */
-    .background-text{
-      position:fixed; top:0; left:0;
-      width:200%; height:200%;
-      font-size:60px; font-weight:bold;
-      color:rgba(255,255,255,0.08);
-      line-height:1.1; letter-spacing:4px;
-      overflow:hidden; z-index:0;
-      pointer-events:none;
-      animation:scroll-diagonal 40s linear infinite;
+    .background-text {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 200%;
+      font-size: 60px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.08);
+      line-height: 1.1;
+      letter-spacing: 4px;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+      animation: scroll-diagonal 40s linear infinite;
     }
-    .background-text div{ white-space:nowrap; }
-    .background-text div:nth-child(even){ padding-left:80px; }
 
-    @keyframes scroll-diagonal{
-      0%{ transform:translate(0,0); }
-      100%{ transform:translate(-50%,-50%); }
+    .background-text div {
+      white-space: nowrap;
     }
 
-    .container{
-      position:relative; z-index:1;
-      max-width:1200px;
-      margin:0 auto;
+    .background-text div:nth-child(even) {
+      padding-left: 80px;
+    }
+
+    @keyframes scroll-diagonal {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      100% {
+        transform: translate(-50%, -50%);
+      }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
     }
 
     /* Back button style like your other pages :contentReference[oaicite:5]{index=5} */
-    .back-button{
-      position:fixed;
-      top:15px; left:15px;
-      background:rgba(20,20,20,0.95);
-      border:2px solid #333;
-      color:#fff;
-      padding:10px 18px;
-      border-radius:8px;
-      cursor:pointer;
-      font-family:'Courier New', monospace;
-      font-size:13px;
-      transition:all 0.3s ease;
-      text-decoration:none;
-      display:inline-block;
-      z-index:10;
-      -webkit-tap-highlight-color:transparent;
-    }
-    .back-button:active{
-      transform:scale(0.95);
-      border-color:#667eea;
+    .back-button {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      background: rgba(20, 20, 20, 0.95);
+      border: 2px solid #333;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit, monospace;
+      font-size: 13px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      z-index: 10;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .topbar{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      align-items:flex-start;
-      margin-bottom:18px;
+    .back-button:active {
+      transform: scale(0.95);
+      border-color: #667eea;
+    }
+
+    .topbar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 18px;
     }
 
     /* Gradient animated title like your pages :contentReference[oaicite:6]{index=6} */
-    .title{
-      font-size:32px;
-      font-weight:bold;
-      margin-bottom:4px;
-      background:linear-gradient(90deg, #fff, #667eea, #764ba2, #fff);
-      background-size:200% auto;
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-      background-clip:text;
-      animation:gradient-shift 3s ease infinite;
-    }
-    @keyframes gradient-shift{
-      0%,100%{ background-position:0% center; }
-      50%{ background-position:100% center; }
+    .title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 4px;
+      background: linear-gradient(90deg, #fff, #667eea, #764ba2, #fff);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradient-shift 3s ease infinite;
     }
 
-    .subtitle{
-      color:#888;
-      font-size:13px;
-      line-height:1.5;
-    }
+    @keyframes gradient-shift {
 
-    .pill{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid #333;
-      background:rgba(20,20,20,0.75);
-      color:#aaa;
-      font-size:12px;
-    }
-
-    .statusline{
-      margin-top:10px;
-      color:#aaa;
-      font-size:12px;
-      min-height:18px;
-    }
-    .statusline.error{ color:#ff4757; }
-    .statusline.ok{ color:#2ecc71; }
-
-    .card{
-      background:rgba(20,20,20,0.95);
-      border:2px solid #333;
-      border-radius:12px;
-      padding:18px;
-      backdrop-filter:blur(10px);
-      box-shadow:0 8px 32px rgba(0,0,0,0.5);
-      transition:transform 0.3s ease, border-color 0.3s ease;
-      overflow:hidden;
-      margin-bottom:16px;
-    }
-
-    .card:hover{ border-color:#555; }
-
-    .section-title{
-      font-size:14px;
-      letter-spacing:1px;
-      text-transform:uppercase;
-      color:#888;
-      margin-bottom:12px;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-
-    .grid2{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-
-    .grid3{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-
-    label{
-      display:block;
-      color:#888;
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:1px;
-      margin-bottom:8px;
-    }
-
-    input, textarea, select{
-      width:100%;
-      background:rgba(0,0,0,0.5);
-      border:2px solid #333;
-      color:#fff;
-      padding:12px 14px;
-      border-radius:8px;
-      font-family:'Courier New', monospace;
-      font-size:14px;
-      transition:border-color 0.3s ease;
-      outline:none;
-    }
-    input:focus, textarea:focus, select:focus{ border-color:#667eea; }
-    textarea{ min-height:120px; resize:vertical; }
-
-    .row-actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      margin-top:12px;
-    }
-
-    button{
-      border:2px solid #333;
-      background:rgba(0,0,0,0.5);
-      color:#fff;
-      padding:10px 14px;
-      border-radius:8px;
-      cursor:pointer;
-      font-family:'Courier New', monospace;
-      font-size:13px;
-      transition:all 0.2s ease;
-      -webkit-tap-highlight-color:transparent;
-    }
-    button:hover{ border-color:#667eea; transform:translateY(-1px); }
-    button:active{ transform:translateY(0); }
-    button.primary{
-      background:linear-gradient(135deg,#667eea 0%, #764ba2 100%);
-      border:none;
-      font-weight:bold;
-      letter-spacing:1px;
-      text-transform:uppercase;
-      padding:12px 16px;
-    }
-    button.primary:hover{ box-shadow:0 8px 20px rgba(102,126,234,0.25); }
-    button.danger{
-      border-color:#ff4757;
-      color:#ff4757;
-    }
-    button.danger:hover{
-      border-color:#ff6b81;
-      color:#ff6b81;
-    }
-    button.ghost{
-      border-color:#333;
-      color:#aaa;
-    }
-
-    .preview{
-      width:100%;
-      height:220px;
-      border-radius:10px;
-      border:2px solid #333;
-      background:#111;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .preview img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      transition:transform 0.3s ease;
-    }
-    .preview:hover img{ transform:scale(1.03); }
-
-    .table-wrap{
-      overflow:auto;
-      border-radius:12px;
-      border:2px solid #333;
-      background:rgba(0,0,0,0.35);
-    }
-
-    table{
-      width:100%;
-      border-collapse:collapse;
-      min-width:860px;
-    }
-    th, td{
-      padding:12px;
-      border-bottom:1px solid #2a2a2a;
-      text-align:left;
-      vertical-align:top;
-      font-size:13px;
-    }
-    th{
-      color:#888;
-      text-transform:uppercase;
-      letter-spacing:1px;
-      font-size:11px;
-      background:rgba(0,0,0,0.35);
-      position:sticky;
-      top:0;
-      z-index:2;
-    }
-    .muted{ color:#888; font-size:12px; }
-    .small{ font-size:12px; color:#aaa; }
-    .tag{
-      display:inline-block;
-      padding:4px 8px;
-      border-radius:999px;
-      border:1px solid #333;
-      color:#aaa;
-      font-size:11px;
-      background:rgba(20,20,20,0.6);
-    }
-    .tag.on{ border-color:#2ecc71; color:#2ecc71; }
-    .tag.off{ border-color:#888; color:#888; }
-
-    .actions-cell{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-
-    .thumb{
-      width:64px; height:64px;
-      border-radius:10px;
-      border:2px solid #333;
-      overflow:hidden;
-      background:#111;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .thumb img{ width:100%; height:100%; object-fit:cover; }
-
-    .login-grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-
-    @media (min-width: 768px){
-      body{ padding:40px 20px; }
-      .background-text{ font-size:120px; letter-spacing:8px; }
-      .background-text div:nth-child(even){ padding-left:150px; }
-
-      .back-button{
-        top:20px; left:20px;
-        padding:12px 24px;
-        font-size:14px;
-      }
-      .back-button:hover{
-        border-color:#667eea;
-        transform:translateX(-5px);
-      }
-      .back-button:active{ transform:scale(1) translateX(-5px); }
-
-      .topbar{
-        flex-direction:row;
-        align-items:center;
-        justify-content:space-between;
-        margin-bottom:22px;
+      0%,
+      100% {
+        background-position: 0% center;
       }
 
-      .title{ font-size:44px; }
-
-      .grid2{ grid-template-columns: 1fr 1fr; }
-      .grid3{ grid-template-columns: 1fr 1fr 1fr; }
-      .login-grid{ grid-template-columns: 1fr 1fr; }
-
-      .card{ padding:22px; }
+      50% {
+        background-position: 100% center;
+      }
     }
 
-    @media (max-width: 360px){
-      .title{ font-size:26px; }
-      input, textarea, select{ font-size:13px; padding:10px 12px; }
-      button{ font-size:12px; padding:9px 12px; }
-      .preview{ height:180px; }
+    .subtitle {
+      color: #888;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .pill {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #333;
+      background: rgba(20, 20, 20, 0.75);
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    .statusline {
+      margin-top: 10px;
+      color: #aaa;
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    .statusline.error {
+      color: #ff4757;
+    }
+
+    .statusline.ok {
+      color: #2ecc71;
+    }
+
+    .card {
+      background: rgba(20, 20, 20, 0.95);
+      border: 2px solid #333;
+      border-radius: 12px;
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .card:hover {
+      border-color: #555;
+    }
+
+    .section-title {
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .grid3 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      color: #888;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #333;
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-family: inherit, monospace;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #667eea;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 2px solid #333;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit, monospace;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:hover {
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.primary {
+      /* Make Login/Save match the other buttons */
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #333;
+      font-weight: inherit;
+      letter-spacing: 0;
+      text-transform: none;
+      padding: 10px 14px;
+    }
+
+    button.primary:hover {
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
+
+    button.danger {
+      /* No red outline until hover (like blue hover on normal buttons) */
+      border-color: #333;
+      color: #ff4757;
+    }
+
+    button.danger:hover {
+      border-color: #ff6b81;
+      color: #ff6b81;
+    }
+
+    button.ghost {
+      border-color: #333;
+      color: #aaa;
+    }
+
+    .preview {
+      width: 100%;
+      height: 220px;
+      border-radius: 10px;
+      border: 2px solid #333;
+      background: #111;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .preview:hover img {
+      transform: scale(1.03);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: 12px;
+      border: 2px solid #333;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th,
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #2a2a2a;
+      text-align: left;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.35);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .muted {
+      color: #888;
+      font-size: 12px;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #333;
+      color: #aaa;
+      font-size: 11px;
+      background: rgba(20, 20, 20, 0.6);
+    }
+
+    .tag.on {
+      border-color: #2ecc71;
+      color: #2ecc71;
+    }
+
+    .tag.off {
+      border-color: #888;
+      color: #888;
+    }
+
+    .actions-cell {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      border: 2px solid #333;
+      overflow: hidden;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .login-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    @media (min-width: 768px) {
+      body {
+        padding: 40px 20px;
+      }
+
+      .background-text {
+        font-size: 120px;
+        letter-spacing: 8px;
+      }
+
+      .background-text div:nth-child(even) {
+        padding-left: 150px;
+      }
+
+      .back-button {
+        top: 20px;
+        left: 20px;
+        padding: 12px 24px;
+        font-size: 14px;
+      }
+
+      .back-button:hover {
+        border-color: #667eea;
+        transform: translateX(-5px);
+      }
+
+      .back-button:active {
+        transform: scale(1) translateX(-5px);
+      }
+
+      .topbar {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 22px;
+      }
+
+      .title {
+        font-size: 44px;
+      }
+
+      .grid2 {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .grid3 {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .login-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .card {
+        padding: 22px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .title {
+        font-size: 26px;
+      }
+
+      input,
+      textarea,
+      select {
+        font-size: 13px;
+        padding: 10px 12px;
+      }
+
+      button {
+        font-size: 12px;
+        padding: 9px 12px;
+      }
+
+      .preview {
+        height: 180px;
+      }
+    }
+
+    .background-text,
+    .bg-text,
+    .bg-letters,
+    .bg-line,
+    .bg-word {
+      font-family: "Courier New", Courier, monospace !important;
+    }
+
+    /* Custom delete modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 16px;
+    }
+
+    .modal {
+      width: min(520px, 100%);
+      background: rgba(20, 20, 20, 0.98);
+      border: 2px solid #333;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    .modal-head {
+      padding: 16px 18px 10px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .modal-title {
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .modal-body {
+      padding: 14px 18px 6px;
+      color: #bbb;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .modal-actions {
+      padding: 12px 18px 18px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .modal-close {
+      border: 2px solid #333;
+      background: rgba(0, 0, 0, 0.35);
+      color: #aaa;
+      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      border-color: #667eea;
+      transform: translateY(-1px);
     }
   </style>
 
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  // Use the SAME project credentials you use on your storefront.
-  const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
+  <script>  // Use the SAME project credentials you use on your storefront.
+    const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
-  const BUCKET = "product-images";
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const BUCKET = "product-images";
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const $ = (id) => document.getElementById(id);
 
-  const $ = (id) => document.getElementById(id);
+    let slugManuallyEdited = false;
 
-  let slugManuallyEdited = false;
+    let pendingDeleteId = null;
+    let pendingDeleteTitle = "";
+    let lastFocusEl = null;
 
-  function setStatus(msg, kind=""){
-    const s = $("status");
-    s.textContent = msg || "";
-    s.className = "statusline" + (kind ? (" " + kind) : "");
-  }
 
-  function slugify(s){
-    return String(s || "")
-      .trim().toLowerCase()
-      .replace(/['"]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  }
-
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
-  function money(n){
-    const v = Number(n || 0);
-    return "€" + (Number.isFinite(v) ? v.toFixed(2) : "0.00");
-  }
-
-  async function refreshUI(){
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session){
-      $("authCard").style.display = "block";
-      $("app").style.display = "none";
-      $("me").textContent = "not logged in";
-      return;
+    function setStatus(msg, kind = "") {
+      const s = $("status");
+      s.textContent = msg || "";
+      s.className = "statusline" + (kind ? (" " + kind) : "");
     }
 
-    $("authCard").style.display = "none";
-    $("app").style.display = "block";
-    $("me").textContent = session.user.email;
-
-    await loadProducts();
-  }
-
-  async function signIn(){
-    setStatus("Signing in…");
-    const email = $("email").value.trim();
-    const password = $("pass").value;
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return setStatus("Login error: " + error.message, "error");
-
-    setStatus("Logged in ✅", "ok");
-    await refreshUI();
-  }
-
-  async function signOut(){
-    await supabase.auth.signOut();
-    setStatus("Logged out.");
-    await refreshUI();
-  }
-
-  async function loadProducts(){
-    setStatus("Loading products…");
-    const { data, error } = await supabase
-      .from("products")
-      .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
-      .order("created_at", { ascending:false });
-
-    if (error){
-      setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
-      $("tableBody").innerHTML = "";
-      return;
+    function slugify(s) {
+      return String(s || "")
+        .trim().toLowerCase()
+        .replace(/['"]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
     }
 
-    $("tableBody").innerHTML = (data || []).map(p => {
-      const activeTag = p.is_active
-        ? `<span class="tag on">active</span>`
-        : `<span class="tag off">inactive</span>`;
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
 
-      const thumb = p.image_url
-        ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
-        : `<div class="thumb"><span class="muted">—</span></div>`;
+    function money(n) {
+      const v = Number(n || 0);
+      return "€" + (Number.isFinite(v) ? v.toFixed(2) : "0.00");
+    }
 
-      return `
+    async function refreshUI() {
+      const { data: { session } } = await sb.auth.getSession();
+
+      if (!session) {
+        $("authCard").style.display = "block";
+        $("app").style.display = "none";
+        $("me").textContent = "not logged in";
+        $("logoutBtn").style.display = "none";
+        return;
+      }
+
+      $("authCard").style.display = "none";
+      $("app").style.display = "block";
+      $("me").textContent = session.user.email;
+
+      await loadProducts();
+    }
+
+    async function signIn() {
+      setStatus("Signing in…");
+      const email = $("email").value.trim();
+      const password = $("pass").value;
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return setStatus("Login error: " + error.message, "error");
+
+      setStatus("Logged in ✅", "ok");
+      await refreshUI();
+    }
+
+    async function signOut() {
+      await sb.auth.signOut();
+      setStatus("Logged out.");
+      await refreshUI();
+    }
+
+    async function loadProducts() {
+      setStatus("Loading products…");
+      const { data, error } = await sb
+        .from("products")
+        .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
+        $("tableBody").innerHTML = "";
+        return;
+      }
+
+      $("tableBody").innerHTML = (data || []).map(p => {
+        const activeTag = p.is_active
+          ? `<span class="tag on">active</span>`
+          : `<span class="tag off">inactive</span>`;
+
+        const thumb = p.image_url
+          ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
+          : `<div class="thumb"><span class="muted">—</span></div>`;
+
+        return `
         <tr>
           <td>
             <div style="font-weight:bold">${escapeHtml(p.title || "")}</div>
             <div class="muted">${escapeHtml(p.slug || "")}</div>
-            <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description||"").length>90?"…":""}</div>
+            <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
           </td>
           <td>${money(p.price_eur)}</td>
           <td>${activeTag}</td>
@@ -468,200 +704,263 @@
           <td>
             <div class="actions-cell">
               <button data-edit="${p.id}">Edit</button>
-              <button class="danger" data-del="${p.id}">Delete</button>
+              <button class="danger" data-del="${p.id}" data-title="${escapeHtml(p.title || "")}">Delete</button>
             </div>
           </td>
         </tr>
       `;
-    }).join("");
+      }).join("");
 
-    document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editProduct(b.dataset.edit));
-    document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => deleteProduct(b.dataset.del));
+      document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editProduct(b.dataset.edit));
+      document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => openDeleteModal(b.dataset.del, b.dataset.title));
 
-    setStatus("");
-  }
-
-  async function editProduct(id){
-    setStatus("Loading product…");
-    const { data, error } = await supabase
-      .from("products")
-      .select("id,title,slug,price_eur,description,image_url,is_active")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (error || !data){
-      return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
+      setStatus("");
     }
 
-    $("id").value = data.id;
-    $("title").value = data.title || "";
-    $("slug").value = data.slug || "";
-    $("price_eur").value = data.price_eur ?? "";
-    $("is_active").value = String(!!data.is_active);
-    $("description").value = data.description || "";
-    $("image_url").value = data.image_url || "";
-    $("image_file").value = "";
+    async function editProduct(id) {
+      setStatus("Loading product…");
+      const { data, error } = await sb
+        .from("products")
+        .select("id,title,slug,price_eur,description,image_url,is_active")
+        .eq("id", id)
+        .maybeSingle();
 
-    // When editing an existing product, consider slug as "manual"
-    slugManuallyEdited = true;
-
-    renderPreview(data.image_url || "");
-    setStatus("Editing: " + (data.title || data.id), "ok");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function clearForm(){
-    $("id").value = "";
-    $("title").value = "";
-    $("slug").value = "";
-    $("price_eur").value = "";
-    $("is_active").value = "true";
-    $("description").value = "";
-    $("image_url").value = "";
-    $("image_file").value = "";
-    renderPreview("");
-
-    // New product => slug auto-follows title unless user edits slug
-    slugManuallyEdited = false;
-
-    setStatus("");
-  }
-
-  function renderPreview(url){
-    const u = (url || "").trim();
-    $("preview").innerHTML = u
-      ? `<img src="${u}" alt="preview">`
-      : `<span class="muted">no image</span>`;
-  }
-
-  async function uploadImageIfAny(){
-    const file = $("image_file").files?.[0];
-    if (!file) return null;
-
-    setStatus("Uploading image…");
-
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const name = `${crypto.randomUUID()}.${ext}`;
-    const path = `products/${name}`;
-
-    const { error: upErr } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { upsert:false, contentType:file.type });
-
-    if (upErr) throw upErr;
-
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return pub?.publicUrl || null;
-  }
-
-  async function saveProduct(e){
-    e.preventDefault();
-
-    const id = $("id").value.trim() || null;
-    const title = $("title").value.trim();
-
-    // If user never manually edited slug, keep it synced to title
-    const currentSlug = $("slug").value.trim();
-    const slug = slugManuallyEdited ? currentSlug : (currentSlug || slugify(title));
-
-    const price_eur = Number($("price_eur").value || 0);
-    const is_active = $("is_active").value === "true";
-    const description = $("description").value || "";
-
-    if (!title) return setStatus("Title is required.", "error");
-    if (!slug) return setStatus("Slug is required.", "error");
-
-    try{
-      const uploadedUrl = await uploadImageIfAny();
-      const image_url = uploadedUrl || ($("image_url").value.trim() || null);
-
-      const payload = { title, slug, price_eur, is_active, description, image_url };
-
-      setStatus("Saving…");
-
-      const { error } = id
-        ? await supabase.from("products").update(payload).eq("id", id)
-        : await supabase.from("products").insert(payload);
-
-      if (error) return setStatus("Save error: " + error.message, "error");
-
-      setStatus("Saved ✅", "ok");
-      clearForm();
-      await loadProducts();
-    } catch (err){
-      setStatus("Upload error: " + (err?.message || String(err)), "error");
-    }
-  }
-
-  async function deleteProduct(id){
-    if (!confirm("Delete this product?")) return;
-
-    setStatus("Deleting…");
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) return setStatus("Delete error: " + error.message, "error");
-
-    setStatus("Deleted ✅", "ok");
-    await loadProducts();
-  }
-
-  function initBgText(){
-    const bgText = $("bgText");
-    const text = "I LOVE RADEK NEVARIL ";
-    let html = "";
-
-    const isMobile = window.innerWidth < 768;
-    const rows = isMobile ? 50 : 100;
-    const cols = isMobile ? 5 : 10;
-
-    for (let i = 0; i < rows; i++){
-      let line = "";
-      for (let j = 0; j < cols; j++) line += text;
-      html += `<div>${line}</div>`;
-    }
-    bgText.innerHTML = html;
-  }
-
-  window.addEventListener("DOMContentLoaded", async () => {
-    initBgText();
-
-    $("loginBtn").onclick = signIn;
-    $("logoutBtn").onclick = signOut;
-    $("productForm").onsubmit = saveProduct;
-    $("clearBtn").onclick = clearForm;
-
-    // Title -> slug (keeps updating until you manually touch slug)
-    $("title").addEventListener("input", () => {
-      if (slugManuallyEdited) return;
-      $("slug").value = slugify($("title").value);
-    });
-
-    // If user types into slug, stop auto-sync
-    $("slug").addEventListener("input", () => {
-      slugManuallyEdited = $("slug").value.trim().length > 0;
-    });
-
-    // If user clears slug fully, resume auto-sync
-    $("slug").addEventListener("blur", () => {
-      if (!$("slug").value.trim()){
-        slugManuallyEdited = false;
-        $("slug").value = slugify($("title").value);
+      if (error || !data) {
+        return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
       }
-    });
 
-    $("image_url").addEventListener("input", () => renderPreview($("image_url").value));
-    $("image_file").addEventListener("change", () => {
+      $("id").value = data.id;
+      $("title").value = data.title || "";
+      $("slug").value = data.slug || "";
+      $("price_eur").value = data.price_eur ?? "";
+      $("is_active").value = String(!!data.is_active);
+      $("description").value = data.description || "";
+      $("image_url").value = data.image_url || "";
+      $("image_file").value = "";
+
+      const auto = slugify(data.title || "");
+      const existing = (data.slug || "").trim();
+
+      slugManuallyEdited = !!existing && existing !== auto;
+
+      renderPreview(data.image_url || "");
+      setStatus("Editing: " + (data.title || data.id), "ok");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function clearForm() {
+      $("id").value = "";
+      $("title").value = "";
+      $("slug").value = "";
+      $("price_eur").value = "";
+      $("is_active").value = "true";
+      $("description").value = "";
+      $("image_url").value = "";
+      $("image_file").value = "";
+      renderPreview("");
+
+      // New product => slug auto-follows title unless user edits slug
+      slugManuallyEdited = false;
+
+      setStatus("");
+    }
+
+    function renderPreview(url) {
+      const u = (url || "").trim();
+      $("preview").innerHTML = u
+        ? `<img src="${u}" alt="preview">`
+        : `<span class="muted">no image</span>`;
+    }
+
+
+    function openDeleteModal(id, title = "") {
+      if (!id) return;
+      lastFocusEl = document.activeElement;
+
+      pendingDeleteId = id;
+      pendingDeleteTitle = title || "";
+      const label = $("deleteTarget");
+      label.textContent = pendingDeleteTitle ? `“${pendingDeleteTitle}”` : "this product";
+
+      const overlay = $("deleteOverlay");
+      overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+      overlay.inert = false;
+
+      // Focus cancel for easy escape
+      $("deleteCancelBtn").focus();
+    }
+
+    function closeDeleteModal() {
+      const overlay = $("deleteOverlay");
+      overlay.style.display = "none";
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.inert = true;
+
+      pendingDeleteId = null;
+      pendingDeleteTitle = "";
+      if (lastFocusEl && typeof lastFocusEl.focus === "function") lastFocusEl.focus();
+      lastFocusEl = null;
+    }
+
+
+    async function confirmDeleteModal() {
+      if (!pendingDeleteId) return closeDeleteModal();
+      const id = pendingDeleteId;
+      closeDeleteModal();
+      await deleteProduct(id);
+    }
+
+
+    async function uploadImageIfAny() {
       const file = $("image_file").files?.[0];
-      if (!file) return;
-      const localUrl = URL.createObjectURL(file);
-      renderPreview(localUrl);
+      if (!file) return null;
+
+      setStatus("Uploading image…");
+
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const name = `${crypto.randomUUID()}.${ext}`;
+      const path = `products/${name}`;
+
+      const { error: upErr } = await sb.storage
+        .from(BUCKET)
+        .upload(path, file, { upsert: false, contentType: file.type });
+
+      if (upErr) throw upErr;
+
+      const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
+      return pub?.publicUrl || null;
+    }
+
+    async function saveProduct(e) {
+      e.preventDefault();
+
+      const id = $("id").value.trim() || null;
+      const title = $("title").value.trim();
+
+      // If user never manually edited slug, keep it synced to title
+      const currentSlug = $("slug").value.trim();
+      const slug = slugManuallyEdited ? currentSlug : (currentSlug || slugify(title));
+
+      const price_eur = Number($("price_eur").value || 0);
+      const is_active = $("is_active").value === "true";
+      const description = $("description").value || "";
+
+      if (!title) return setStatus("Title is required.", "error");
+      if (!slug) return setStatus("Slug is required.", "error");
+
+      try {
+        const uploadedUrl = await uploadImageIfAny();
+        const image_url = uploadedUrl || ($("image_url").value.trim() || null);
+
+        const payload = { title, slug, price_eur, is_active, description, image_url };
+
+        setStatus("Saving…");
+
+        const { error } = id
+          ? await sb.from("products").update(payload).eq("id", id)
+          : await sb.from("products").insert(payload);
+
+        if (error) return setStatus("Save error: " + error.message, "error");
+
+        setStatus("Saved ✅", "ok");
+        clearForm();
+        await loadProducts();
+      } catch (err) {
+        setStatus("Upload error: " + (err?.message || String(err)), "error");
+      }
+    }
+
+    async function deleteProduct(id) {
+
+      setStatus("Deleting…");
+      const { error } = await sb.from("products").delete().eq("id", id);
+      if (error) return setStatus("Delete error: " + error.message, "error");
+
+      setStatus("Deleted ✅", "ok");
+      await loadProducts();
+    }
+
+    function initBgText() {
+      const bgText = $("bgText");
+      const text = "I LOVE RADEK NEVARIL ";
+      let html = "";
+
+      const isMobile = window.innerWidth < 768;
+      const rows = isMobile ? 50 : 100;
+      const cols = isMobile ? 5 : 10;
+
+      for (let i = 0; i < rows; i++) {
+        let line = "";
+        for (let j = 0; j < cols; j++) line += text;
+        html += `<div>${line}</div>`;
+      }
+      bgText.innerHTML = html;
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      initBgText();
+
+      $("loginBtn").onclick = signIn;
+      $("logoutBtn").onclick = signOut;
+      $("productForm").onsubmit = saveProduct;
+      $("clearBtn").onclick = clearForm;
+
+      ["email", "pass"].forEach((id) => {
+        const el = $(id);
+        if (!el) return;
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            signIn();
+          }
+        });
+      });
+
+      // Delete modal wiring
+      $("deleteCancelBtn").onclick = closeDeleteModal;
+      $("deleteConfirmBtn").onclick = confirmDeleteModal;
+      $("deleteCloseBtn").onclick = closeDeleteModal;
+      $("deleteOverlay").addEventListener("click", (e) => {
+        if (e.target === $("deleteOverlay")) closeDeleteModal();
+      });
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && $("deleteOverlay").style.display === "flex") closeDeleteModal();
+      });
+
+      // Title -> slug (keeps updating until you manually touch slug)
+      $("title").addEventListener("input", () => {
+        if (slugManuallyEdited) return;
+        $("slug").value = slugify($("title").value);
+      });
+
+      // If user types into slug, stop auto-sync
+      $("slug").addEventListener("input", () => {
+        slugManuallyEdited = $("slug").value.trim().length > 0;
+      });
+
+      // If user clears slug fully, resume auto-sync
+      $("slug").addEventListener("blur", () => {
+        if (!$("slug").value.trim()) {
+          slugManuallyEdited = false;
+          $("slug").value = slugify($("title").value);
+        }
+      });
+
+      $("image_url").addEventListener("input", () => renderPreview($("image_url").value));
+      $("image_file").addEventListener("change", () => {
+        const file = $("image_file").files?.[0];
+        if (!file) return;
+        const localUrl = URL.createObjectURL(file);
+        renderPreview(localUrl);
+      });
+
+      // Start in "new product" mode
+      clearForm();
+
+      await refreshUI();
     });
-
-    // Start in "new product" mode
-    clearForm();
-
-    await refreshUI();
-  });
-</script>
+  </script>
 </head>
 
 <body>
@@ -787,10 +1086,33 @@
         </div>
 
         <div class="muted" style="margin-top:10px;">
-          If you only see active products on the public site, that’s correct — your storefront reads <b>is_active=true</b>.
+          If you only see active products on the public site, that’s correct — your storefront reads
+          <b>is_active=true</b>.
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Custom Delete Modal -->
+  <div id="deleteOverlay" class="modal-overlay" aria-hidden="true" inert>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+      <div class="modal-head">
+        <div id="deleteTitle" class="modal-title">Delete product</div>
+        <button id="deleteCloseBtn" class="modal-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        This will permanently delete <b id="deleteTarget">this product</b> from the database.
+        <div class="small" style="margin-top:8px; color:#888;">
+          Tip: if you only want to hide it from the public site, edit it and set <b>Active=false</b>.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="deleteCancelBtn" class="ghost" type="button">Cancel</button>
+        <button id="deleteConfirmBtn" class="danger" type="button">Delete</button>
+      </div>
+    </div>
+  </div>
+
 </body>
+
 </html>

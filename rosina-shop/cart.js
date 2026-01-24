@@ -321,8 +321,11 @@ function addToCart(productId, qty = 1) {
 }
 
 function buyNow(productId) {
-  addToCart(productId, 1);
-  toggleCart();
+  cart = [{ id: String(productId), qty: 1 }];
+  localStorage.setItem("rosina_cart_v1", JSON.stringify(cart));
+  updateCartBadge();
+
+  window.location.href = "/rosina-shop/checkout.html";
 }
 
 function renderPromoControls() {
