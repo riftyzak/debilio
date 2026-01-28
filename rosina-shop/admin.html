@@ -673,6 +673,7 @@
     let supportsDeliveryFields = true;
     let supportsVariantFields = true;
     let supportsKeyPrefix = true;
+    let licenseBasedEnabled = false;
 
     let pendingDeleteId = null;
     let pendingDeleteTitle = "";
@@ -709,7 +710,7 @@
 
     function setDeliverySupport(isSupported) {
       supportsDeliveryFields = isSupported;
-      const toggleIds = ["auto_deliver"];
+      const toggleIds = ["license_based"];
       toggleIds.forEach((id) => {
         const el = $(id);
         if (el) el.disabled = !isSupported;
@@ -717,8 +718,8 @@
       const note = $("deliverySupportNote");
       if (note) {
         note.textContent = isSupported
-          ? "Enable auto-delivery for products that should generate a key."
-          : "Add column auto_deliver to enable key delivery.";
+          ? "Enable license-based mode to issue keys automatically."
+          : "Add column auto_deliver to enable license-based products.";
       }
     }
 
@@ -741,8 +742,19 @@
       const note = $("variantSupportNote");
       if (note) {
         note.textContent = isSupported
-          ? "Fill in price to enable a duration option."
+          ? "Enable durations and set prices for each one."
           : "Create a product_variants table to enable duration-based pricing.";
+      }
+    }
+
+    function setLicenseBased(enabled) {
+      licenseBasedEnabled = enabled;
+      const licenseSection = $("licenseSection");
+      if (licenseSection) licenseSection.style.display = enabled ? "block" : "none";
+      if (!enabled) {
+        const keyPrefixInput = $("key_prefix");
+        if (keyPrefixInput) keyPrefixInput.value = "";
+        clearVariantsForm();
       }
     }
 
@@ -821,8 +833,8 @@
           : `<span class="tag off">inactive</span>`;
 
         const deliveryTag = p.auto_deliver
-          ? `<span class="tag on">auto-delivery</span>`
-          : `<span class="tag off">manual</span>`;
+          ? `<span class="tag on">license</span>`
+          : `<span class="tag off">no license</span>`;
 
         const thumb = p.image_url
           ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
@@ -899,8 +911,9 @@
       $("description").value = data.description || "";
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
-      $("auto_deliver").checked = Boolean(data.auto_deliver);
+      $("license_based").checked = Boolean(data.auto_deliver);
       $("key_prefix").value = data.key_prefix || "";
+      setLicenseBased(Boolean(data.auto_deliver));
 
       await loadVariants(id);
 
@@ -923,8 +936,9 @@
       $("description").value = "";
       $("image_url").value = "";
       $("image_file").value = "";
-      $("auto_deliver").checked = false;
+      $("license_based").checked = false;
       $("key_prefix").value = "";
+      setLicenseBased(false);
       clearVariantsForm();
       renderPreview("");
 
@@ -1014,7 +1028,7 @@
       const price_eur = Number($("price_eur").value || 0);
       const is_active = $("is_active").value === "true";
       const description = $("description").value || "";
-      const auto_deliver = $("auto_deliver").checked;
+      const auto_deliver = $("license_based").checked;
       const key_prefix = ($("key_prefix").value || "").trim();
 
       if (!title) return setStatus("Title is required.", "error");
@@ -1032,7 +1046,7 @@
           description,
           image_url,
           ...(supportsDeliveryFields ? { auto_deliver } : {}),
-          ...(supportsKeyPrefix ? { key_prefix: key_prefix || null } : {})
+          ...(supportsKeyPrefix ? { key_prefix: auto_deliver ? (key_prefix || null) : null } : {})
         };
 
         setStatus("Saving…");
@@ -1072,8 +1086,12 @@
         if (error) return setStatus("Save error: " + error.message, "error");
 
         if (supportsVariantFields && savedId) {
-          const variantError = await saveVariants(savedId);
-          if (variantError) return setStatus("Variant save error: " + variantError, "error");
+          if (!auto_deliver) {
+            await saveVariants(savedId, true);
+          } else {
+            const variantError = await saveVariants(savedId);
+            if (variantError) return setStatus("Variant save error: " + variantError, "error");
+          }
         }
 
         setStatus("Saved ✅", "ok");
@@ -1122,13 +1140,6 @@
               <label>Price (EUR)</label>
               <input id="variant_price_${days}" type="number" step="0.01" placeholder="0.00" />
             </div>
-            <div>
-              <label>Auto deliver</label>
-              <div class="checkbox-row">
-                <input id="variant_auto_${days}" type="checkbox" />
-                <span class="small">Generate key on purchase</span>
-              </div>
-            </div>
           </div>
         `)
         .join("");
@@ -1151,10 +1162,8 @@
       variantDurations().forEach((days) => {
         const enabledEl = $(`variant_enabled_${days}`);
         const priceEl = $(`variant_price_${days}`);
-        const autoEl = $(`variant_auto_${days}`);
         if (enabledEl) enabledEl.checked = false;
         if (priceEl) priceEl.value = "";
-        if (autoEl) autoEl.checked = false;
         if (priceEl) priceEl.disabled = true;
       });
     }
@@ -1182,18 +1191,28 @@
         const days = Number(variant.duration_days);
         const enabledEl = $(`variant_enabled_${days}`);
         const priceEl = $(`variant_price_${days}`);
-        const autoEl = $(`variant_auto_${days}`);
         if (enabledEl) enabledEl.checked = true;
         if (priceEl) {
           priceEl.value = variant.price_eur ?? "";
           priceEl.disabled = false;
         }
-        if (autoEl) autoEl.checked = Boolean(variant.auto_deliver);
       });
     }
 
-    async function saveVariants(productId) {
+    async function saveVariants(productId, forceClear = false) {
       let errorMessage = null;
+      if (forceClear) {
+        const { error } = await sb
+          .from("product_variants")
+          .delete()
+          .eq("product_id", productId);
+        if (error && String(error.message || "").includes("relation")) {
+          setVariantSupport(false);
+          return null;
+        }
+        if (error) return error.message;
+        return null;
+      }
       for (const days of variantDurations()) {
         const enabledEl = $(`variant_enabled_${days}`);
         const priceEl = $(`variant_price_${days}`);
@@ -1206,7 +1225,6 @@
         .map((days) => {
           const enabledEl = $(`variant_enabled_${days}`);
           const priceEl = $(`variant_price_${days}`);
-          const autoEl = $(`variant_auto_${days}`);
           const enabled = Boolean(enabledEl?.checked);
           const price = priceEl ? Number(priceEl.value || 0) : 0;
           if (!enabled || !priceEl || priceEl.value === "") return null;
@@ -1214,7 +1232,7 @@
             product_id: productId,
             duration_days: days,
             price_eur: price,
-            auto_deliver: Boolean(autoEl?.checked)
+            auto_deliver: true
           };
         })
         .filter(Boolean);
@@ -1340,6 +1358,13 @@
         });
       }
 
+      const licenseToggle = $("license_based");
+      if (licenseToggle) {
+        licenseToggle.addEventListener("change", () => {
+          setLicenseBased(licenseToggle.checked);
+        });
+      }
+
       $("image_url").addEventListener("input", () => renderPreview($("image_url").value));
       $("image_file").addEventListener("change", () => {
         const file = $("image_file").files?.[0];
@@ -1431,29 +1456,33 @@
             </div>
           </div>
 
-          <div class="grid4" style="margin-top:12px;">
+          <div class="grid2" style="margin-top:12px;">
             <div>
-              <label>Auto delivery</label>
+              <label>License based product</label>
               <div class="checkbox-row">
-                <input id="auto_deliver" type="checkbox" />
-                <span class="small">Auto output license / key</span>
+                <input id="license_based" type="checkbox" />
+                <span class="small">Enable keys and durations</span>
               </div>
-            </div>
-            <div>
-              <label>Key prefix (optional)</label>
-              <input id="key_prefix" type="text" placeholder="e.g. unm" />
-              <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “unm”, keys will start with “unm-”.</div>
-            </div>
-            <div>
-              <label>Key delivery</label>
-              <div class="muted" id="deliverySupportNote" style="margin-top:6px;">Enable auto-delivery for products that should generate a key.</div>
             </div>
           </div>
 
-          <div id="variantSection" style="margin-top:16px;">
+          <div id="licenseSection" style="margin-top:16px;">
+            <div class="grid2">
+              <div>
+                <label>Key prefix (optional)</label>
+                <input id="key_prefix" type="text" placeholder="e.g. unm" />
+                <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “unm”, keys will start with “unm-”.</div>
+              </div>
+              <div>
+                <label>License settings</label>
+                <div class="muted" id="deliverySupportNote" style="margin-top:6px;">Enable license-based mode to issue keys automatically.</div>
+              </div>
+            </div>
+            <div id="variantSection">
             <div class="section-title">Durations for sale</div>
             <div class="muted" id="variantSupportNote">Enable durations and set prices for each one.</div>
             <div class="variant-grid" id="durationRows"></div>
+            </div>
           </div>
 
           <div style="margin-top:12px;">
