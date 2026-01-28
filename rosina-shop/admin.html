@@ -422,6 +422,16 @@
       color: #888;
     }
 
+    .primary-outline:hover {
+      border-color: #4a90e2;
+      color: #4a90e2;
+    }
+
+    .danger-outline:hover {
+      border-color: #ff6b81;
+      color: #ff6b81;
+    }
+
     .product-link {
       color: inherit;
       text-decoration: none;
@@ -1112,7 +1122,7 @@
       await loadProducts();
     }
 
-    let durationOptions = [1, 3, 7, 30];
+    let durationOptions = [];
 
     function variantDurations() {
       return durationOptions.slice().sort((a, b) => a - b);
@@ -1148,7 +1158,7 @@
             </div>
             <div>
               <label>Actions</label>
-              <button type="button" class="ghost" data-remove-duration="${days}" style="border-color:#ff6b81;color:#ff6b81;">Remove</button>
+              <button type="button" class="ghost danger-outline" data-remove-duration="${days}">Remove</button>
             </div>
           </div>
         `)
@@ -1521,7 +1531,7 @@
             <div class="muted" id="variantSupportNote">Enable durations and set prices for each one.</div>
             <div class="row-actions" style="margin-bottom:10px;">
               <input id="durationInput" type="number" min="1" step="1" placeholder="Add duration (days)" style="max-width:200px;" />
-              <button type="button" id="addDurationBtn" class="ghost" style="border-color:#4a90e2;color:#4a90e2;">Add duration</button>
+              <button type="button" id="addDurationBtn" class="ghost primary-outline">Add duration</button>
             </div>
             <div class="variant-grid" id="durationRows"></div>
             </div>
