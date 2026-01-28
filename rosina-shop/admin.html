@@ -1139,7 +1139,7 @@
               <label>Enabled</label>
               <div class="checkbox-row">
                 <input id="variant_enabled_${days}" type="checkbox" />
-                <span class="small">Offer this duration</span>
+                <span class="small">Enable duration</span>
               </div>
             </div>
             <div>
@@ -1148,7 +1148,7 @@
             </div>
             <div>
               <label>Actions</label>
-              <button type="button" class="ghost" data-remove-duration="${days}">Remove</button>
+              <button type="button" class="ghost" data-remove-duration="${days}" style="border-color:#ff6b81;color:#ff6b81;">Remove</button>
             </div>
           </div>
         `)
@@ -1513,19 +1513,15 @@
               <div>
                 <label>Key prefix (optional)</label>
                 <input id="key_prefix" type="text" placeholder="e.g. unm" />
-                <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “unm”, keys will start with “unm-”.</div>
-              </div>
-              <div>
-                <label>License settings</label>
-                <div class="muted" id="deliverySupportNote" style="margin-top:6px;">Enable license-based mode to issue keys automatically.</div>
+                <div class="muted" id="keyPrefixNote" style="margin-top:6px;margin-bottom:12px;">Optional. If set to “unm”, keys will start with “unm-”.</div>
               </div>
             </div>
-            <div id="variantSection">
+            <div id="variantSection" style="margin-top:12px;">
             <div class="section-title">Durations for sale</div>
             <div class="muted" id="variantSupportNote">Enable durations and set prices for each one.</div>
             <div class="row-actions" style="margin-bottom:10px;">
               <input id="durationInput" type="number" min="1" step="1" placeholder="Add duration (days)" style="max-width:200px;" />
-              <button type="button" id="addDurationBtn" class="ghost">Add duration</button>
+              <button type="button" id="addDurationBtn" class="ghost" style="border-color:#4a90e2;color:#4a90e2;">Add duration</button>
             </div>
             <div class="variant-grid" id="durationRows"></div>
             </div>
