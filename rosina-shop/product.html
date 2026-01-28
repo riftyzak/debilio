@@ -442,18 +442,71 @@
     }
 
     async function fetchProductBySlug(slug) {
-      const url =
-        `${SUPABASE_URL}/rest/v1/products` +
-        `?select=id,title,slug,price_eur,description,image_url,is_active` +
-        `&slug=eq.${encodeURIComponent(slug)}` +
-        `&is_active=eq.true` +
-        `&limit=1`;
+      const base = `${SUPABASE_URL}/rest/v1/products`;
+      const selects = [
+        "id,title,slug,price_eur,description,image_url,is_active,duration_days,auto_deliver,delivery_text",
+        "id,title,slug,price_eur,description,image_url,is_active"
+      ];
 
-      const res = await fetch(url, { headers: supaHeaders() });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      let data = null;
+      for (const select of selects) {
+        const url =
+          `${base}` +
+          `?select=${select}` +
+          `&slug=eq.${encodeURIComponent(slug)}` +
+          `&is_active=eq.true` +
+          `&limit=1`;
+
+        const res = await fetch(url, { headers: supaHeaders() });
+        if (!res.ok) {
+          if (res.status === 400 && select !== selects[selects.length - 1]) {
+            continue;
+          }
+          throw new Error(await res.text());
+        }
+        data = await res.json();
+        break;
+      }
+
       if (!data || !data[0]) return null;
       return { ...data[0], price_eur: Number(data[0].price_eur) };
+    }
+
+    async function fetchVariantsByProductId(productId) {
+      const base = `${SUPABASE_URL}/rest/v1/product_variants`;
+      const selects = [
+        "id,product_id,duration_days,price_eur,auto_deliver,delivery_text",
+        "id,product_id,duration_days,price_eur"
+      ];
+
+      for (const select of selects) {
+        const url =
+          `${base}` +
+          `?select=${select}` +
+          `&product_id=eq.${encodeURIComponent(productId)}` +
+          `&order=duration_days.asc`;
+
+        const res = await fetch(url, { headers: supaHeaders() });
+        if (!res.ok) {
+          if (res.status === 400 && select !== selects[selects.length - 1]) {
+            continue;
+          }
+          return [];
+        }
+        const data = await res.json();
+        return (data || []).map((variant) => ({
+          ...variant,
+          price_eur: Number(variant.price_eur),
+          duration_days:
+            variant.duration_days !== null && variant.duration_days !== undefined
+              ? Number(variant.duration_days)
+              : null,
+          auto_deliver: Boolean(variant.auto_deliver),
+          delivery_text: variant.delivery_text || ""
+        }));
+      }
+
+      return [];
     }
 
 
@@ -471,11 +524,22 @@
         .replaceAll("'", "&#039;");
     }
 
+    let currentVariants = [];
+    let selectedVariantId = null;
+
     function renderProduct(p) {
       document.title = `${p.title} • Rosina Shop`;
 
       const card = document.getElementById('productCard');
       card.style.display = 'block';
+
+      const hasVariants = Array.isArray(currentVariants) && currentVariants.length > 0;
+      const defaultVariant = hasVariants ? currentVariants[0] : null;
+      selectedVariantId = defaultVariant ? String(defaultVariant.id) : null;
+
+      const durationText = hasVariants
+        ? `Duration: ${defaultVariant?.duration_days || "—"} day${defaultVariant?.duration_days === 1 ? "" : "s"}`
+        : (p.duration_days ? `Duration: ${Number(p.duration_days)} day${Number(p.duration_days) === 1 ? "" : "s"}` : "");
 
       card.innerHTML = `
       <div class="hero">
@@ -487,15 +551,48 @@
         <div class="content">
           <div class="name">${escapeHtml(p.title)}</div>
           <div class="desc">${escapeHtml(p.description || "")}</div>
-          <div class="price">${moneyEUR(p.price_eur)}</div>
+          ${durationText ? `<div class="desc" id="durationLabel" style="color:#888;font-size:13px;">${durationText}</div>` : ``}
+          ${hasVariants ? `
+          <div style="margin-top:10px;">
+            <label style="display:block;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Choose duration</label>
+            <select id="variantSelect" style="width:100%;background:rgba(0,0,0,0.5);border:2px solid #333;color:#fff;padding:10px 12px;border-radius:8px;font-family:inherit;font-size:14px;">
+              ${currentVariants.map((variant) => `
+                <option value="${variant.id}">
+                  ${variant.duration_days} day${variant.duration_days === 1 ? "" : "s"} • ${moneyEUR(variant.price_eur)}
+                </option>
+              `).join("")}
+            </select>
+          </div>
+          ` : ``}
+          <div class="price" id="priceLabel">${moneyEUR(hasVariants ? defaultVariant?.price_eur : p.price_eur)}</div>
           <div class="actions">
-            <button class="btn" onclick="addToCart('${String(p.id)}')"><i class="fas fa-cart-plus"></i> Add to cart</button>
-            <button class="btn" onclick="buyNow('${String(p.id)}')"><i class="fas fa-bolt"></i> Buy now</button>
+            <button class="btn" id="addToCartBtn"><i class="fas fa-cart-plus"></i> Add to cart</button>
+            <button class="btn" id="buyNowBtn"><i class="fas fa-bolt"></i> Buy now</button>
           </div>
           
         </div>
       </div>
     `;
+
+      const variantSelect = document.getElementById("variantSelect");
+      if (variantSelect) {
+        variantSelect.addEventListener("change", () => {
+          const variantId = variantSelect.value;
+          const variant = currentVariants.find((v) => String(v.id) === String(variantId));
+          selectedVariantId = variant ? String(variant.id) : null;
+          const priceLabel = document.getElementById("priceLabel");
+          const durationLabel = document.getElementById("durationLabel");
+          if (priceLabel && variant) priceLabel.textContent = moneyEUR(variant.price_eur);
+          if (durationLabel && variant) {
+            durationLabel.textContent = `Duration: ${variant.duration_days} day${variant.duration_days === 1 ? "" : "s"}`;
+          }
+        });
+      }
+
+      const addBtn = document.getElementById("addToCartBtn");
+      const buyBtn = document.getElementById("buyNowBtn");
+      if (addBtn) addBtn.addEventListener("click", () => addToCart(String(p.id), 1, selectedVariantId));
+      if (buyBtn) buyBtn.addEventListener("click", () => buyNow(String(p.id), selectedVariantId));
     }
 
     let currentProduct = null;
@@ -521,6 +618,10 @@
       if (!currentProduct) {
         document.getElementById('notFound').style.display = 'block';
         return;
+      }
+
+      if (currentProduct) {
+        currentVariants = await fetchVariantsByProductId(currentProduct.id);
       }
 
       renderProduct(currentProduct);
