@@ -164,16 +164,12 @@
 
   <div class="container">
     <div class="title">Order successful</div>
-    <div class="sub">Thanks — your cart was cleared.</div>
+    <div class="sub">Sebastian Rosina personally thanks you for your order.</div>
 
     <div class="card">
       <div class="row">
         <div class="k">Provider</div>
         <div class="v" id="provider">—</div>
-      </div>
-      <div class="row">
-        <div class="k">Session / Charge ID</div>
-        <div class="v" id="sid">—</div>
       </div>
       <div class="row">
         <div class="k">Time</div>
@@ -212,7 +208,6 @@
     // Show ids if present
     const sp = new URLSearchParams(window.location.search);
     const sessionId = sp.get("session_id") || sp.get("charge_id") || sp.get("id") || "";
-    document.getElementById("sid").textContent = sessionId || "—";
     document.getElementById("provider").textContent = (sessionId && sessionId.startsWith("cs_")) ? "Stripe" : "Stripe / Coinbase";
     document.getElementById("time").textContent = new Date().toLocaleString();
 
@@ -257,7 +252,7 @@
         return `
           <div class="order-item">
             <div class="order-item-title">${escapeHtml(item.title || "Product")} × ${qty}</div>
-            <div class="order-item-meta">${item.slug ? escapeHtml(item.slug) : "—"}${durationDays ? ` • Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}` : ""}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>
+            <div class="order-item-meta">${durationDays ? `Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}` : "No duration"}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>
             ${deliveryText ? `<div class="delivery-box">Delivery: ${escapeHtml(deliveryText)}</div>` : ""}
           </div>
         `;

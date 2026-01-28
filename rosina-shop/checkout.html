@@ -341,8 +341,8 @@
       const list = ids.map(x => String(x)).join(',');
       const base = `${SUPABASE_URL}/rest/v1/products`;
       const selects = [
-        "id,title,price_eur,slug,auto_deliver,delivery_text,duration_days",
-        "id,title,price_eur,slug"
+        "id,title,price_eur,auto_deliver,delivery_text,duration_days",
+        "id,title,price_eur"
       ];
 
       let data = null;
@@ -418,7 +418,6 @@
           id: String(ci.id),
           qty,
           title: p?.title || "Unknown product",
-          slug: p?.slug || "",
           price_eur: p?.price_eur ?? 0,
           auto_deliver: Boolean(p?.auto_deliver),
           delivery_text: p?.delivery_text || "",
@@ -462,7 +461,7 @@
           <div class="item">
             <div>
               <div class="item-name">${p ? String(p.title) : "Unknown product"}</div>
-              <div class="item-meta">Qty: ${qty}${p?.slug ? ` • ${p.slug}` : ""}${durationLabel}</div>
+              <div class="item-meta">Qty: ${qty}${durationLabel}</div>
             </div>
             <div class="item-price">${moneyEUR(line)}</div>
           </div>
