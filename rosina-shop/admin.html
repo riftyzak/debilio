@@ -215,6 +215,12 @@
       gap: 12px;
     }
 
+    .grid4 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
     label {
       display: block;
       color: #888;
@@ -237,6 +243,21 @@
       font-size: 14px;
       transition: border-color 0.3s ease;
       outline: none;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: auto;
+      accent-color: #667eea;
     }
 
     input:focus,
@@ -475,6 +496,10 @@
         grid-template-columns: 1fr 1fr 1fr;
       }
 
+      .grid4 {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+
       .login-grid {
         grid-template-columns: 1fr 1fr;
       }
@@ -673,7 +698,7 @@
       setStatus("Loading products…");
       const { data, error } = await sb
         .from("products")
-        .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
+        .select("id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,delivery_text,duration_days")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -687,6 +712,14 @@
           ? `<span class="tag on">active</span>`
           : `<span class="tag off">inactive</span>`;
 
+        const deliveryTag = p.auto_deliver
+          ? `<span class="tag on">auto-delivery</span>`
+          : `<span class="tag off">manual</span>`;
+
+        const durationTag = p.duration_days
+          ? `<span class="tag on">${Number(p.duration_days)}d</span>`
+          : `<span class="tag off">no duration</span>`;
+
         const thumb = p.image_url
           ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
           : `<div class="thumb"><span class="muted">—</span></div>`;
@@ -697,6 +730,10 @@
             <div style="font-weight:bold">${escapeHtml(p.title || "")}</div>
             <div class="muted">${escapeHtml(p.slug || "")}</div>
             <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
+            <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+              ${deliveryTag}
+              ${durationTag}
+            </div>
           </td>
           <td>${money(p.price_eur)}</td>
           <td>${activeTag}</td>
@@ -721,7 +758,7 @@
       setStatus("Loading product…");
       const { data, error } = await sb
         .from("products")
-        .select("id,title,slug,price_eur,description,image_url,is_active")
+        .select("id,title,slug,price_eur,description,image_url,is_active,auto_deliver,delivery_text,duration_days")
         .eq("id", id)
         .maybeSingle();
 
@@ -737,6 +774,9 @@
       $("description").value = data.description || "";
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
+      $("auto_deliver").checked = Boolean(data.auto_deliver);
+      $("delivery_text").value = data.delivery_text || "";
+      $("duration_days").value = data.duration_days ? String(data.duration_days) : "";
 
       const auto = slugify(data.title || "");
       const existing = (data.slug || "").trim();
@@ -757,6 +797,9 @@
       $("description").value = "";
       $("image_url").value = "";
       $("image_file").value = "";
+      $("auto_deliver").checked = false;
+      $("delivery_text").value = "";
+      $("duration_days").value = "";
       renderPreview("");
 
       // New product => slug auto-follows title unless user edits slug
@@ -845,6 +888,10 @@
       const price_eur = Number($("price_eur").value || 0);
       const is_active = $("is_active").value === "true";
       const description = $("description").value || "";
+      const auto_deliver = $("auto_deliver").checked;
+      const delivery_text = $("delivery_text").value || "";
+      const duration_days_raw = $("duration_days").value;
+      const duration_days = duration_days_raw ? Number(duration_days_raw) : null;
 
       if (!title) return setStatus("Title is required.", "error");
       if (!slug) return setStatus("Slug is required.", "error");
@@ -853,7 +900,17 @@
         const uploadedUrl = await uploadImageIfAny();
         const image_url = uploadedUrl || ($("image_url").value.trim() || null);
 
-        const payload = { title, slug, price_eur, is_active, description, image_url };
+        const payload = {
+          title,
+          slug,
+          price_eur,
+          is_active,
+          description,
+          image_url,
+          auto_deliver,
+          delivery_text,
+          duration_days
+        };
 
         setStatus("Saving…");
 
@@ -1036,6 +1093,32 @@
             <div>
               <label>Image URL (optional)</label>
               <input id="image_url" type="text" placeholder="https://…" />
+            </div>
+          </div>
+
+          <div class="grid4" style="margin-top:12px;">
+            <div>
+              <label>Auto delivery</label>
+              <div class="checkbox-row">
+                <input id="auto_deliver" type="checkbox" />
+                <span class="small">Auto output license / key</span>
+              </div>
+            </div>
+            <div>
+              <label>Delivery text / key</label>
+              <input id="delivery_text" type="text" placeholder="e.g. LICENSE-XXXXX" />
+              <div class="muted" style="margin-top:6px;">Leave blank to auto-generate on purchase.</div>
+            </div>
+            <div>
+              <label>Duration</label>
+              <select id="duration_days">
+                <option value="">No time limit</option>
+                <option value="1">1 day</option>
+                <option value="3">3 days</option>
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+              </select>
+              <div class="muted" style="margin-top:6px;">Used for time-based products.</div>
             </div>
           </div>
 

@@ -444,7 +444,7 @@
     async function fetchProductBySlug(slug) {
       const url =
         `${SUPABASE_URL}/rest/v1/products` +
-        `?select=id,title,slug,price_eur,description,image_url,is_active` +
+        `?select=id,title,slug,price_eur,description,image_url,is_active,duration_days,auto_deliver,delivery_text` +
         `&slug=eq.${encodeURIComponent(slug)}` +
         `&is_active=eq.true` +
         `&limit=1`;
@@ -487,6 +487,7 @@
         <div class="content">
           <div class="name">${escapeHtml(p.title)}</div>
           <div class="desc">${escapeHtml(p.description || "")}</div>
+          ${p.duration_days ? `<div class="desc" style="color:#888;font-size:13px;">Duration: ${Number(p.duration_days)} day${Number(p.duration_days) === 1 ? "" : "s"}</div>` : ""}
           <div class="price">${moneyEUR(p.price_eur)}</div>
           <div class="actions">
             <button class="btn" onclick="addToCart('${String(p.id)}')"><i class="fas fa-cart-plus"></i> Add to cart</button>

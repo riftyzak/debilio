@@ -309,6 +309,7 @@
 
     const CART_KEY_LOCAL = "rosina_cart_v1";
     const PROMO_KEY_LOCAL = "rosina_promo_v1";
+    const ORDER_KEY_LOCAL = "rosina_last_order_v1";
 
     const PROMOS_LOCAL = {
       xrs: { type: "multiplier", multiplier: 2 },
@@ -340,13 +341,19 @@
       const list = ids.map(x => String(x)).join(',');
       const url =
         `${SUPABASE_URL}/rest/v1/products` +
-        `?select=id,title,price_eur,slug` +
+        `?select=id,title,price_eur,slug,auto_deliver,delivery_text,duration_days` +
         `&id=in.(${encodeURIComponent(list)})` +
         `&limit=200`;
       const res = await fetch(url, { headers: supaHeaders() });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      return (data || []).map(p => ({ ...p, price_eur: Number(p.price_eur) }));
+      return (data || []).map(p => ({
+        ...p,
+        price_eur: Number(p.price_eur),
+        duration_days: p.duration_days !== null && p.duration_days !== undefined ? Number(p.duration_days) : null,
+        auto_deliver: Boolean(p.auto_deliver),
+        delivery_text: p.delivery_text || ""
+      }));
     }
 
     function setStatus(msg) {
@@ -390,6 +397,29 @@
       return { total: subtotal, lineHtml: "" };
     }
 
+    function buildOrderPayload(cart, products, promoCode) {
+      const byId = new Map(products.map(p => [String(p.id), p]));
+      const items = cart.map(ci => {
+        const p = byId.get(String(ci.id));
+        const qty = Number(ci.qty || 1);
+        return {
+          id: String(ci.id),
+          qty,
+          title: p?.title || "Unknown product",
+          slug: p?.slug || "",
+          price_eur: p?.price_eur ?? 0,
+          auto_deliver: Boolean(p?.auto_deliver),
+          delivery_text: p?.delivery_text || "",
+          duration_days: p?.duration_days ?? null
+        };
+      });
+      return {
+        items,
+        promo_code: promoCode || null,
+        created_at: new Date().toISOString()
+      };
+    }
+
     async function renderSummary() {
       const itemsEl = document.getElementById("items");
       const totalsEl = document.getElementById("totals");
@@ -414,11 +444,13 @@
         const line = price * qty;
         subtotal += line;
 
+        const durationLabel = p?.duration_days ? ` • ${p.duration_days} day${p.duration_days === 1 ? "" : "s"}` : "";
+
         return `
           <div class="item">
             <div>
               <div class="item-name">${p ? String(p.title) : "Unknown product"}</div>
-              <div class="item-meta">Qty: ${qty}${p?.slug ? ` • ${p.slug}` : ""}</div>
+              <div class="item-meta">Qty: ${qty}${p?.slug ? ` • ${p.slug}` : ""}${durationLabel}</div>
             </div>
             <div class="item-price">${moneyEUR(line)}</div>
           </div>
@@ -443,6 +475,16 @@
       if (!cart.length) {
         setStatus("Your cart is empty.");
         return;
+      }
+
+      let products = [];
+      try {
+        const ids = [...new Set(cart.map(i => i.id))];
+        products = await fetchProductsByIds(ids);
+        const orderPayload = buildOrderPayload(cart, products, loadPromoCode());
+        localStorage.setItem(ORDER_KEY_LOCAL, JSON.stringify(orderPayload));
+      } catch (e) {
+        // If order snapshot fails, continue to checkout anyway.
       }
 
       const payload = {
