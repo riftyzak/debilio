@@ -368,6 +368,41 @@
       }));
     }
 
+    async function fetchVariantsByIds(variantIds) {
+      const ids = [...new Set((variantIds || []).filter(Boolean))];
+      if (!ids.length) return [];
+
+      const base = `${SUPABASE_URL}/rest/v1/product_variants`;
+      const selects = [
+        "id,product_id,duration_days,price_eur,auto_deliver,delivery_text",
+        "id,product_id,duration_days,price_eur"
+      ];
+
+      for (const select of selects) {
+        const url = `${base}?select=${select}&id=in.(${encodeURIComponent(ids.join(","))})`;
+        const res = await fetch(url, { headers: supaHeaders() });
+        if (!res.ok) {
+          if (res.status === 400 && select !== selects[selects.length - 1]) {
+            continue;
+          }
+          return [];
+        }
+        const data = await res.json();
+        return (data || []).map((variant) => ({
+          ...variant,
+          price_eur: Number(variant.price_eur),
+          duration_days:
+            variant.duration_days !== null && variant.duration_days !== undefined
+              ? Number(variant.duration_days)
+              : null,
+          auto_deliver: Boolean(variant.auto_deliver),
+          delivery_text: variant.delivery_text || ""
+        }));
+      }
+
+      return [];
+    }
+
     function setStatus(msg) {
       const el = document.getElementById("status");
       el.textContent = msg;
@@ -409,19 +444,26 @@
       return { total: subtotal, lineHtml: "" };
     }
 
-    function buildOrderPayload(cart, products, promoCode) {
+    function buildOrderPayload(cart, products, variants, promoCode) {
       const byId = new Map(products.map(p => [String(p.id), p]));
+      const variantById = new Map(variants.map(v => [String(v.id), v]));
       const items = cart.map(ci => {
         const p = byId.get(String(ci.id));
         const qty = Number(ci.qty || 1);
+        const variant = ci.variant_id ? variantById.get(String(ci.variant_id)) : null;
+        const price = variant?.price_eur ?? p?.price_eur ?? 0;
+        const durationDays = variant?.duration_days ?? p?.duration_days ?? null;
+        const autoDeliver = variant?.auto_deliver ?? p?.auto_deliver ?? false;
+        const deliveryText = variant?.delivery_text ?? p?.delivery_text ?? "";
         return {
           id: String(ci.id),
           qty,
           title: p?.title || "Unknown product",
-          price_eur: p?.price_eur ?? 0,
-          auto_deliver: Boolean(p?.auto_deliver),
-          delivery_text: p?.delivery_text || "",
-          duration_days: p?.duration_days ?? null
+          variant_id: ci.variant_id ? String(ci.variant_id) : null,
+          price_eur: price,
+          auto_deliver: Boolean(autoDeliver),
+          delivery_text: deliveryText,
+          duration_days: durationDays
         };
       });
       return {
@@ -444,18 +486,22 @@
 
       const ids = [...new Set(cart.map(i => i.id))];
       const products = await fetchProductsByIds(ids);
+      const variants = await fetchVariantsByIds(cart.map(i => i.variant_id));
       const byId = new Map(products.map(p => [String(p.id), p]));
+      const variantById = new Map(variants.map(v => [String(v.id), v]));
 
       let subtotal = 0;
 
       itemsEl.innerHTML = cart.map(ci => {
         const p = byId.get(String(ci.id));
         const qty = Number(ci.qty || 1);
-        const price = p ? Number(p.price_eur) : 0;
+        const variant = ci.variant_id ? variantById.get(String(ci.variant_id)) : null;
+        const price = variant ? Number(variant.price_eur) : (p ? Number(p.price_eur) : 0);
         const line = price * qty;
         subtotal += line;
 
-        const durationLabel = p?.duration_days ? ` • ${p.duration_days} day${p.duration_days === 1 ? "" : "s"}` : "";
+        const durationDays = variant?.duration_days ?? p?.duration_days;
+        const durationLabel = durationDays ? ` • ${durationDays} day${durationDays === 1 ? "" : "s"}` : "";
 
         return `
           <div class="item">
@@ -489,10 +535,12 @@
       }
 
       let products = [];
+      let variants = [];
       try {
         const ids = [...new Set(cart.map(i => i.id))];
         products = await fetchProductsByIds(ids);
-        const orderPayload = buildOrderPayload(cart, products, loadPromoCode());
+        variants = await fetchVariantsByIds(cart.map(i => i.variant_id));
+        const orderPayload = buildOrderPayload(cart, products, variants, loadPromoCode());
         localStorage.setItem(ORDER_KEY_LOCAL, JSON.stringify(orderPayload));
       } catch (e) {
         // If order snapshot fails, continue to checkout anyway.
