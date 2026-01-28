@@ -683,7 +683,6 @@
     let supportsDeliveryFields = true;
     let supportsVariantFields = true;
     let supportsKeyPrefix = true;
-    let licenseBasedEnabled = false;
 
     let pendingDeleteId = null;
     let pendingDeleteTitle = "";
@@ -757,16 +756,6 @@
       }
     }
 
-    function setLicenseBased(enabled) {
-      licenseBasedEnabled = enabled;
-      const licenseSection = $("licenseSection");
-      if (licenseSection) licenseSection.style.display = enabled ? "block" : "none";
-      if (!enabled) {
-        const keyPrefixInput = $("key_prefix");
-        if (keyPrefixInput) keyPrefixInput.value = "";
-        clearVariantsForm();
-      }
-    }
 
     async function refreshUI() {
       const { data: { session } } = await sb.auth.getSession();
@@ -921,9 +910,7 @@
       $("description").value = data.description || "";
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
-      $("license_based").checked = Boolean(data.auto_deliver);
       $("key_prefix").value = data.key_prefix || "";
-      setLicenseBased(Boolean(data.auto_deliver));
 
       await loadVariants(id);
 
@@ -946,9 +933,7 @@
       $("description").value = "";
       $("image_url").value = "";
       $("image_file").value = "";
-      $("license_based").checked = false;
       $("key_prefix").value = "";
-      setLicenseBased(false);
       clearVariantsForm();
       renderPreview("");
 
@@ -1038,8 +1023,12 @@
       const price_eur = Number($("price_eur").value || 0);
       const is_active = $("is_active").value === "true";
       const description = $("description").value || "";
-      const auto_deliver = $("license_based").checked;
       const key_prefix = ($("key_prefix").value || "").trim();
+      const hasDurations = variantDurations().some((days) => {
+        const enabledEl = $(`variant_enabled_${days}`);
+        return Boolean(enabledEl?.checked);
+      });
+      const auto_deliver = Boolean(hasDurations || key_prefix);
 
       if (!title) return setStatus("Title is required.", "error");
       if (!slug) return setStatus("Slug is required.", "error");
@@ -1096,12 +1085,8 @@
         if (error) return setStatus("Save error: " + error.message, "error");
 
         if (supportsVariantFields && savedId) {
-          if (!auto_deliver) {
-            await saveVariants(savedId, true);
-          } else {
-            const variantError = await saveVariants(savedId);
-            if (variantError) return setStatus("Variant save error: " + variantError, "error");
-          }
+          const variantError = await saveVariants(savedId);
+          if (variantError) return setStatus("Variant save error: " + variantError, "error");
         }
 
         setStatus("Saved ✅", "ok");
@@ -1387,13 +1372,6 @@
         });
       }
 
-      const licenseToggle = $("license_based");
-      if (licenseToggle) {
-        licenseToggle.addEventListener("change", () => {
-          setLicenseBased(licenseToggle.checked);
-        });
-      }
-
       const addDurationBtn = $("addDurationBtn");
       const durationInput = $("durationInput");
       if (addDurationBtn && durationInput) {
@@ -1505,16 +1483,6 @@
             <div>
               <label>Image URL (optional)</label>
               <input id="image_url" type="text" placeholder="https://…" />
-            </div>
-          </div>
-
-          <div class="grid2" style="margin-top:12px;">
-            <div>
-              <label>License based product</label>
-              <div class="checkbox-row">
-                <input id="license_based" type="checkbox" />
-                <span class="small">Enable keys and durations</span>
-              </div>
             </div>
           </div>
 
