@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Georama:wght@200;300;400;500;600;700;800&display=swap"
     rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -100,6 +101,9 @@
       display: inline-block;
       z-index: 10;
       -webkit-tap-highlight-color: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .back-button:active {
@@ -215,6 +219,12 @@
       gap: 12px;
     }
 
+    .grid4 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
     label {
       display: block;
       color: #888;
@@ -237,6 +247,21 @@
       font-size: 14px;
       transition: border-color 0.3s ease;
       outline: none;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: auto;
+      accent-color: #667eea;
     }
 
     input:focus,
@@ -326,6 +351,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center;
       transition: transform 0.3s ease;
     }
 
@@ -396,6 +422,46 @@
       color: #888;
     }
 
+    .product-link {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .product-link:hover {
+      color: #fff;
+      text-decoration: underline;
+    }
+
+    .variant-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .variant-row {
+      border: 1px solid #222;
+      border-radius: 10px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.35);
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr;
+    }
+
+    .variant-row .variant-title {
+      font-weight: 700;
+      color: #ddd;
+      margin-bottom: 4px;
+    }
+
+    @media (min-width: 768px) {
+      .variant-row {
+        grid-template-columns: 1fr 1fr 1fr;
+        align-items: end;
+      }
+    }
+
     .actions-cell {
       display: flex;
       gap: 10px;
@@ -418,6 +484,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center;
     }
 
     .login-grid {
@@ -473,6 +540,10 @@
 
       .grid3 {
         grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .grid4 {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
       }
 
       .login-grid {
@@ -599,6 +670,9 @@
     const $ = (id) => document.getElementById(id);
 
     let slugManuallyEdited = false;
+    let supportsDeliveryFields = true;
+    let supportsVariantFields = true;
+    let supportsKeyPrefix = true;
 
     let pendingDeleteId = null;
     let pendingDeleteTitle = "";
@@ -631,6 +705,45 @@
     function money(n) {
       const v = Number(n || 0);
       return "€" + (Number.isFinite(v) ? v.toFixed(2) : "0.00");
+    }
+
+    function setDeliverySupport(isSupported) {
+      supportsDeliveryFields = isSupported;
+      const toggleIds = ["auto_deliver"];
+      toggleIds.forEach((id) => {
+        const el = $(id);
+        if (el) el.disabled = !isSupported;
+      });
+      const note = $("deliverySupportNote");
+      if (note) {
+        note.textContent = isSupported
+          ? "Enable auto-delivery for products that should generate a key."
+          : "Add column auto_deliver to enable key delivery.";
+      }
+    }
+
+    function setKeyPrefixSupport(isSupported) {
+      supportsKeyPrefix = isSupported;
+      const input = $("key_prefix");
+      if (input) input.disabled = !isSupported;
+      const note = $("keyPrefixNote");
+      if (note) {
+        note.textContent = isSupported
+          ? "Optional. If set to “unm”, keys will start with “unm-”."
+          : "Add column key_prefix to enable key prefixes.";
+      }
+    }
+
+    function setVariantSupport(isSupported) {
+      supportsVariantFields = isSupported;
+      const variantSection = $("variantSection");
+      if (variantSection) variantSection.style.display = isSupported ? "block" : "none";
+      const note = $("variantSupportNote");
+      if (note) {
+        note.textContent = isSupported
+          ? "Fill in price to enable a duration option."
+          : "Create a product_variants table to enable duration-based pricing.";
+      }
     }
 
     async function refreshUI() {
@@ -671,10 +784,30 @@
 
     async function loadProducts() {
       setStatus("Loading products…");
-      const { data, error } = await sb
+      let data = null;
+      let error = null;
+
+      ({ data, error } = await sb
         .from("products")
-        .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
-        .order("created_at", { ascending: false });
+        .select("id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,key_prefix")
+        .order("created_at", { ascending: false }));
+
+      if (error && String(error.message || "").includes("column")) {
+        setDeliverySupport(false);
+        ({ data, error } = await sb
+          .from("products")
+          .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
+          .order("created_at", { ascending: false }));
+      } else {
+        setDeliverySupport(true);
+      }
+
+      setVariantSupport(true);
+      if (error && String(error.message || "").includes("column") && supportsDeliveryFields) {
+        setKeyPrefixSupport(false);
+      } else {
+        setKeyPrefixSupport(true);
+      }
 
       if (error) {
         setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
@@ -687,6 +820,10 @@
           ? `<span class="tag on">active</span>`
           : `<span class="tag off">inactive</span>`;
 
+        const deliveryTag = p.auto_deliver
+          ? `<span class="tag on">auto-delivery</span>`
+          : `<span class="tag off">manual</span>`;
+
         const thumb = p.image_url
           ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
           : `<div class="thumb"><span class="muted">—</span></div>`;
@@ -694,9 +831,20 @@
         return `
         <tr>
           <td>
-            <div style="font-weight:bold">${escapeHtml(p.title || "")}</div>
-            <div class="muted">${escapeHtml(p.slug || "")}</div>
+            <div style="font-weight:bold">
+              ${p.slug
+                ? `<a class="product-link" href="/rosina-shop/product/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">${escapeHtml(p.title || "")}</a>`
+                : `${escapeHtml(p.title || "")}`}
+            </div>
+            <div class="muted">
+              ${p.slug
+                ? `<a class="product-link" href="/rosina-shop/product/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">${escapeHtml(p.slug || "")}</a>`
+                : `${escapeHtml(p.slug || "")}`}
+            </div>
             <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
+            <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+              ${supportsDeliveryFields ? deliveryTag : ""}
+            </div>
           </td>
           <td>${money(p.price_eur)}</td>
           <td>${activeTag}</td>
@@ -719,11 +867,25 @@
 
     async function editProduct(id) {
       setStatus("Loading product…");
-      const { data, error } = await sb
+      let data = null;
+      let error = null;
+
+      ({ data, error } = await sb
         .from("products")
-        .select("id,title,slug,price_eur,description,image_url,is_active")
+        .select("id,title,slug,price_eur,description,image_url,is_active,auto_deliver,key_prefix")
         .eq("id", id)
-        .maybeSingle();
+        .maybeSingle());
+
+      if (error && String(error.message || "").includes("column")) {
+        setDeliverySupport(false);
+        ({ data, error } = await sb
+          .from("products")
+          .select("id,title,slug,price_eur,description,image_url,is_active")
+          .eq("id", id)
+          .maybeSingle());
+      } else {
+        setDeliverySupport(true);
+      }
 
       if (error || !data) {
         return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
@@ -737,6 +899,10 @@
       $("description").value = data.description || "";
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
+      $("auto_deliver").checked = Boolean(data.auto_deliver);
+      $("key_prefix").value = data.key_prefix || "";
+
+      await loadVariants(id);
 
       const auto = slugify(data.title || "");
       const existing = (data.slug || "").trim();
@@ -757,6 +923,9 @@
       $("description").value = "";
       $("image_url").value = "";
       $("image_file").value = "";
+      $("auto_deliver").checked = false;
+      $("key_prefix").value = "";
+      clearVariantsForm();
       renderPreview("");
 
       // New product => slug auto-follows title unless user edits slug
@@ -845,6 +1014,8 @@
       const price_eur = Number($("price_eur").value || 0);
       const is_active = $("is_active").value === "true";
       const description = $("description").value || "";
+      const auto_deliver = $("auto_deliver").checked;
+      const key_prefix = ($("key_prefix").value || "").trim();
 
       if (!title) return setStatus("Title is required.", "error");
       if (!slug) return setStatus("Slug is required.", "error");
@@ -853,15 +1024,57 @@
         const uploadedUrl = await uploadImageIfAny();
         const image_url = uploadedUrl || ($("image_url").value.trim() || null);
 
-        const payload = { title, slug, price_eur, is_active, description, image_url };
+        const payload = {
+          title,
+          slug,
+          price_eur,
+          is_active,
+          description,
+          image_url,
+          ...(supportsDeliveryFields ? { auto_deliver } : {}),
+          ...(supportsKeyPrefix ? { key_prefix: key_prefix || null } : {})
+        };
 
         setStatus("Saving…");
 
-        const { error } = id
-          ? await sb.from("products").update(payload).eq("id", id)
-          : await sb.from("products").insert(payload);
+        let error = null;
+        let savedId = id;
+        if (id) {
+          ({ error } = await sb.from("products").update(payload).eq("id", id));
+        } else {
+          const { data: inserted, error: insertError } = await sb
+            .from("products")
+            .insert(payload)
+            .select("id")
+            .maybeSingle();
+          error = insertError;
+          savedId = inserted?.id || null;
+        }
+
+        if (error && String(error.message || "").includes("column") && (supportsDeliveryFields || supportsKeyPrefix)) {
+          setDeliverySupport(false);
+          setKeyPrefixSupport(false);
+          const fallbackPayload = {
+            title,
+            slug,
+            price_eur,
+            is_active,
+            description,
+            image_url
+          };
+          if (id) {
+            ({ error } = await sb.from("products").update(fallbackPayload).eq("id", id));
+          } else {
+            ({ error } = await sb.from("products").insert(fallbackPayload));
+          }
+        }
 
         if (error) return setStatus("Save error: " + error.message, "error");
+
+        if (supportsVariantFields && savedId) {
+          const variantError = await saveVariants(savedId);
+          if (variantError) return setStatus("Variant save error: " + variantError, "error");
+        }
 
         setStatus("Saved ✅", "ok");
         clearForm();
@@ -879,6 +1092,172 @@
 
       setStatus("Deleted ✅", "ok");
       await loadProducts();
+    }
+
+    const DURATION_OPTIONS = [1, 3, 7, 30];
+
+    function variantDurations() {
+      return DURATION_OPTIONS;
+    }
+
+    function durationLabel(days) {
+      return `${days} day${days === 1 ? "" : "s"}`;
+    }
+
+    function renderDurationRows() {
+      const container = $("durationRows");
+      if (!container) return;
+      container.innerHTML = variantDurations()
+        .map((days) => `
+          <div class="variant-row" data-duration="${days}">
+            <div>
+              <div class="variant-title">${durationLabel(days)}</div>
+              <label>Enabled</label>
+              <div class="checkbox-row">
+                <input id="variant_enabled_${days}" type="checkbox" />
+                <span class="small">Offer this duration</span>
+              </div>
+            </div>
+            <div>
+              <label>Price (EUR)</label>
+              <input id="variant_price_${days}" type="number" step="0.01" placeholder="0.00" />
+            </div>
+            <div>
+              <label>Auto deliver</label>
+              <div class="checkbox-row">
+                <input id="variant_auto_${days}" type="checkbox" />
+                <span class="small">Generate key on purchase</span>
+              </div>
+            </div>
+          </div>
+        `)
+        .join("");
+
+      variantDurations().forEach((days) => {
+        const enabledEl = $(`variant_enabled_${days}`);
+        const priceEl = $(`variant_price_${days}`);
+        if (!enabledEl || !priceEl) return;
+        priceEl.disabled = !enabledEl.checked;
+        enabledEl.addEventListener("change", () => {
+          priceEl.disabled = !enabledEl.checked;
+          if (!enabledEl.checked) {
+            priceEl.value = "";
+          }
+        });
+      });
+    }
+
+    function clearVariantsForm() {
+      variantDurations().forEach((days) => {
+        const enabledEl = $(`variant_enabled_${days}`);
+        const priceEl = $(`variant_price_${days}`);
+        const autoEl = $(`variant_auto_${days}`);
+        if (enabledEl) enabledEl.checked = false;
+        if (priceEl) priceEl.value = "";
+        if (autoEl) autoEl.checked = false;
+        if (priceEl) priceEl.disabled = true;
+      });
+    }
+
+    async function loadVariants(productId) {
+      if (!productId) return clearVariantsForm();
+      let data = null;
+      let error = null;
+
+      ({ data, error } = await sb
+        .from("product_variants")
+        .select("id,product_id,duration_days,price_eur,auto_deliver")
+        .eq("product_id", productId));
+
+      if (error && String(error.message || "").includes("relation")) {
+        setVariantSupport(false);
+        clearVariantsForm();
+        return;
+      }
+
+      setVariantSupport(true);
+      clearVariantsForm();
+
+      (data || []).forEach((variant) => {
+        const days = Number(variant.duration_days);
+        const enabledEl = $(`variant_enabled_${days}`);
+        const priceEl = $(`variant_price_${days}`);
+        const autoEl = $(`variant_auto_${days}`);
+        if (enabledEl) enabledEl.checked = true;
+        if (priceEl) {
+          priceEl.value = variant.price_eur ?? "";
+          priceEl.disabled = false;
+        }
+        if (autoEl) autoEl.checked = Boolean(variant.auto_deliver);
+      });
+    }
+
+    async function saveVariants(productId) {
+      let errorMessage = null;
+      for (const days of variantDurations()) {
+        const enabledEl = $(`variant_enabled_${days}`);
+        const priceEl = $(`variant_price_${days}`);
+        if (enabledEl?.checked && priceEl && priceEl.value === "") {
+          return `Price required for ${durationLabel(days)}.`;
+        }
+      }
+
+      const variants = variantDurations()
+        .map((days) => {
+          const enabledEl = $(`variant_enabled_${days}`);
+          const priceEl = $(`variant_price_${days}`);
+          const autoEl = $(`variant_auto_${days}`);
+          const enabled = Boolean(enabledEl?.checked);
+          const price = priceEl ? Number(priceEl.value || 0) : 0;
+          if (!enabled || !priceEl || priceEl.value === "") return null;
+          return {
+            product_id: productId,
+            duration_days: days,
+            price_eur: price,
+            auto_deliver: Boolean(autoEl?.checked)
+          };
+        })
+        .filter(Boolean);
+
+      if (!variants.length) {
+        const { error } = await sb
+          .from("product_variants")
+          .delete()
+          .eq("product_id", productId);
+        if (error && String(error.message || "").includes("relation")) {
+          setVariantSupport(false);
+          return null;
+        }
+        if (error) {
+          errorMessage = error.message;
+        }
+        return errorMessage;
+      }
+
+      const { error: deleteError } = await sb
+        .from("product_variants")
+        .delete()
+        .eq("product_id", productId);
+      if (deleteError && String(deleteError.message || "").includes("relation")) {
+        setVariantSupport(false);
+        return null;
+      }
+      if (deleteError) {
+        return deleteError.message;
+      }
+
+      const { error: insertError } = await sb
+        .from("product_variants")
+        .insert(variants);
+      if (insertError && String(insertError.message || "").includes("relation")) {
+        setVariantSupport(false);
+        return null;
+      }
+      if (insertError) {
+        errorMessage = insertError.message;
+      }
+
+      return errorMessage;
     }
 
     function initBgText() {
@@ -900,6 +1279,10 @@
 
     window.addEventListener("DOMContentLoaded", async () => {
       initBgText();
+      setDeliverySupport(true);
+      setVariantSupport(true);
+      setKeyPrefixSupport(true);
+      renderDurationRows();
 
       $("loginBtn").onclick = signIn;
       $("logoutBtn").onclick = signOut;
@@ -947,6 +1330,16 @@
         }
       });
 
+      const keyPrefixInput = $("key_prefix");
+      if (keyPrefixInput) {
+        keyPrefixInput.addEventListener("input", () => {
+          keyPrefixInput.value = keyPrefixInput.value.replace(/\s+/g, "");
+        });
+        keyPrefixInput.addEventListener("blur", () => {
+          keyPrefixInput.value = keyPrefixInput.value.replace(/-+$/g, "");
+        });
+      }
+
       $("image_url").addEventListener("input", () => renderPreview($("image_url").value));
       $("image_file").addEventListener("change", () => {
         const file = $("image_file").files?.[0];
@@ -966,13 +1359,13 @@
 <body>
   <div class="background-text" id="bgText"></div>
 
-  <a href="/rosina-shop/" class="back-button">← Back</a>
+  <a href="/rosina-shop/" class="back-button"><i class="fas fa-arrow-left"></i> Back</a>
 
   <div class="container">
     <div class="topbar">
       <div>
         <div class="title">admin panel</div>
-        <div class="subtitle">manage products, images, descriptions — same vibe, better scaling.</div>
+        <div class="subtitle">Sign-in required. Authorized access only.</div>
         <div id="status" class="statusline"></div>
       </div>
 
@@ -997,7 +1390,6 @@
       </div>
       <div class="row-actions">
         <button id="loginBtn" class="primary">Login</button>
-        <span class="muted">If products won’t load after login: your user isn’t in <b>public.admins</b>.</span>
       </div>
     </div>
 
@@ -1037,6 +1429,31 @@
               <label>Image URL (optional)</label>
               <input id="image_url" type="text" placeholder="https://…" />
             </div>
+          </div>
+
+          <div class="grid4" style="margin-top:12px;">
+            <div>
+              <label>Auto delivery</label>
+              <div class="checkbox-row">
+                <input id="auto_deliver" type="checkbox" />
+                <span class="small">Auto output license / key</span>
+              </div>
+            </div>
+            <div>
+              <label>Key prefix (optional)</label>
+              <input id="key_prefix" type="text" placeholder="e.g. unm" />
+              <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “unm”, keys will start with “unm-”.</div>
+            </div>
+            <div>
+              <label>Key delivery</label>
+              <div class="muted" id="deliverySupportNote" style="margin-top:6px;">Enable auto-delivery for products that should generate a key.</div>
+            </div>
+          </div>
+
+          <div id="variantSection" style="margin-top:16px;">
+            <div class="section-title">Durations for sale</div>
+            <div class="muted" id="variantSupportNote">Enable durations and set prices for each one.</div>
+            <div class="variant-grid" id="durationRows"></div>
           </div>
 
           <div style="margin-top:12px;">

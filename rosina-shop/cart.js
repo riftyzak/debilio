@@ -15,6 +15,7 @@ const PROMOS = {
 let appliedPromo = loadPromo();
 let cart = loadCart();
 let cartProductMap = new Map();
+let cartVariantMap = new Map();
 
 function loadCart() {
   try {
@@ -22,7 +23,11 @@ function loadCart() {
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((x) => ({ id: String(x.id), qty: Math.max(1, Number(x.qty || 1)) }))
+      .map((x) => ({
+        id: String(x.id),
+        qty: Math.max(1, Number(x.qty || 1)),
+        variant_id: x.variant_id ? String(x.variant_id) : null,
+      }))
       .filter((x) => x.id && Number.isFinite(x.qty));
   } catch {
     return [];
@@ -234,6 +239,46 @@ async function refreshCartProductsFromSupabase() {
   const data = await res.json();
   const products = (data || []).map((p) => ({ ...p, price_eur: Number(p.price_eur) }));
   cartProductMap = new Map(products.map((p) => [String(p.id), p]));
+
+  await refreshCartVariantsFromSupabase(headers);
+}
+
+async function refreshCartVariantsFromSupabase(headers) {
+  const variantIds = [...new Set(cart.map((x) => x.variant_id).filter(Boolean))];
+  if (!variantIds.length) {
+    cartVariantMap = new Map();
+    return;
+  }
+
+  const idList = variantIds.map((id) => `"${String(id).replaceAll('"', '\\"')}"`).join(",");
+  const base = `${SUPABASE_URL}/rest/v1/product_variants`;
+  const selects = [
+    "id,product_id,duration_days,price_eur,auto_deliver",
+    "id,product_id,duration_days,price_eur",
+  ];
+
+  for (const select of selects) {
+    const url = `${base}?select=${select}&id=in.(${idList})`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      if (res.status === 400 && select !== selects[selects.length - 1]) {
+        continue;
+      }
+      cartVariantMap = new Map();
+      return;
+    }
+    const data = await res.json();
+    const variants = (data || []).map((v) => ({
+      ...v,
+      price_eur: Number(v.price_eur),
+      duration_days:
+        v.duration_days !== null && v.duration_days !== undefined ? Number(v.duration_days) : null,
+      auto_deliver: Boolean(v.auto_deliver),
+      delivery_text: "",
+    }));
+    cartVariantMap = new Map(variants.map((v) => [String(v.id), v]));
+    return;
+  }
 }
 
 function findProductByIdGeneric(id) {
@@ -279,18 +324,22 @@ async function toggleCart() {
   }
 }
 
-function removeFromCart(productId) {
+function removeFromCart(productId, variantId = null) {
   const id = String(productId);
-  cart = cart.filter((x) => x.id !== id);
+  const variantKey = variantId ? String(variantId) : null;
+  cart = cart.filter((x) => !(x.id === id && String(x.variant_id || "") === String(variantKey || "")));
   saveCart();
   updateCartBadge();
   renderCart();
 }
 
-function setQty(productId, qty) {
+function setQty(productId, qty, variantId = null) {
   const id = String(productId);
+  const variantKey = variantId ? String(variantId) : null;
   const q = Math.max(1, Number(qty || 1));
-  const item = cart.find((x) => x.id === id);
+  const item = cart.find(
+    (x) => x.id === id && String(x.variant_id || "") === String(variantKey || "")
+  );
   if (!item) return;
   item.qty = q;
   saveCart();
@@ -298,12 +347,15 @@ function setQty(productId, qty) {
   renderCart();
 }
 
-function addToCart(productId, qty = 1) {
+function addToCart(productId, qty = 1, variantId = null) {
   const id = String(productId);
+  const variantKey = variantId ? String(variantId) : null;
   const q = Math.max(1, Number(qty || 1));
-  const existing = cart.find((x) => x.id === id);
+  const existing = cart.find(
+    (x) => x.id === id && String(x.variant_id || "") === String(variantKey || "")
+  );
   if (existing) existing.qty += q;
-  else cart.push({ id, qty: q });
+  else cart.push({ id, qty: q, variant_id: variantKey });
 
   saveCart();
   updateCartBadge();
@@ -320,8 +372,8 @@ function addToCart(productId, qty = 1) {
   }
 }
 
-function buyNow(productId) {
-  cart = [{ id: String(productId), qty: 1 }];
+function buyNow(productId, variantId = null) {
+  cart = [{ id: String(productId), qty: 1, variant_id: variantId ? String(variantId) : null }];
   localStorage.setItem("rosina_cart_v1", JSON.stringify(cart));
   updateCartBadge();
 
@@ -399,13 +451,18 @@ function renderCart() {
   const resolved = cart
     .map((item) => {
       const p = findProductByIdGeneric(item.id);
-      return p ? { item, p } : null;
+      const variant = item.variant_id ? cartVariantMap.get(String(item.variant_id)) : null;
+      return p ? { item, p, variant } : null;
     })
     .filter(Boolean);
 
   // Drop items we can't resolve (e.g., product deleted)
   if (resolved.length !== cart.length) {
-    cart = resolved.map(({ item }) => ({ id: String(item.id), qty: item.qty }));
+    cart = resolved.map(({ item }) => ({
+      id: String(item.id),
+      qty: item.qty,
+      variant_id: item.variant_id || null,
+    }));
     saveCart();
     updateCartBadge();
   }
@@ -418,20 +475,23 @@ function renderCart() {
   }
 
   itemsEl.innerHTML = resolved
-    .map(({ item, p }) => {
+    .map(({ item, p, variant }) => {
       const qty = item.qty || 1;
-      const unit = Number(p.price_eur) || 0;
+      const unit = Number(variant?.price_eur ?? p.price_eur) || 0;
       const line = unit * qty;
+      const durationLabel = variant?.duration_days
+        ? ` • ${variant.duration_days} day${variant.duration_days === 1 ? "" : "s"}`
+        : "";
 
       return `
         <div class="cart-row">
           <div>
             <div class="cart-name">${escapeHtml(p.title)}</div>
-            <div class="cart-meta">Qty: ${qty}</div>
+            <div class="cart-meta">Qty: ${qty}${durationLabel}</div>
             <div class="cart-price">${moneyEUR(line)}</div>
           </div>
-          <input class="qty" type="number" min="1" value="${qty}" onchange="setQty('${String(p.id)}', this.value)">
-          <button class="remove-item" onclick="removeFromCart('${String(p.id)}')" aria-label="Remove item">
+          <input class="qty" type="number" min="1" value="${qty}" onchange="setQty('${String(p.id)}', this.value, '${String(item.variant_id || "")}')">
+          <button class="remove-item" onclick="removeFromCart('${String(p.id)}', '${String(item.variant_id || "")}')" aria-label="Remove item">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -450,7 +510,9 @@ function calculateTotal() {
   const subtotal = cart.reduce((sum, item) => {
     const p = findProductByIdGeneric(item.id);
     if (!p) return sum;
-    return sum + Number(p.price_eur) * (item.qty || 1);
+    const variant = item.variant_id ? cartVariantMap.get(String(item.variant_id)) : null;
+    const price = Number(variant?.price_eur ?? p.price_eur) || 0;
+    return sum + price * (item.qty || 1);
   }, 0);
 
   let total = subtotal;
