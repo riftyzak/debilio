@@ -1112,10 +1112,16 @@
       await loadProducts();
     }
 
-    const DURATION_OPTIONS = [1, 3, 7, 30];
+    let durationOptions = [1, 3, 7, 30];
 
     function variantDurations() {
-      return DURATION_OPTIONS;
+      return durationOptions.slice().sort((a, b) => a - b);
+    }
+
+    function ensureDurationOption(days) {
+      const value = Number(days);
+      if (!Number.isFinite(value) || value <= 0) return;
+      if (!durationOptions.includes(value)) durationOptions.push(value);
     }
 
     function durationLabel(days) {
@@ -1140,6 +1146,10 @@
               <label>Price (EUR)</label>
               <input id="variant_price_${days}" type="number" step="0.01" placeholder="0.00" />
             </div>
+            <div>
+              <label>Actions</label>
+              <button type="button" class="ghost" data-remove-duration="${days}">Remove</button>
+            </div>
           </div>
         `)
         .join("");
@@ -1154,6 +1164,14 @@
           if (!enabledEl.checked) {
             priceEl.value = "";
           }
+        });
+      });
+
+      container.querySelectorAll("[data-remove-duration]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const value = Number(btn.getAttribute("data-remove-duration"));
+          durationOptions = durationOptions.filter((d) => d !== value);
+          renderDurationRows();
         });
       });
     }
@@ -1189,6 +1207,7 @@
 
       (data || []).forEach((variant) => {
         const days = Number(variant.duration_days);
+        ensureDurationOption(days);
         const enabledEl = $(`variant_enabled_${days}`);
         const priceEl = $(`variant_price_${days}`);
         if (enabledEl) enabledEl.checked = true;
@@ -1365,6 +1384,29 @@
         });
       }
 
+      const addDurationBtn = $("addDurationBtn");
+      const durationInput = $("durationInput");
+      if (addDurationBtn && durationInput) {
+        const addDuration = () => {
+          const value = Number(durationInput.value);
+          if (!Number.isFinite(value) || value <= 0) {
+            setStatus("Enter a valid duration in days.", "error");
+            return;
+          }
+          ensureDurationOption(value);
+          durationInput.value = "";
+          renderDurationRows();
+          setStatus("");
+        };
+        addDurationBtn.addEventListener("click", addDuration);
+        durationInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            addDuration();
+          }
+        });
+      }
+
       $("image_url").addEventListener("input", () => renderPreview($("image_url").value));
       $("image_file").addEventListener("change", () => {
         const file = $("image_file").files?.[0];
@@ -1481,6 +1523,10 @@
             <div id="variantSection">
             <div class="section-title">Durations for sale</div>
             <div class="muted" id="variantSupportNote">Enable durations and set prices for each one.</div>
+            <div class="row-actions" style="margin-bottom:10px;">
+              <input id="durationInput" type="number" min="1" step="1" placeholder="Add duration (days)" style="max-width:200px;" />
+              <button type="button" id="addDurationBtn" class="ghost">Add duration</button>
+            </div>
             <div class="variant-grid" id="durationRows"></div>
             </div>
           </div>
