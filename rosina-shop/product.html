@@ -442,16 +442,32 @@
     }
 
     async function fetchProductBySlug(slug) {
-      const url =
-        `${SUPABASE_URL}/rest/v1/products` +
-        `?select=id,title,slug,price_eur,description,image_url,is_active,duration_days,auto_deliver,delivery_text` +
-        `&slug=eq.${encodeURIComponent(slug)}` +
-        `&is_active=eq.true` +
-        `&limit=1`;
+      const base = `${SUPABASE_URL}/rest/v1/products`;
+      const selects = [
+        "id,title,slug,price_eur,description,image_url,is_active,duration_days,auto_deliver,delivery_text",
+        "id,title,slug,price_eur,description,image_url,is_active"
+      ];
 
-      const res = await fetch(url, { headers: supaHeaders() });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      let data = null;
+      for (const select of selects) {
+        const url =
+          `${base}` +
+          `?select=${select}` +
+          `&slug=eq.${encodeURIComponent(slug)}` +
+          `&is_active=eq.true` +
+          `&limit=1`;
+
+        const res = await fetch(url, { headers: supaHeaders() });
+        if (!res.ok) {
+          if (res.status === 400 && select !== selects[selects.length - 1]) {
+            continue;
+          }
+          throw new Error(await res.text());
+        }
+        data = await res.json();
+        break;
+      }
+
       if (!data || !data[0]) return null;
       return { ...data[0], price_eur: Number(data[0].price_eur) };
     }

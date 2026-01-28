@@ -339,14 +339,26 @@
 
     async function fetchProductsByIds(ids) {
       const list = ids.map(x => String(x)).join(',');
-      const url =
-        `${SUPABASE_URL}/rest/v1/products` +
-        `?select=id,title,price_eur,slug,auto_deliver,delivery_text,duration_days` +
-        `&id=in.(${encodeURIComponent(list)})` +
-        `&limit=200`;
-      const res = await fetch(url, { headers: supaHeaders() });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const base = `${SUPABASE_URL}/rest/v1/products`;
+      const selects = [
+        "id,title,price_eur,slug,auto_deliver,delivery_text,duration_days",
+        "id,title,price_eur,slug"
+      ];
+
+      let data = null;
+      for (const select of selects) {
+        const url = `${base}?select=${select}&id=in.(${encodeURIComponent(list)})&limit=200`;
+        const res = await fetch(url, { headers: supaHeaders() });
+        if (!res.ok) {
+          if (res.status === 400 && select !== selects[selects.length - 1]) {
+            continue;
+          }
+          throw new Error(await res.text());
+        }
+        data = await res.json();
+        break;
+      }
+
       return (data || []).map(p => ({
         ...p,
         price_eur: Number(p.price_eur),

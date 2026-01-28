@@ -624,6 +624,7 @@
     const $ = (id) => document.getElementById(id);
 
     let slugManuallyEdited = false;
+    let supportsDeliveryFields = true;
 
     let pendingDeleteId = null;
     let pendingDeleteTitle = "";
@@ -656,6 +657,21 @@
     function money(n) {
       const v = Number(n || 0);
       return "€" + (Number.isFinite(v) ? v.toFixed(2) : "0.00");
+    }
+
+    function setDeliverySupport(isSupported) {
+      supportsDeliveryFields = isSupported;
+      const toggleIds = ["auto_deliver", "delivery_text", "duration_days"];
+      toggleIds.forEach((id) => {
+        const el = $(id);
+        if (el) el.disabled = !isSupported;
+      });
+      const note = $("deliverySupportNote");
+      if (note) {
+        note.textContent = isSupported
+          ? "Leave blank to auto-generate on purchase."
+          : "Add columns auto_deliver, delivery_text, duration_days to enable auto delivery/time-based products.";
+      }
     }
 
     async function refreshUI() {
@@ -696,10 +712,23 @@
 
     async function loadProducts() {
       setStatus("Loading products…");
-      const { data, error } = await sb
+      let data = null;
+      let error = null;
+
+      ({ data, error } = await sb
         .from("products")
         .select("id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,delivery_text,duration_days")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }));
+
+      if (error && String(error.message || "").includes("column")) {
+        setDeliverySupport(false);
+        ({ data, error } = await sb
+          .from("products")
+          .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
+          .order("created_at", { ascending: false }));
+      } else {
+        setDeliverySupport(true);
+      }
 
       if (error) {
         setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
@@ -731,8 +760,8 @@
             <div class="muted">${escapeHtml(p.slug || "")}</div>
             <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
             <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-              ${deliveryTag}
-              ${durationTag}
+              ${supportsDeliveryFields ? deliveryTag : ""}
+              ${supportsDeliveryFields ? durationTag : ""}
             </div>
           </td>
           <td>${money(p.price_eur)}</td>
@@ -756,11 +785,25 @@
 
     async function editProduct(id) {
       setStatus("Loading product…");
-      const { data, error } = await sb
+      let data = null;
+      let error = null;
+
+      ({ data, error } = await sb
         .from("products")
         .select("id,title,slug,price_eur,description,image_url,is_active,auto_deliver,delivery_text,duration_days")
         .eq("id", id)
-        .maybeSingle();
+        .maybeSingle());
+
+      if (error && String(error.message || "").includes("column")) {
+        setDeliverySupport(false);
+        ({ data, error } = await sb
+          .from("products")
+          .select("id,title,slug,price_eur,description,image_url,is_active")
+          .eq("id", id)
+          .maybeSingle());
+      } else {
+        setDeliverySupport(true);
+      }
 
       if (error || !data) {
         return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
@@ -907,16 +950,36 @@
           is_active,
           description,
           image_url,
-          auto_deliver,
-          delivery_text,
-          duration_days
+          ...(supportsDeliveryFields
+            ? { auto_deliver, delivery_text, duration_days }
+            : {})
         };
 
         setStatus("Saving…");
 
-        const { error } = id
-          ? await sb.from("products").update(payload).eq("id", id)
-          : await sb.from("products").insert(payload);
+        let error = null;
+        if (id) {
+          ({ error } = await sb.from("products").update(payload).eq("id", id));
+        } else {
+          ({ error } = await sb.from("products").insert(payload));
+        }
+
+        if (error && String(error.message || "").includes("column") && supportsDeliveryFields) {
+          setDeliverySupport(false);
+          const fallbackPayload = {
+            title,
+            slug,
+            price_eur,
+            is_active,
+            description,
+            image_url
+          };
+          if (id) {
+            ({ error } = await sb.from("products").update(fallbackPayload).eq("id", id));
+          } else {
+            ({ error } = await sb.from("products").insert(fallbackPayload));
+          }
+        }
 
         if (error) return setStatus("Save error: " + error.message, "error");
 
@@ -957,6 +1020,7 @@
 
     window.addEventListener("DOMContentLoaded", async () => {
       initBgText();
+      setDeliverySupport(true);
 
       $("loginBtn").onclick = signIn;
       $("logoutBtn").onclick = signOut;
@@ -1107,7 +1171,7 @@
             <div>
               <label>Delivery text / key</label>
               <input id="delivery_text" type="text" placeholder="e.g. LICENSE-XXXXX" />
-              <div class="muted" style="margin-top:6px;">Leave blank to auto-generate on purchase.</div>
+              <div class="muted" id="deliverySupportNote" style="margin-top:6px;">Leave blank to auto-generate on purchase.</div>
             </div>
             <div>
               <label>Duration</label>
