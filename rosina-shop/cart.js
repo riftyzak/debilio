@@ -452,13 +452,17 @@ function renderCart() {
     .map((item) => {
       const p = findProductByIdGeneric(item.id);
       const variant = item.variant_id ? cartVariantMap.get(String(item.variant_id)) : null;
-      return p ? { item, p } : null;
+      return p ? { item, p, variant } : null;
     })
     .filter(Boolean);
 
   // Drop items we can't resolve (e.g., product deleted)
   if (resolved.length !== cart.length) {
-    cart = resolved.map(({ item }) => ({ id: String(item.id), qty: item.qty }));
+    cart = resolved.map(({ item }) => ({
+      id: String(item.id),
+      qty: item.qty,
+      variant_id: item.variant_id || null,
+    }));
     saveCart();
     updateCartBadge();
   }
@@ -471,7 +475,7 @@ function renderCart() {
   }
 
   itemsEl.innerHTML = resolved
-    .map(({ item, p }) => {
+    .map(({ item, p, variant }) => {
       const qty = item.qty || 1;
       const unit = Number(variant?.price_eur ?? p.price_eur) || 0;
       const line = unit * qty;
