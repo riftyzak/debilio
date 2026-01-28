@@ -172,33 +172,46 @@
 
         .products-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 36px;
         }
 
-        .product-card {
+        /* Card is the link now (replaces the big "View product" button) */
+        .product-card-link {
             background: rgba(20, 20, 20, 0.95);
             border: 2px solid #333;
             border-radius: 12px;
-            padding: 25px;
-            transition: all 0.3s ease;
+            padding: 22px;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            cursor: pointer;
         }
 
-        .product-card:hover {
+        .product-card-link:hover {
             border-color: #4a90e2;
-            transform: translateY(-5px);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .product-card-link:focus-visible {
+            outline: 3px solid rgba(74, 144, 226, 0.6);
+            outline-offset: 4px;
         }
 
         .product-image {
             width: 100%;
-            height: 200px;
+            aspect-ratio: 16 / 9;
             background: #111;
-            border-radius: 8px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             overflow: hidden;
         }
 
@@ -207,53 +220,61 @@
             height: 100%;
             object-fit: cover;
             display: block;
+            transition: transform 0.35s ease;
+        }
+
+        .product-card-link:hover .product-image img {
+            transform: scale(1.04);
         }
 
         .product-name {
             font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 10px;
+            font-weight: 700;
+            margin-bottom: 8px;
             color: #fff;
+
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .product-description {
             font-size: 14px;
-            color: #888;
-            margin-bottom: 20px;
+            color: #9a9a9a;
+            margin-bottom: 14px;
             line-height: 1.6;
+
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+
+            /* Keeps card heights more consistent when some descriptions are short */
+            min-height: 44px;
         }
 
         .product-price {
             font-size: 24px;
             color: #4a90e2;
-            font-weight: bold;
-            margin-bottom: 15px;
+            font-weight: 800;
+            margin-top: auto;
         }
 
-        /* Reuse existing button style (we'll use it as "View product") */
-        .add-to-cart {
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-            border: none;
-            color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
+        .product-cta {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #cfcfcf;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
-            text-decoration: none;
+            gap: 8px;
+            opacity: 0.9;
         }
 
-        .add-to-cart:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
+        .product-card-link:hover .product-cta {
+            color: #fff;
+            opacity: 1;
         }
-
         .cart-modal {
             position: fixed;
             top: 0;
@@ -580,7 +601,8 @@
             }
 
             grid.innerHTML = products.map(product => `
-                <div class="product-card">
+                <a class="product-card-link" href="/rosina-shop/product/${encodeURIComponent(product.slug)}"
+                   aria-label="View ${escapeHtml(product.title)}">
                     <div class="product-image">
                         ${product.image_url
                     ? `<img src="${product.image_url}" alt="${escapeHtml(product.title)}" loading="lazy">`
@@ -590,11 +612,10 @@
                     <div class="product-name">${escapeHtml(product.title)}</div>
                     <div class="product-description">${escapeHtml(product.description || "")}</div>
                     <div class="product-price">€${Number(product.price_eur).toFixed(2)}</div>
-
-                    <a class="add-to-cart" href="/rosina-shop/product/${encodeURIComponent(product.slug)}">
-                        <i class="fas fa-eye"></i> View product
-                    </a>
-                </div>
+                    <div class="product-cta">
+                        Details <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </a>
             `).join('');
         }
 
