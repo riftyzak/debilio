@@ -27,3 +27,8 @@ The original static HTML/JS content has been moved to `legacy/` for reference. A
 This uses the default Vite static build output and relies on the `_redirects` file in `public/` for SPA routing.
 A small Vite plugin copies the root-level assets/favicons into `dist/` during build so URLs like `/assets/*.webp`
 remain valid.
+
+## Cloudflare Pages notes
+
+If you still see the module MIME type error after deploying, trigger a fresh deploy so the new `_headers` file is
+picked up by Pages. No additional runtime action is needed beyond a new deployment.

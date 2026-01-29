@@ -82,4 +82,7 @@ function serveRootAssets() {
 
 export default defineConfig({
   plugins: [react(), serveRootAssets()],
+  build: {
+    assetsDir: "static",
+  },
 });
