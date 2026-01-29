@@ -447,8 +447,18 @@
       grid-template-columns: 1fr;
       gap: 10px;
       margin-top: 10px;
+      max-width: 860px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
+    #durationRows {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .variant-header,
     .variant-row {
       border: 1px solid #222;
       border-radius: 10px;
@@ -459,6 +469,21 @@
       grid-template-columns: 1fr;
     }
 
+    .variant-header {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+    }
+
+    .variant-header div:first-child {
+      text-align: center;
+    }
+
+    .variant-row .variant-duration {
+      text-align: center;
+    }
+
     .variant-row .variant-title {
       font-weight: 700;
       color: #ddd;
@@ -466,9 +491,10 @@
     }
 
     @media (min-width: 768px) {
+      .variant-header,
       .variant-row {
-        grid-template-columns: 1fr 1fr 1fr;
-        align-items: end;
+        grid-template-columns: 140px 1fr 160px;
+        align-items: center;
       }
     }
 
@@ -501,6 +527,12 @@
       display: grid;
       grid-template-columns: 1fr;
       gap: 12px;
+    }
+
+    .toggle-button.is-active {
+      border-color: #4a90e2;
+      color: #4a90e2;
+      box-shadow: 0 0 0 1px rgba(74, 144, 226, 0.25);
     }
 
     @media (min-width: 768px) {
@@ -761,6 +793,12 @@
       licenseBasedEnabled = enabled;
       const licenseSection = $("licenseSection");
       if (licenseSection) licenseSection.style.display = enabled ? "block" : "none";
+      const toggle = $("license_based");
+      if (toggle) {
+        toggle.classList.toggle("is-active", enabled);
+        toggle.setAttribute("aria-pressed", String(enabled));
+        toggle.textContent = enabled ? "Disable keys and durations" : "Enable keys and durations";
+      }
       if (!enabled) {
         const keyPrefixInput = $("key_prefix");
         if (keyPrefixInput) keyPrefixInput.value = "";
@@ -922,7 +960,6 @@
       $("description").value = data.description || "";
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
-      $("license_based").checked = Boolean(data.auto_deliver);
       $("key_prefix").value = data.key_prefix || "";
       setLicenseBased(Boolean(data.auto_deliver));
 
@@ -947,7 +984,6 @@
       $("description").value = "";
       $("image_url").value = "";
       $("image_file").value = "";
-      $("license_based").checked = false;
       $("key_prefix").value = "";
       setLicenseBased(false);
       clearVariantsForm();
@@ -1040,7 +1076,7 @@
       const is_active = $("is_active").value === "true";
       const description = $("description").value || "";
       const key_prefix = ($("key_prefix").value || "").trim();
-      const auto_deliver = $("license_based").checked;
+      const auto_deliver = licenseBasedEnabled;
 
       if (!title) return setStatus("Title is required.", "error");
       if (!slug) return setStatus("Slug is required.", "error");
@@ -1120,6 +1156,7 @@
     }
 
     let durationOptions = [];
+    const durationPriceCache = new Map();
 
     function variantDurations() {
       return durationOptions.slice().sort((a, b) => a - b);
@@ -1138,18 +1175,20 @@
     function renderDurationRows() {
       const container = $("durationRows");
       if (!container) return;
+      variantDurations().forEach((days) => {
+        const priceEl = $(`variant_price_${days}`);
+        if (priceEl) durationPriceCache.set(days, priceEl.value);
+      });
       container.innerHTML = variantDurations()
         .map((days) => `
           <div class="variant-row" data-duration="${days}">
-            <div>
+            <div class="variant-duration">
               <div class="variant-title">${durationLabel(days)}</div>
             </div>
             <div>
-              <label>Price (EUR)</label>
-              <input id="variant_price_${days}" type="number" step="0.01" placeholder="0.00" />
+              <input id="variant_price_${days}" type="number" step="0.01" placeholder="0.00" aria-label="Price (EUR)" />
             </div>
             <div>
-              <label>Actions</label>
               <button type="button" class="ghost danger-outline" data-remove-duration="${days}">Remove</button>
             </div>
           </div>
@@ -1158,19 +1197,27 @@
 
       variantDurations().forEach((days) => {
         const priceEl = $(`variant_price_${days}`);
-        if (priceEl) priceEl.disabled = false;
+        if (priceEl) {
+          priceEl.value = durationPriceCache.get(days) ?? "";
+          priceEl.disabled = false;
+          priceEl.addEventListener("input", () => {
+            durationPriceCache.set(days, priceEl.value);
+          });
+        }
       });
 
       container.querySelectorAll("[data-remove-duration]").forEach((btn) => {
         btn.addEventListener("click", () => {
           const value = Number(btn.getAttribute("data-remove-duration"));
           durationOptions = durationOptions.filter((d) => d !== value);
+          durationPriceCache.delete(value);
           renderDurationRows();
         });
       });
     }
 
     function clearVariantsForm() {
+      durationPriceCache.clear();
       variantDurations().forEach((days) => {
         const priceEl = $(`variant_price_${days}`);
         if (priceEl) priceEl.value = "";
@@ -1205,6 +1252,7 @@
           priceEl.value = variant.price_eur ?? "";
           priceEl.disabled = false;
         }
+        durationPriceCache.set(days, variant.price_eur ?? "");
       });
     }
 
@@ -1360,8 +1408,9 @@
 
       const licenseToggle = $("license_based");
       if (licenseToggle) {
-        licenseToggle.addEventListener("change", () => {
-          setLicenseBased(licenseToggle.checked);
+        licenseToggle.addEventListener("click", () => {
+          if (licenseToggle.disabled) return;
+          setLicenseBased(!licenseBasedEnabled);
         });
       }
 
@@ -1372,6 +1421,10 @@
           const value = Number(durationInput.value);
           if (!Number.isFinite(value) || value <= 0) {
             setStatus("Enter a valid duration in days.", "error");
+            return;
+          }
+          if (durationOptions.includes(value)) {
+            setStatus(`Duration ${value} already exists.`, "error");
             return;
           }
           ensureDurationOption(value);
@@ -1483,8 +1536,7 @@
             <div>
               <label>License based product</label>
               <div class="checkbox-row">
-                <input id="license_based" type="checkbox" />
-                <span class="small">Enable keys and durations</span>
+                <button id="license_based" type="button" class="ghost primary-outline toggle-button">Enable keys and durations</button>
               </div>
             </div>
           </div>
@@ -1504,7 +1556,14 @@
               <input id="durationInput" type="number" min="1" step="1" placeholder="Add duration (days)" style="max-width:200px;" />
               <button type="button" id="addDurationBtn" class="ghost primary-outline">Add duration</button>
             </div>
-            <div class="variant-grid" id="durationRows"></div>
+            <div class="variant-grid">
+              <div class="variant-header">
+                <div>Duration</div>
+                <div>Price (EUR)</div>
+                <div>Actions</div>
+              </div>
+              <div id="durationRows"></div>
+            </div>
             </div>
           </div>
 
