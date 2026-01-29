@@ -1,0 +1,5 @@
+/rosina-shop/checkout.html /rosina-shop/checkout 200
+/rosina-shop/admin.html /rosina-shop/admin 200
+/rosina-shop/success.html /rosina-shop/success 200
+/rosina-shop/product/* /index.html 200
+/* /index.html 200
