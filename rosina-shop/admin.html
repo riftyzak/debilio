@@ -715,19 +715,37 @@
     const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
     const BUCKET = "product-images";
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const memoryStorage = (() => {
+      const store = {};
+      return {
+        getItem: (key) => (Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null),
+        setItem: (key, value) => { store[key] = String(value); },
+        removeItem: (key) => { delete store[key]; },
+      };
+    })();
+
+    // Use in-memory auth storage to avoid Safari/Firefox tracking-prevention blocks on third-party storage.
+    // Note: this means you will need to log in again after a page refresh.
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        storage: memoryStorage,
+      },
+    });
     const $ = (id) => document.getElementById(id);
 
     let slugManuallyEdited = false;
 
     // Optional schema support flags (we auto-detect and degrade gracefully)
-    let supportsKeyPrefix = true;
-    let supportsTimeBasedFlag = true;
+    let supportsKeyPrefix = false;
+    let supportsTimeBasedFlag = false;
     let supportsVariantsTable = true;
 
 
     // Cache schema detection so we don't spam 400s on every refresh
-    let productsSchemaMode = "unknown"; // "unknown" | "optional" | "fallback"
+    let productsSchemaMode = "fallback"; // "unknown" | "optional" | "fallback"
     // Time-based editor state
     let timeBasedEnabled = false;
     let userExplicitlyDisabledTimeBased = false;
@@ -973,7 +991,7 @@ function setTimeBasedFlagSupport(isSupported) {
       // Optional columns used by the admin UI:
       // - products.time_based_enabled
       // - products.key_prefix
-      return "id,title,slug,price_eur,description,image_url,is_active,created_at,time_based_enabled,key_prefix";
+      return "id,title,slug,price_eur,description,image_url,is_active,created_at"; // optional columns disabled until DB has them
     }
 
     function productSelectFallback() {
@@ -999,7 +1017,17 @@ function setTimeBasedFlagSupport(isSupported) {
              (msg.includes("relation") && msg.includes(t) && msg.includes("does not exist"));
     }
 
-    async function loadProducts() {
+    
+    function wireTableActions() {
+      document.querySelectorAll("[data-edit]").forEach((btn) => {
+        btn.onclick = () => editProduct(btn.dataset.edit);
+      });
+      document.querySelectorAll("[data-del]").forEach((btn) => {
+        btn.onclick = () => openDeleteModal(btn.dataset.del, btn.dataset.title || "");
+      });
+    }
+
+async function loadProducts() {
   setStatus("Loading products…");
   let data = null;
   let error = null;
