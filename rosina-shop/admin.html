@@ -683,29 +683,44 @@
       border-color: #667eea;
       transform: translateY(-1px);
     }
-  
+
     .file-uploader {
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
     }
+
     .file-btn {
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
+
     .file-name {
-      color:#aaa;
-      font-size:12px;
+      color: #aaa;
+      font-size: 12px;
       font-family: inherit, monospace;
     }
 
-  
-    .upload-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .upload-btn{display:inline-flex;align-items:center;gap:8px}
-    .upload-btn svg{width:16px;height:16px}
 
+    .upload-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .upload-btn svg {
+      width: 16px;
+      height: 16px
+    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -715,6 +730,11 @@
     const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
     const BUCKET = "product-images";
+
+    // When time-based (variants) are enabled, what should we store in products.price_eur?
+    // - "min_variant" (safer): keep products.price_eur synced to the cheapest variant so legacy UI still shows a price.
+    // - "wipe" (riskier): set products.price_eur = null when variants exist (can break code or NOT NULL constraints).
+    const TIME_BASED_BASE_PRICE_MODE = "min_variant";
     const memoryStorage = (() => {
       const store = {};
       return {
@@ -745,7 +765,7 @@
 
 
     // Cache schema detection so we don't spam 400s on every refresh
-    let productsSchemaMode = "fallback"; // "unknown" | "optional" | "fallback"
+    let productsSchemaMode = "unknown"; // "unknown" | "optional" | "fallback"
     // Time-based editor state
     let timeBasedEnabled = false;
     let userExplicitlyDisabledTimeBased = false;
@@ -804,21 +824,22 @@
       updateKeyPrefixUI();
     }
 
-    
 
-function updateKeyPrefixUI() {
-  const wrap = $("keyPrefixWrap");
-  const timeWrap = $("timeBasedWrap");
-  if (!wrap || !timeWrap) return;
 
-  // Show Key Prefix only for license-based products (time-based enabled) and only if schema supports it.
-  const shouldShow = !!supportsKeyPrefix && !!timeBasedEnabled;
+    function updateKeyPrefixUI() {
+      const wrap = $("keyPrefixWrap");
+      const timeWrap = $("timeBasedWrap");
+      if (!wrap || !timeWrap) return;
 
-  wrap.style.display = shouldShow ? "block" : "none";
-  timeWrap.classList.toggle("span2", !shouldShow);
-}
+      // Show prefix when time-based is enabled (and the input exists)
+      const shouldShow = !!timeBasedEnabled;
 
-function setTimeBasedFlagSupport(isSupported) {
+      wrap.style.display = shouldShow ? "block" : "none";
+      timeWrap.classList.toggle("span2", !shouldShow);
+    }
+
+
+    function setTimeBasedFlagSupport(isSupported) {
       supportsTimeBasedFlag = isSupported;
       // If not supported, we can still infer based on variants length, but we won't write flag to products.
     }
@@ -835,7 +856,7 @@ function setTimeBasedFlagSupport(isSupported) {
       }
     }
 
-    
+
     function updatePriceFieldUI() {
       const priceEl = $("price_eur");
       if (!priceEl) return;
@@ -862,7 +883,7 @@ function setTimeBasedFlagSupport(isSupported) {
       renderTimeVariants();
     }
 
-    
+
     function renderTimeVariants() {
       const body = $("variantTableBody");
       if (!body) return;
@@ -871,10 +892,10 @@ function setTimeBasedFlagSupport(isSupported) {
 
       body.innerHTML = sorted.length
         ? sorted.map((v) => {
-            const uid = v.uid;
-            const days = Number(v.duration_days);
-            const price = Number(v.price_eur || 0);
-            return `
+          const uid = v.uid;
+          const days = Number(v.duration_days);
+          const price = Number(v.price_eur || 0);
+          return `
               <tr>
                 <td>
                   <input type="number" step="1" min="1" value="${Number.isFinite(days) ? days : ""}"
@@ -889,7 +910,7 @@ function setTimeBasedFlagSupport(isSupported) {
                 </td>
               </tr>
             `;
-          }).join("")
+        }).join("")
         : `
             <tr>
               <td colspan="3" class="muted">No durations added yet.</td>
@@ -987,15 +1008,14 @@ function setTimeBasedFlagSupport(isSupported) {
     }
 
     function productSelectWithOptional() {
-      // Order matters: we try with optional columns first; if Supabase complains about columns, we retry.
-      // Optional columns used by the admin UI:
-      // - products.time_based_enabled
-      // - products.key_prefix
-      return "id,title,slug,price_eur,description,image_url,is_active,created_at"; // optional columns disabled until DB has them
+      // Columns present in your current schema (per Supabase diagram):
+      // products: id, title, slug, price_eur, description, image_url, is_active, created_at,
+      //           auto_deliver, delivery_text, duration_days, key_prefix
+      return "id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,delivery_text,duration_days,key_prefix";
     }
 
     function productSelectFallback() {
-      return "id,title,slug,price_eur,description,image_url,is_active,created_at";
+      return "id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,delivery_text,duration_days,key_prefix";
     }
 
 
@@ -1013,11 +1033,11 @@ function setTimeBasedFlagSupport(isSupported) {
       const t = String(tableName || "").toLowerCase();
       // Missing table often surfaces as schema cache error; sometimes as "relation does not exist"
       return (code && code.startsWith("PGRST") && msg.includes("schema cache") && msg.includes(t)) ||
-             (msg.includes("schema cache") && msg.includes(t)) ||
-             (msg.includes("relation") && msg.includes(t) && msg.includes("does not exist"));
+        (msg.includes("schema cache") && msg.includes(t)) ||
+        (msg.includes("relation") && msg.includes(t) && msg.includes("does not exist"));
     }
 
-    
+
     function wireTableActions() {
       document.querySelectorAll("[data-edit]").forEach((btn) => {
         btn.onclick = () => editProduct(btn.dataset.edit);
@@ -1027,58 +1047,54 @@ function setTimeBasedFlagSupport(isSupported) {
       });
     }
 
-async function loadProducts() {
-  setStatus("Loading products…");
-  let data = null;
-  let error = null;
+    async function loadProducts() {
+      setStatus("Loading products…");
+      let data = null;
+      let error = null;
 
-  const runFallback = async () => {
-    setKeyPrefixSupport(false);
-    setTimeBasedFlagSupport(false);
-    ({ data, error } = await sb
-      .from("products")
-      .select(productSelectFallback())
-      .order("created_at", { ascending: false }));
-  };
+      const runFallback = async () => {
+        setKeyPrefixSupport(true);
+        setTimeBasedFlagSupport(false);
+        ({ data, error } = await sb
+          .from("products")
+          .select(productSelectFallback())
+          .order("created_at", { ascending: false }));
+      };
 
-  if (productsSchemaMode === "fallback") {
-    await runFallback();
-  } else {
-    ({ data, error } = await sb
-      .from("products")
-      .select(productSelectWithOptional())
-      .order("created_at", { ascending: false }));
+      if (productsSchemaMode === "fallback") {
+        await runFallback();
+      } else {
+        ({ data, error } = await sb
+          .from("products")
+          .select(productSelectWithOptional())
+          .order("created_at", { ascending: false }));
 
-    if (error && isMissingColumnError(error)) {
-      productsSchemaMode = "fallback";
-      await runFallback();
-    } else if (!error) {
-      productsSchemaMode = "optional";
-      setKeyPrefixSupport(true);
-      setTimeBasedFlagSupport(true);
-    }
-  }
+        if (error && isMissingColumnError(error)) {
+          productsSchemaMode = "fallback";
+          await runFallback();
+        } else if (!error) {
+          productsSchemaMode = "optional";
+          setKeyPrefixSupport(true);
+          setTimeBasedFlagSupport(false); // no products.time_based_enabled column in schema
+        }
+      }
 
-  if (error) {
-    setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
-    $("tableBody").innerHTML = "";
-    return;
-  }
+      if (error) {
+        setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
+        $("tableBody").innerHTML = "";
+        return;
+      }
 
-  $("tableBody").innerHTML = (data || []).map(p => {
-    const activeTag = p.is_active
-      ? `<span class="tag on">active</span>`
-      : `<span class="tag off">inactive</span>`;
+      $("tableBody").innerHTML = (data || []).map(p => {
+        const activeTag = p.is_active
+          ? `<span class="tag on">active</span>`
+          : `<span class="tag off">inactive</span>`;
 
-    const timeTag = (supportsTimeBasedFlag && p.time_based_enabled)
-      ? `<span class="tag on">time-based</span>`
-      : "";
+        const thumb = p.image_url
+          ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
+          : `<div class="thumb"><span class="muted">—</span></div>`;
 
-    const thumb = p.image_url
-      ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
-      : `<div class="thumb"><span class="muted">—</span></div>`;
-
-    return `
+        return `
     <tr>
       <td>
         <div style="font-weight:bold">
@@ -1093,11 +1109,11 @@ async function loadProducts() {
         </div>
         <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
         <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-          ${timeTag}
         </div>
       </td>
-      <td id="pricecell-${p.id}">${(supportsTimeBasedFlag && p.time_based_enabled) ? `<span class="muted">…</span>` : money(p.price_eur)}</td>
+      <td id="pricecell-${p.id}">${money(p.price_eur)}</td>
       <td>${activeTag}</td>
+      <td>${escapeHtml(p.key_prefix || "")}</td>
       <td>${thumb}</td>
       <td>
         <div class="actions-cell">
@@ -1107,123 +1123,123 @@ async function loadProducts() {
       </td>
     </tr>
     `;
-  }).join("");
+      }).join("");
 
-  wireTableActions();
+      wireTableActions();
 
-  // If time-based flag exists, show price ranges for time-based products (best-effort).
-  if (supportsTimeBasedFlag && supportsVariantsTable) {
-    (data || [])
-      .filter(p => p.time_based_enabled)
-      .forEach(async (p) => {
-        const cell = document.getElementById(`pricecell-${p.id}`);
-        if (!cell) return;
+      // If time-based flag exists, show price ranges for time-based products (best-effort).
+      if (supportsTimeBasedFlag && supportsVariantsTable) {
+        (data || [])
+          .filter(p => p.time_based_enabled)
+          .forEach(async (p) => {
+            const cell = document.getElementById(`pricecell-${p.id}`);
+            if (!cell) return;
 
-        const { data: vars, error: vErr } = await sb
-          .from("product_variants")
-          .select("price_eur")
-          .eq("product_id", p.id);
+            const { data: vars, error: vErr } = await sb
+              .from("product_variants")
+              .select("price_eur")
+              .eq("product_id", p.id);
 
-        if (vErr && isMissingTableError(vErr, "product_variants")) {
-          setVariantsSupport(false);
-          cell.textContent = money(p.price_eur);
-          return;
-        }
+            if (vErr && isMissingTableError(vErr, "product_variants")) {
+              setVariantsSupport(false);
+              cell.textContent = money(p.price_eur);
+              return;
+            }
 
-        if (vErr) {
-          cell.textContent = money(p.price_eur);
-          return;
-        }
+            if (vErr) {
+              cell.textContent = money(p.price_eur);
+              return;
+            }
 
-        const prices = (vars || []).map(v => Number(v.price_eur)).filter(n => Number.isFinite(n));
-        if (!prices.length) {
-          cell.textContent = money(p.price_eur);
-          return;
-        }
-        const minP = Math.min(...prices);
-        const maxP = Math.max(...prices);
-        cell.textContent = (minP === maxP) ? money(minP) : `${money(minP)}–${money(maxP)}`;
-      });
-  }
+            const prices = (vars || []).map(v => Number(v.price_eur)).filter(n => Number.isFinite(n));
+            if (!prices.length) {
+              cell.textContent = money(p.price_eur);
+              return;
+            }
+            const minP = Math.min(...prices);
+            const maxP = Math.max(...prices);
+            cell.textContent = (minP === maxP) ? money(minP) : `${money(minP)}–${money(maxP)}`;
+          });
+      }
 
-  setStatus("");
-}
+      setStatus("");
+    }
 
 
     async function editProduct(id) {
-  setStatus("Loading product…");
-  userExplicitlyDisabledTimeBased = false;
-  let data = null;
-  let error = null;
+      setStatus("Loading product…");
+      userExplicitlyDisabledTimeBased = false;
+      let data = null;
+      let error = null;
 
-  const runFallback = async () => {
-    setKeyPrefixSupport(false);
-    setTimeBasedFlagSupport(false);
-    ({ data, error } = await sb
-      .from("products")
-      .select(productSelectFallback())
-      .eq("id", id)
-      .maybeSingle());
-  };
+      const runFallback = async () => {
+        setKeyPrefixSupport(false);
+        setTimeBasedFlagSupport(false);
+        ({ data, error } = await sb
+          .from("products")
+          .select(productSelectFallback())
+          .eq("id", id)
+          .maybeSingle());
+      };
 
-  if (productsSchemaMode === "fallback") {
-    await runFallback();
-  } else {
-    ({ data, error } = await sb
-      .from("products")
-      .select(productSelectWithOptional())
-      .eq("id", id)
-      .maybeSingle());
+      if (productsSchemaMode === "fallback") {
+        await runFallback();
+      } else {
+        ({ data, error } = await sb
+          .from("products")
+          .select(productSelectWithOptional())
+          .eq("id", id)
+          .maybeSingle());
 
-    if (error && isMissingColumnError(error)) {
-      productsSchemaMode = "fallback";
-      await runFallback();
-    } else if (!error) {
-      productsSchemaMode = "optional";
-      setKeyPrefixSupport(true);
-      setTimeBasedFlagSupport(true);
+        if (error && isMissingColumnError(error)) {
+          productsSchemaMode = "fallback";
+          await runFallback();
+        } else if (!error) {
+          productsSchemaMode = "optional";
+          setKeyPrefixSupport(true);
+          setTimeBasedFlagSupport(false); // no products.time_based_enabled column in schema
+        }
+      }
+
+      if (error || !data) {
+        return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
+      }
+
+      $("id").value = data.id;
+      $("title").value = data.title || "";
+      $("slug").value = data.slug || "";
+      $("price_eur").value = data.price_eur ?? "";
+      $("is_active").value = String(!!data.is_active);
+      $("description").value = data.description || "";
+      $("image_url").value = data.image_url || "";
+      $("image_file").value = "";
+      const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
+
+      $("key_prefix").value = data.key_prefix || "";
+
+
+      // Determine time-based enabled:
+      // - If the flag exists, use it.
+      // - Otherwise infer from variants presence after loading variants.
+      const flagEnabled = supportsTimeBasedFlag ? Boolean(data.time_based_enabled) : false;
+
+      await loadTimeVariants(id);
+      if (supportsTimeBasedFlag) {
+        setTimeBasedEnabledUI(flagEnabled);
+      } else {
+        setTimeBasedEnabledUI(timeVariants.length > 0);
+      }
+
+      const auto = slugify(data.title || "");
+      const existing = (data.slug || "").trim();
+      slugManuallyEdited = !!existing && existing !== auto;
+
+      renderPreview(data.image_url || "");
+      setStatus("Editing: " + (data.title || data.id), "ok");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }
 
-  if (error || !data) {
-    return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
-  }
-
-  $("id").value = data.id;
-  $("title").value = data.title || "";
-  $("slug").value = data.slug || "";
-  $("price_eur").value = data.price_eur ?? "";
-  $("is_active").value = String(!!data.is_active);
-  $("description").value = data.description || "";
-  $("image_url").value = data.image_url || "";
-  $("image_file").value = "";
-  const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
-
-  if (supportsKeyPrefix) $("key_prefix").value = data.key_prefix || "";
-  else $("key_prefix").value = "";
-
-  // Determine time-based enabled:
-  // - If the flag exists, use it.
-  // - Otherwise infer from variants presence after loading variants.
-  const flagEnabled = supportsTimeBasedFlag ? Boolean(data.time_based_enabled) : false;
-
-  await loadTimeVariants(id);
-  if (supportsTimeBasedFlag) {
-    setTimeBasedEnabledUI(flagEnabled);
-  } else {
-    setTimeBasedEnabledUI(timeVariants.length > 0);
-  }
-
-  const auto = slugify(data.title || "");
-  const existing = (data.slug || "").trim();
-  slugManuallyEdited = !!existing && existing !== auto;
-
-  renderPreview(data.image_url || "");
-  setStatus("Editing: " + (data.title || data.id), "ok");
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function clearForm() {
+    function clearForm() {
       userExplicitlyDisabledTimeBased = false;
 
       $("id").value = "";
@@ -1323,19 +1339,26 @@ function clearForm() {
 
       let price_eur = Number($("price_eur").value || 0);
 
-      // For time-based products, store the minimum duration price as the base price (read-only in UI)
+      // For time-based products, decide what we store in products.price_eur:
+      // - "min_variant" (safer): keep it synced to the cheapest variant so legacy UI still shows a price
+      // - "wipe" (riskier): set it to null when variants exist
       if (timeBasedEnabled) {
         const valid = [...timeVariants]
           .map(v => ({ duration_days: Number(v.duration_days), price_eur: Number(v.price_eur) }))
           .filter(v => Number.isFinite(v.duration_days) && v.duration_days > 0 && Number.isFinite(v.price_eur) && v.price_eur >= 0);
-        if (valid.length) price_eur = Math.min(...valid.map(v => v.price_eur));
-        else price_eur = 0;
+
+        if (TIME_BASED_BASE_PRICE_MODE === "wipe") {
+          price_eur = null;
+        } else {
+          if (valid.length) price_eur = Math.min(...valid.map(v => v.price_eur));
+          else price_eur = 0;
+        }
       }
       const is_active = $("is_active").value === "true";
       const description = $("description").value || "";
 
       const key_prefix_raw = normalizePrefix($("key_prefix").value);
-      const key_prefix = timeBasedEnabled ? key_prefix_raw : null;
+      const key_prefix = key_prefix_raw || null;
 
       if (!title) return setStatus("Title is required.", "error");
       if (!slug) return setStatus("Slug is required.", "error");
@@ -1351,8 +1374,7 @@ function clearForm() {
           is_active,
           description,
           image_url,
-          ...(supportsKeyPrefix && timeBasedEnabled ? { key_prefix } : {}),
-          ...(supportsTimeBasedFlag ? { time_based_enabled: timeBasedEnabled } : {})
+          key_prefix
         };
 
         setStatus("Saving…");
@@ -1372,11 +1394,12 @@ function clearForm() {
           savedId = inserted?.id || null;
         }
 
-        // Optional-column fallback if schema doesn't match
-        if (error) {
+        // Optional-column fallback ONLY if schema doesn't match
+        if (error && isMissingColumnError(error)) {
           // Retry without optional columns
           setKeyPrefixSupport(false);
           setTimeBasedFlagSupport(false);
+
           const fallbackPayload = {
             title,
             slug,
@@ -1385,6 +1408,7 @@ function clearForm() {
             description,
             image_url
           };
+
           if (id) {
             ({ error } = await sb.from("products").update(fallbackPayload).eq("id", id));
           } else {
@@ -1398,7 +1422,9 @@ function clearForm() {
           }
         }
 
+        // If we still have an error here, show it (don't silently drop key_prefix)
         if (error) return setStatus("Save error: " + error.message, "error");
+
 
         if (savedId) {
           const vErr = await saveTimeVariants(savedId);
@@ -1429,7 +1455,7 @@ function clearForm() {
     }
 
     async function loadTimeVariants(productId) {
-      timeVariants = [];      renderTimeVariants();
+      timeVariants = []; renderTimeVariants();
 
       if (!productId) return;
 
@@ -1535,7 +1561,7 @@ function clearForm() {
     window.addEventListener("DOMContentLoaded", async () => {
       initBgText();
       setKeyPrefixSupport(true);
-      setTimeBasedFlagSupport(true);
+      setTimeBasedFlagSupport(false); // no products.time_based_enabled column in schema
       setVariantsSupport(true);
 
       setTimeBasedEnabledUI(false);
@@ -1705,17 +1731,21 @@ function clearForm() {
           </div>
 
           <div class="grid2" style="margin-top:12px;">
-            <div id="keyPrefixWrap" style="display:none;">
-              <label>Key prefix (optional)</label>
-              <input id="key_prefix" type="text" placeholder="e.g. XXX" />
-              <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “xxx”, keys will start with “xxx-”.</div>
-            </div>
             <div id="timeBasedWrap">
               <label>Time-based product</label>
               <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                <button id="timeBasedToggleBtn" type="button" class="ghost enable-hover">Enable time-based product</button>
+                <button id="timeBasedToggleBtn" type="button" class="ghost enable-hover">Enable time-based
+                  product</button>
               </div>
-</div>
+            </div>
+
+            <div id="keyPrefixWrap" style="display:none;">
+              <label>Key prefix (optional)</label>
+              <input id="key_prefix" type="text" placeholder="e.g. XXX" />
+              <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “xxx”, keys will start
+                with “xxx-”.</div>
+
+            </div>
           </div>
 
           <div id="timeVariantSection" style="margin-top:16px; display:none;">
@@ -1748,7 +1778,7 @@ function clearForm() {
                 <tbody id="variantTableBody"></tbody>
               </table>
             </div>
-</div>
+          </div>
 
           <div style="margin-top:12px;">
             <label>Description</label>
@@ -1757,18 +1787,19 @@ function clearForm() {
 
           <div class="grid2" style="margin-top:12px;">
             <div>
-  <label>Upload image</label>
-  <div class="upload-row">
-    <input id="image_file" type="file" accept="image/*" style="display:none" />
-    <button id="imageUploadBtn" type="button" class="ghost upload-btn" aria-label="Upload image">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>Upload</span>
-    </button>
-    <span id="imageFileName" class="muted">No file selected</span>
-  </div>
-</div>
+              <label>Upload image</label>
+              <div class="upload-row">
+                <input id="image_file" type="file" accept="image/*" style="display:none" />
+                <button id="imageUploadBtn" type="button" class="ghost upload-btn" aria-label="Upload image">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <span>Upload</span>
+                </button>
+                <span id="imageFileName" class="muted">No file selected</span>
+              </div>
+            </div>
             <div>
               <label>Preview</label>
               <div id="preview" class="preview"><span class="muted">no image</span></div>
@@ -1793,6 +1824,7 @@ function clearForm() {
                 <th>Product</th>
                 <th>Price</th>
                 <th>Status</th>
+                <th>Key prefix</th>
                 <th>Image</th>
                 <th>Actions</th>
               </tr>
@@ -1800,7 +1832,7 @@ function clearForm() {
             <tbody id="tableBody"></tbody>
           </table>
         </div>
-</div>
+      </div>
     </div>
   </div>
 
