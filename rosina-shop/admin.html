@@ -721,6 +721,8 @@
       width: 16px;
       height: 16px
     }
+
+    
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1173,7 +1175,7 @@
       let error = null;
 
       const runFallback = async () => {
-        setKeyPrefixSupport(false);
+        setKeyPrefixSupport(true);
         setTimeBasedFlagSupport(false);
         ({ data, error } = await sb
           .from("products")
@@ -1215,8 +1217,8 @@
       $("image_file").value = "";
       const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
 
-      $("key_prefix").value = data.key_prefix || "";
-
+      if (supportsKeyPrefix) $("key_prefix").value = data.key_prefix || "";
+      else $("key_prefix").value = "";
 
       // Determine time-based enabled:
       // - If the flag exists, use it.
@@ -1730,7 +1732,7 @@
             </div>
           </div>
 
-          <div class="grid2" style="margin-top:12px;">
+          <div class="grid2 timeKeyRow" style="margin-top:12px;">
             <div id="timeBasedWrap">
               <label>Time-based product</label>
               <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
@@ -1738,17 +1740,9 @@
                   product</button>
               </div>
             </div>
-
-            <div id="keyPrefixWrap" style="display:none;">
-              <label>Key prefix (optional)</label>
-              <input id="key_prefix" type="text" placeholder="e.g. XXX" />
-              <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “xxx”, keys will start
-                with “xxx-”.</div>
-
-            </div>
           </div>
 
-          <div id="timeVariantSection" style="margin-top:16px; display:none;">
+          <div id="timeVariantSection" style="margin-top:34px; display:none;">
             <div class="section-title">Time-based pricing</div>
             <div class="muted" id="variantSupportNote"></div>
 
@@ -1780,6 +1774,15 @@
             </div>
           </div>
 
+
+
+            <div id="keyPrefixWrap" style="display:none; margin-top:12px;">
+              <label>Key prefix (optional)</label>
+              <input id="key_prefix" type="text" placeholder="e.g. XXX" />
+              <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “xxx”, keys will start
+                with “xxx-”.</div>
+
+            </div>
           <div style="margin-top:12px;">
             <label>Description</label>
             <textarea id="description" placeholder="Describe the product…"></textarea>
