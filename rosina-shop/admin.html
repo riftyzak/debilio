@@ -725,8 +725,12 @@
     let supportsTimeBasedFlag = true;
     let supportsVariantsTable = true;
 
+
+    // Cache schema detection so we don't spam 400s on every refresh
+    let productsSchemaMode = "unknown"; // "unknown" | "optional" | "fallback"
     // Time-based editor state
     let timeBasedEnabled = false;
+    let userExplicitlyDisabledTimeBased = false;
     let timeVariants = []; // { uid:string, duration_days:number, price_eur:number }
 
     let pendingDeleteId = null;
@@ -976,98 +980,133 @@ function setTimeBasedFlagSupport(isSupported) {
       return "id,title,slug,price_eur,description,image_url,is_active,created_at";
     }
 
+
+
+    function isMissingColumnError(err) {
+      const code = err?.code || "";
+      const msg = String(err?.message || "").toLowerCase();
+      // PostgREST: PGRST204 - column not found in schema cache
+      return code === "PGRST204" || msg.includes("schema cache") || msg.includes("could not find") || msg.includes("does not exist") && msg.includes("column");
+    }
+
+    function isMissingTableError(err, tableName) {
+      const code = err?.code || "";
+      const msg = String(err?.message || "").toLowerCase();
+      const t = String(tableName || "").toLowerCase();
+      // Missing table often surfaces as schema cache error; sometimes as "relation does not exist"
+      return (code && code.startsWith("PGRST") && msg.includes("schema cache") && msg.includes(t)) ||
+             (msg.includes("schema cache") && msg.includes(t)) ||
+             (msg.includes("relation") && msg.includes(t) && msg.includes("does not exist"));
+    }
+
     async function loadProducts() {
-      setStatus("Loading products…");
-      let data = null;
-      let error = null;
+  setStatus("Loading products…");
+  let data = null;
+  let error = null;
 
-      ({ data, error } = await sb
-        .from("products")
-        .select(productSelectWithOptional())
-        .order("created_at", { ascending: false }));
+  const runFallback = async () => {
+    setKeyPrefixSupport(false);
+    setTimeBasedFlagSupport(false);
+    ({ data, error } = await sb
+      .from("products")
+      .select(productSelectFallback())
+      .order("created_at", { ascending: false }));
+  };
 
-      // Column detection: if the optional columns don't exist, retry without them.
-      if (error) {
-        setKeyPrefixSupport(false);
-        setTimeBasedFlagSupport(false);
-        ({ data, error } = await sb
-          .from("products")
-          .select(productSelectFallback())
-          .order("created_at", { ascending: false }));
-      } else {
-        setKeyPrefixSupport(true);
-        setTimeBasedFlagSupport(true);
-      }
+  if (productsSchemaMode === "fallback") {
+    await runFallback();
+  } else {
+    ({ data, error } = await sb
+      .from("products")
+      .select(productSelectWithOptional())
+      .order("created_at", { ascending: false }));
 
-      if (error) {
-        setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
-        $("tableBody").innerHTML = "";
-        return;
-      }
+    if (error && isMissingColumnError(error)) {
+      productsSchemaMode = "fallback";
+      await runFallback();
+    } else if (!error) {
+      productsSchemaMode = "optional";
+      setKeyPrefixSupport(true);
+      setTimeBasedFlagSupport(true);
+    }
+  }
 
-      $("tableBody").innerHTML = (data || []).map(p => {
-        const activeTag = p.is_active
-          ? `<span class="tag on">active</span>`
-          : `<span class="tag off">inactive</span>`;
+  if (error) {
+    setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
+    $("tableBody").innerHTML = "";
+    return;
+  }
 
-        const timeTag = (supportsTimeBasedFlag && p.time_based_enabled)
-          ? `<span class="tag on">time-based</span>`
-          : "";
+  $("tableBody").innerHTML = (data || []).map(p => {
+    const activeTag = p.is_active
+      ? `<span class="tag on">active</span>`
+      : `<span class="tag off">inactive</span>`;
 
-        const thumb = p.image_url
-          ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
-          : `<div class="thumb"><span class="muted">—</span></div>`;
+    const timeTag = (supportsTimeBasedFlag && p.time_based_enabled)
+      ? `<span class="tag on">time-based</span>`
+      : "";
 
-        return `
-        <tr>
-          <td>
-            <div style="font-weight:bold">
-              ${p.slug
-                ? `<a class="product-link" href="/rosina-shop/product/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">${escapeHtml(p.title || "")}</a>`
-                : `${escapeHtml(p.title || "")}`}
-            </div>
-            <div class="muted">
-              ${p.slug
-                ? `<a class="product-link" href="/rosina-shop/product/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">${escapeHtml(p.slug || "")}</a>`
-                : `${escapeHtml(p.slug || "")}`}
-            </div>
-            <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
-            <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-              ${timeTag}
-            </div>
-          </td>
-          <td id="pricecell-${p.id}">${(supportsTimeBasedFlag && p.time_based_enabled) ? `<span class="muted">…</span>` : money(p.price_eur)}</td>
-          <td>${activeTag}</td>
-          <td>${thumb}</td>
-          <td>
-            <div class="actions-cell">
-              <button data-edit="${p.id}">Edit</button>
-              <button class="danger" data-del="${p.id}" data-title="${escapeHtml(p.title || "")}">Delete</button>
-            </div>
-          </td>
-        </tr>
-      `;
-      }).join("");
+    const thumb = p.image_url
+      ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
+      : `<div class="thumb"><span class="muted">—</span></div>`;
 
-      document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editProduct(b.dataset.edit));
-      document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => openDeleteModal(b.dataset.del, b.dataset.title));
+    return `
+    <tr>
+      <td>
+        <div style="font-weight:bold">
+          ${p.slug
+            ? `<a class="product-link" href="/rosina-shop/product/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">${escapeHtml(p.title || "")}</a>`
+            : `${escapeHtml(p.title || "")}`}
+        </div>
+        <div class="muted">
+          ${p.slug
+            ? `<a class="product-link" href="/rosina-shop/product/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">${escapeHtml(p.slug || "")}</a>`
+            : `${escapeHtml(p.slug || "")}`}
+        </div>
+        <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
+        <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+          ${timeTag}
+        </div>
+      </td>
+      <td id="pricecell-${p.id}">${(supportsTimeBasedFlag && p.time_based_enabled) ? `<span class="muted">…</span>` : money(p.price_eur)}</td>
+      <td>${activeTag}</td>
+      <td>${thumb}</td>
+      <td>
+        <div class="actions-cell">
+          <button data-edit="${p.id}">Edit</button>
+          <button class="danger" data-del="${p.id}" data-title="${escapeHtml(p.title || "")}">Delete</button>
+        </div>
+      </td>
+    </tr>
+    `;
+  }).join("");
 
+  wireTableActions();
 
-      // Fill in price ranges for time-based products
-      (data || []).forEach(async (p) => {
-        if (!(supportsTimeBasedFlag && p.time_based_enabled)) return;
+  // If time-based flag exists, show price ranges for time-based products (best-effort).
+  if (supportsTimeBasedFlag && supportsVariantsTable) {
+    (data || [])
+      .filter(p => p.time_based_enabled)
+      .forEach(async (p) => {
         const cell = document.getElementById(`pricecell-${p.id}`);
         if (!cell) return;
+
         const { data: vars, error: vErr } = await sb
           .from("product_variants")
           .select("price_eur")
           .eq("product_id", p.id);
 
-        if (vErr) {
-          // Fallback to base price
+        if (vErr && isMissingTableError(vErr, "product_variants")) {
+          setVariantsSupport(false);
           cell.textContent = money(p.price_eur);
           return;
         }
+
+        if (vErr) {
+          cell.textContent = money(p.price_eur);
+          return;
+        }
+
         const prices = (vars || []).map(v => Number(v.price_eur)).filter(n => Number.isFinite(n));
         if (!prices.length) {
           cell.textContent = money(p.price_eur);
@@ -1077,74 +1116,86 @@ function setTimeBasedFlagSupport(isSupported) {
         const maxP = Math.max(...prices);
         cell.textContent = (minP === maxP) ? money(minP) : `${money(minP)}–${money(maxP)}`;
       });
+  }
 
-      setStatus("");
-    }
+  setStatus("");
+}
+
 
     async function editProduct(id) {
-      setStatus("Loading product…");
-      userExplicitlyDisabledTimeBased = false;
-      let data = null;
-      let error = null;
+  setStatus("Loading product…");
+  userExplicitlyDisabledTimeBased = false;
+  let data = null;
+  let error = null;
 
-      ({ data, error } = await sb
-        .from("products")
-        .select(productSelectWithOptional())
-        .eq("id", id)
-        .maybeSingle());
+  const runFallback = async () => {
+    setKeyPrefixSupport(false);
+    setTimeBasedFlagSupport(false);
+    ({ data, error } = await sb
+      .from("products")
+      .select(productSelectFallback())
+      .eq("id", id)
+      .maybeSingle());
+  };
 
-      if (error) {
-        setKeyPrefixSupport(false);
-        setTimeBasedFlagSupport(false);
-        ({ data, error } = await sb
-          .from("products")
-          .select(productSelectFallback())
-          .eq("id", id)
-          .maybeSingle());
-      } else {
-        setKeyPrefixSupport(true);
-        setTimeBasedFlagSupport(true);
-      }
+  if (productsSchemaMode === "fallback") {
+    await runFallback();
+  } else {
+    ({ data, error } = await sb
+      .from("products")
+      .select(productSelectWithOptional())
+      .eq("id", id)
+      .maybeSingle());
 
-      if (error || !data) {
-        return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
-      }
-
-      $("id").value = data.id;
-      $("title").value = data.title || "";
-      $("slug").value = data.slug || "";
-      $("price_eur").value = data.price_eur ?? "";
-      $("is_active").value = String(!!data.is_active);
-      $("description").value = data.description || "";
-      $("image_url").value = data.image_url || "";
-      $("image_file").value = "";
-      const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
-
-      if (supportsKeyPrefix) $("key_prefix").value = data.key_prefix || "";
-      else $("key_prefix").value = "";
-
-      // Determine time-based enabled:
-      // - If the flag exists, use it.
-      // - Otherwise infer from variants presence after loading variants.
-      const flagEnabled = supportsTimeBasedFlag ? Boolean(data.time_based_enabled) : false;
-
-      await loadTimeVariants(id);
-      if (supportsTimeBasedFlag) {
-        setTimeBasedEnabledUI(flagEnabled);
-      } else {
-        setTimeBasedEnabledUI(timeVariants.length > 0);
-      }
-
-const auto = slugify(data.title || "");
-      const existing = (data.slug || "").trim();
-      slugManuallyEdited = !!existing && existing !== auto;
-
-      renderPreview(data.image_url || "");
-      setStatus("Editing: " + (data.title || data.id), "ok");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (error && isMissingColumnError(error)) {
+      productsSchemaMode = "fallback";
+      await runFallback();
+    } else if (!error) {
+      productsSchemaMode = "optional";
+      setKeyPrefixSupport(true);
+      setTimeBasedFlagSupport(true);
     }
+  }
 
-    function clearForm() {
+  if (error || !data) {
+    return setStatus("Edit load error: " + (error?.message || "Not found"), "error");
+  }
+
+  $("id").value = data.id;
+  $("title").value = data.title || "";
+  $("slug").value = data.slug || "";
+  $("price_eur").value = data.price_eur ?? "";
+  $("is_active").value = String(!!data.is_active);
+  $("description").value = data.description || "";
+  $("image_url").value = data.image_url || "";
+  $("image_file").value = "";
+  const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
+
+  if (supportsKeyPrefix) $("key_prefix").value = data.key_prefix || "";
+  else $("key_prefix").value = "";
+
+  // Determine time-based enabled:
+  // - If the flag exists, use it.
+  // - Otherwise infer from variants presence after loading variants.
+  const flagEnabled = supportsTimeBasedFlag ? Boolean(data.time_based_enabled) : false;
+
+  await loadTimeVariants(id);
+  if (supportsTimeBasedFlag) {
+    setTimeBasedEnabledUI(flagEnabled);
+  } else {
+    setTimeBasedEnabledUI(timeVariants.length > 0);
+  }
+
+  const auto = slugify(data.title || "");
+  const existing = (data.slug || "").trim();
+  slugManuallyEdited = !!existing && existing !== auto;
+
+  renderPreview(data.image_url || "");
+  setStatus("Editing: " + (data.title || data.id), "ok");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function clearForm() {
       userExplicitlyDisabledTimeBased = false;
 
       $("id").value = "";
@@ -1338,8 +1389,10 @@ const auto = slugify(data.title || "");
       setStatus("Deleting…");
 
       // Best-effort: remove variants too (if table exists)
-      await sb.from("product_variants").delete().eq("product_id", id);
-
+      {
+        const { error: vErr } = await sb.from("product_variants").delete().eq("product_id", id);
+        if (vErr && isMissingTableError(vErr, "product_variants")) setVariantsSupport(false);
+      }
       const { error } = await sb.from("products").delete().eq("id", id);
       if (error) return setStatus("Delete error: " + error.message, "error");
 
@@ -1360,7 +1413,7 @@ const auto = slugify(data.title || "");
         .select("duration_days,price_eur")
         .eq("product_id", productId));
 
-      if (error && String(error.message || "").includes("relation")) {
+      if (error && isMissingTableError(error, "product_variants")) {
         setVariantsSupport(false);
         timeVariants = [];
         renderTimeVariants();
@@ -1387,7 +1440,7 @@ const auto = slugify(data.title || "");
       if (!timeBasedEnabled) {
         if (userExplicitlyDisabledTimeBased) {
           const { error: delErr } = await sb.from("product_variants").delete().eq("product_id", productId);
-          if (delErr && String(delErr.message || "").includes("relation")) {
+          if (delErr && isMissingTableError(delErr, "product_variants")) {
             setVariantsSupport(false);
             return null;
           }
@@ -1412,7 +1465,7 @@ const auto = slugify(data.title || "");
 
       // Replace variants atomically-ish: delete then insert
       const { error: deleteError } = await sb.from("product_variants").delete().eq("product_id", productId);
-      if (deleteError && String(deleteError.message || "").includes("relation")) {
+      if (deleteError && isMissingTableError(deleteError, "product_variants")) {
         setVariantsSupport(false);
         return null;
       }
@@ -1427,7 +1480,7 @@ const auto = slugify(data.title || "");
         }));
 
       const { error: insertError } = await sb.from("product_variants").insert(payload);
-      if (insertError && String(insertError.message || "").includes("relation")) {
+      if (insertError && isMissingTableError(insertError, "product_variants")) {
         setVariantsSupport(false);
         return null;
       }
