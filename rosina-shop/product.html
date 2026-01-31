@@ -359,6 +359,53 @@
       animation: gradient-shift 3s ease infinite;
     }
 
+    /* Duration picker cards */
+    .duration-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .duration-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .duration-card {
+      width: 100%;
+      text-align: left;
+      background: rgba(0, 0, 0, .35);
+      border: 2px solid #333;
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all .2s ease;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      line-height: 1.2;
+    }
+
+    .duration-card:hover {
+      border-color: #4a90e2;
+    }
+
+    .duration-card.is-selected {
+      border-color: #4a90e2;
+      background: rgba(74, 144, 226, .12);
+    }
+
+    .duration-card:focus-visible {
+      outline: none;
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, .35);
+    }
+
 </style>
 </head>
 
@@ -539,10 +586,6 @@
       const defaultVariant = hasVariants ? currentVariants[0] : null;
       selectedVariantId = defaultVariant ? String(defaultVariant.id) : null;
 
-      const durationText = hasVariants
-        ? `Duration: ${defaultVariant?.duration_days || "—"} day${defaultVariant?.duration_days === 1 ? "" : "s"}`
-        : (p.duration_days ? `Duration: ${Number(p.duration_days)} day${Number(p.duration_days) === 1 ? "" : "s"}` : "");
-
       card.innerHTML = `
       <div class="hero">
         <div class="img">
@@ -553,17 +596,26 @@
         <div class="content">
           <div class="name">${escapeHtml(p.title)}</div>
           <div class="desc">${escapeHtml(p.description || "")}</div>
-          ${durationText ? `<div class="desc" id="durationLabel" style="color:#888;font-size:13px;">${durationText}</div>` : ``}
           ${hasVariants ? `
           <div style="margin-top:10px;">
-            <label style="display:block;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Choose duration</label>
-            <select id="variantSelect" style="width:100%;background:rgba(0,0,0,0.5);border:2px solid #333;color:#fff;padding:10px 12px;border-radius:8px;font-family:inherit;font-size:14px;">
-              ${currentVariants.map((variant) => `
-                <option value="${variant.id}">
-                  ${variant.duration_days} day${variant.duration_days === 1 ? "" : "s"} • ${moneyEUR(variant.price_eur)}
-                </option>
-              `).join("")}
-            </select>
+            <label id="durationPickerLabel" style="display:block;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Choose duration</label>
+            <div id="durationPicker" class="duration-grid" role="group" aria-labelledby="durationPickerLabel">
+              ${currentVariants.map((variant) => {
+                const id = String(variant.id);
+                const isSelected = id === selectedVariantId;
+                const days = variant.duration_days ?? "—";
+                const daySuffix = Number(variant.duration_days) === 1 ? "" : "s";
+                return `
+                  <button
+                    type="button"
+                    class="duration-card${isSelected ? " is-selected" : ""}"
+                    data-variant-id="${escapeHtml(id)}"
+                    aria-pressed="${isSelected ? "true" : "false"}">
+                    ${days} day${daySuffix} • ${moneyEUR(variant.price_eur)}
+                  </button>
+                `;
+              }).join("")}
+            </div>
           </div>
           ` : ``}
           <div class="price" id="priceLabel">${moneyEUR(hasVariants ? defaultVariant?.price_eur : p.price_eur)}</div>
@@ -576,20 +628,35 @@
       </div>
     `;
 
-      const variantSelect = document.getElementById("variantSelect");
-      if (variantSelect) {
-        variantSelect.addEventListener("change", () => {
-          const variantId = variantSelect.value;
-          const variant = currentVariants.find((v) => String(v.id) === String(variantId));
-          selectedVariantId = variant ? String(variant.id) : null;
-          const priceLabel = document.getElementById("priceLabel");
-          const durationLabel = document.getElementById("durationLabel");
-          if (priceLabel && variant) priceLabel.textContent = moneyEUR(variant.price_eur);
-          if (durationLabel && variant) {
-            durationLabel.textContent = `Duration: ${variant.duration_days} day${variant.duration_days === 1 ? "" : "s"}`;
-          }
+      const priceLabel = document.getElementById("priceLabel");
+      const durationPicker = document.getElementById("durationPicker");
+
+      function syncVariantUI() {
+        if (!durationPicker) return;
+        durationPicker.querySelectorAll("button[data-variant-id]").forEach((btn) => {
+          const isSelected = String(btn.dataset.variantId) === String(selectedVariantId);
+          btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+          btn.classList.toggle("is-selected", isSelected);
         });
       }
+
+      function selectVariantById(variantId) {
+        const variant = currentVariants.find((v) => String(v.id) === String(variantId));
+        selectedVariantId = variant ? String(variant.id) : null;
+        if (priceLabel && variant) priceLabel.textContent = moneyEUR(variant.price_eur);
+        syncVariantUI();
+      }
+
+      if (durationPicker) {
+        durationPicker.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-variant-id]");
+          if (!btn) return;
+          selectVariantById(btn.dataset.variantId);
+        });
+      }
+
+      // Ensure aria-pressed + selection classes are in sync on initial render.
+      syncVariantUI();
 
       const addBtn = document.getElementById("addToCartBtn");
       const buyBtn = document.getElementById("buyNowBtn");
