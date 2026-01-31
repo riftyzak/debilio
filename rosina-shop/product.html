@@ -339,7 +339,7 @@
         font-size: 14px !important;
       }
     }
-  
+
 
     .header {
       text-align: center;
@@ -359,18 +359,16 @@
       animation: gradient-shift 3s ease infinite;
     }
 
-    /* Duration picker cards */
-    .duration-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 10px;
-    }
+    /* ============================
+       Duration picker (UPDATED UI)
+       ============================ */
 
-    @media (max-width: 640px) {
-      .duration-grid {
-        grid-template-columns: 1fr;
-      }
+    /* Variants as vertical stacked cards */
+    .duration-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 10px;
     }
 
     .duration-card {
@@ -379,16 +377,17 @@
       background: rgba(0, 0, 0, .35);
       border: 2px solid #333;
       color: #fff;
-      padding: 12px 14px;
-      border-radius: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
       cursor: pointer;
       transition: all .2s ease;
       font-family: inherit;
-      display: inline-flex;
+
+      /* two-column layout: left info + right price */
+      display: grid;
+      grid-template-columns: 1fr auto;
+      column-gap: 14px;
       align-items: center;
-      justify-content: flex-start;
-      gap: 8px;
-      line-height: 1.2;
     }
 
     .duration-card:hover {
@@ -398,6 +397,7 @@
     .duration-card.is-selected {
       border-color: #4a90e2;
       background: rgba(74, 144, 226, .12);
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, .22);
     }
 
     .duration-card:focus-visible {
@@ -406,7 +406,78 @@
       box-shadow: 0 0 0 3px rgba(74, 144, 226, .35);
     }
 
-</style>
+    /* Disabled / out-of-stock variants */
+    .duration-card.is-disabled,
+    .duration-card:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      border-color: #2b2b2b;
+      background: rgba(0, 0, 0, .28);
+    }
+
+    .duration-card.is-disabled:hover,
+    .duration-card:disabled:hover {
+      border-color: #2b2b2b;
+    }
+
+    .duration-card__left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .variant-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .variant-stock {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .stock--in {
+      color: #2ecc71;
+    }
+
+    /* green */
+    .stock--low {
+      color: #f39c12;
+    }
+
+    /* orange */
+    .stock--out {
+      color: #e74c3c;
+    }
+
+    /* red */
+
+    .variant-price {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Hide the big standalone price under variants (keep DOM for JS updates) */
+    #priceLabel {
+      display: none !important;
+    }
+
+    /* Actions buttons: force same row like screenshot */
+    .actions.actions--row {
+      flex-wrap: nowrap;
+    }
+
+    .actions.actions--row .btn {
+      min-width: 0;
+    }
+  </style>
 </head>
 
 <body>
@@ -583,8 +654,29 @@
       card.style.display = 'block';
 
       const hasVariants = Array.isArray(currentVariants) && currentVariants.length > 0;
-      const defaultVariant = hasVariants ? currentVariants[0] : null;
-      selectedVariantId = defaultVariant ? String(defaultVariant.id) : null;
+
+      // UI-only: disabled/out-of-stock guard (does NOT change backend)
+      function isVariantDisabled(variant) {
+        const qtyRaw =
+          variant.stock_qty ?? variant.stock ?? variant.quantity ?? variant.inventory_qty ?? variant.qty ?? null;
+        const qty = (qtyRaw === null || qtyRaw === undefined || qtyRaw === "") ? null : Number(qtyRaw);
+
+        const explicitOut =
+          variant.is_in_stock === false ||
+          variant.out_of_stock === true ||
+          variant.purchase_disabled === true ||
+          variant.disabled === true ||
+          variant.is_active === false;
+
+        const isOut = explicitOut || (Number.isFinite(qty) && qty <= 0);
+        return isOut;
+      }
+
+      const defaultVariant = hasVariants
+        ? (currentVariants.find(v => !isVariantDisabled(v)) || currentVariants[0])
+        : null;
+
+      selectedVariantId = (defaultVariant && !isVariantDisabled(defaultVariant)) ? String(defaultVariant.id) : null;
 
       card.innerHTML = `
       <div class="hero">
@@ -599,31 +691,65 @@
           ${hasVariants ? `
           <div style="margin-top:10px;">
             <label id="durationPickerLabel" style="display:block;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Choose duration</label>
-            <div id="durationPicker" class="duration-grid" role="group" aria-labelledby="durationPickerLabel">
+            <div id="durationPicker" class="duration-grid" role="radiogroup" aria-labelledby="durationPickerLabel">
               ${currentVariants.map((variant) => {
                 const id = String(variant.id);
-                const isSelected = id === selectedVariantId;
-                const days = variant.duration_days ?? "—";
-                const daySuffix = Number(variant.duration_days) === 1 ? "" : "s";
+
+                // Title: prefer provided title/name/label, else derive from duration_days
+                const daysNum = (variant.duration_days ?? null);
+                const daySuffix = Number(daysNum) === 1 ? "" : "s";
+                const derivedTitle = daysNum !== null ? `${daysNum} Day${daySuffix}` : "Duration";
+                const title = (variant.title || variant.name || variant.label || "").trim() || derivedTitle;
+
+                // Stock (UI-only): if no stock info exists in data, defaults to "In stock"
+                const qtyRaw =
+                  variant.stock_qty ?? variant.stock ?? variant.quantity ?? variant.inventory_qty ?? variant.qty ?? null;
+                const qty = (qtyRaw === null || qtyRaw === undefined || qtyRaw === "") ? null : Number(qtyRaw);
+
+                const explicitOut =
+                  variant.is_in_stock === false ||
+                  variant.out_of_stock === true ||
+                  variant.purchase_disabled === true ||
+                  variant.disabled === true ||
+                  variant.is_active === false;
+
+                const isOut = explicitOut || (Number.isFinite(qty) && qty <= 0);
+                const isLow = !isOut && Number.isFinite(qty) && qty > 0 && qty <= 3;
+
+                const stockText = isOut ? "Out of stock" : (isLow ? "Low stock" : "In stock");
+                const stockClass = isOut ? "stock--out" : (isLow ? "stock--low" : "stock--in");
+
+                const isDisabled = isOut;
+                const isSelected = !isDisabled && id === selectedVariantId;
+
                 return `
                   <button
                     type="button"
-                    class="duration-card${isSelected ? " is-selected" : ""}"
+                    class="duration-card${isSelected ? " is-selected" : ""}${isDisabled ? " is-disabled" : ""}"
                     data-variant-id="${escapeHtml(id)}"
-                    aria-pressed="${isSelected ? "true" : "false"}">
-                    ${days} day${daySuffix} • ${moneyEUR(variant.price_eur)}
+                    ${isDisabled ? `disabled aria-disabled="true"` : ``}
+                    role="radio"
+                    aria-checked="${isSelected ? "true" : "false"}"
+                    tabindex="${isSelected ? "0" : "-1"}">
+                    <span class="duration-card__left">
+                      <span class="variant-title">${escapeHtml(title)}</span>
+                      <span class="variant-stock ${stockClass}">${stockText}</span>
+                    </span>
+                    <span class="variant-price">${moneyEUR(variant.price_eur)}</span>
                   </button>
                 `;
               }).join("")}
             </div>
           </div>
           ` : ``}
+
           <div class="price" id="priceLabel">${moneyEUR(hasVariants ? defaultVariant?.price_eur : p.price_eur)}</div>
-          <div class="actions">
+
+          <div class="actions actions--row">
             <button class="btn" id="addToCartBtn"><i class="fas fa-cart-plus"></i> Add to cart</button>
             <button class="btn" id="buyNowBtn"><i class="fas fa-bolt"></i> Buy now</button>
           </div>
-          
+
         </div>
       </div>
     `;
@@ -633,17 +759,32 @@
 
       function syncVariantUI() {
         if (!durationPicker) return;
-        durationPicker.querySelectorAll("button[data-variant-id]").forEach((btn) => {
-          const isSelected = String(btn.dataset.variantId) === String(selectedVariantId);
-          btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+
+        const buttons = Array.from(durationPicker.querySelectorAll("button[data-variant-id]"));
+        buttons.forEach((btn) => {
+          const isDisabled = btn.disabled || btn.getAttribute("aria-disabled") === "true";
+          const isSelected = !isDisabled && String(btn.dataset.variantId) === String(selectedVariantId);
+
+          btn.setAttribute("aria-checked", isSelected ? "true" : "false");
           btn.classList.toggle("is-selected", isSelected);
+          btn.tabIndex = isSelected ? 0 : -1;
         });
+
+        if (!buttons.some(b => b.tabIndex === 0)) {
+          const firstEnabled = buttons.find(b => !b.disabled && b.getAttribute("aria-disabled") !== "true");
+          if (firstEnabled) firstEnabled.tabIndex = 0;
+        }
       }
 
       function selectVariantById(variantId) {
         const variant = currentVariants.find((v) => String(v.id) === String(variantId));
-        selectedVariantId = variant ? String(variant.id) : null;
-        if (priceLabel && variant) priceLabel.textContent = moneyEUR(variant.price_eur);
+        if (!variant || isVariantDisabled(variant)) return; // ignore disabled/out-of-stock
+
+        selectedVariantId = String(variant.id);
+
+        // Keep wired to existing priceLabel updates (label is hidden in CSS)
+        if (priceLabel) priceLabel.textContent = moneyEUR(variant.price_eur);
+
         syncVariantUI();
       }
 
@@ -651,11 +792,42 @@
         durationPicker.addEventListener("click", (e) => {
           const btn = e.target.closest("button[data-variant-id]");
           if (!btn) return;
+          if (btn.disabled || btn.getAttribute("aria-disabled") === "true") return; // ignore disabled
           selectVariantById(btn.dataset.variantId);
+        });
+
+        durationPicker.addEventListener("keydown", (e) => {
+          const keys = ["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "Home", "End", " ", "Enter"];
+          if (!keys.includes(e.key)) return;
+
+          const buttons = Array.from(durationPicker.querySelectorAll("button[data-variant-id]"))
+            .filter(b => !b.disabled && b.getAttribute("aria-disabled") !== "true");
+
+          if (!buttons.length) return;
+
+          const current = document.activeElement?.closest?.("button[data-variant-id]");
+          const currentIndex = Math.max(0, buttons.indexOf(current));
+
+          let nextIndex = currentIndex;
+
+          if (e.key === "Home") nextIndex = 0;
+          if (e.key === "End") nextIndex = buttons.length - 1;
+          if (e.key === "ArrowDown" || e.key === "ArrowRight") nextIndex = (currentIndex + 1) % buttons.length;
+          if (e.key === "ArrowUp" || e.key === "ArrowLeft") nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            if (current && !current.disabled) selectVariantById(current.dataset.variantId);
+            return;
+          }
+
+          e.preventDefault();
+          buttons[nextIndex].focus();
+          selectVariantById(buttons[nextIndex].dataset.variantId);
         });
       }
 
-      // Ensure aria-pressed + selection classes are in sync on initial render.
+      // Ensure aria + selection classes are in sync on initial render.
       syncVariantUI();
 
       const addBtn = document.getElementById("addToCartBtn");
