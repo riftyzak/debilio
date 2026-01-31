@@ -1,0 +1,19 @@
+@import "tailwindcss" source("../");
+
+/* Optional, but recommended for your repo to avoid scanning backup HTML */
+@source not "../rosina-shop/.backup";
+
+@theme {
+  --scroll-diagonal: scroll-diagonal 40s linear infinite;
+  --gradient-shift: gradient-shift 3s ease infinite;
+
+  @keyframes scroll-diagonal {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-50%, -50%); }
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% center; }
+    50% { background-position: 100% center; }
+  }
+}

@@ -7,6 +7,8 @@
     <title>Rosina Shop</title>
     <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/styles/tailwind.css">
+
     <style>
         * {
             margin: 0;
@@ -133,7 +135,7 @@
             padding: 12px 20px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             transition: all 0.3s ease;
             z-index: 100;
         }
@@ -556,18 +558,75 @@
         }
 
         async function fetchActiveProducts() {
-            const url =
-                `${SUPABASE_URL}/rest/v1/products` +
-                `?select=id,title,slug,price_eur,description,image_url,is_active,created_at` +
-                `&is_active=eq.true` +
-                `&order=created_at.desc`;
+            const base = `${SUPABASE_URL}/rest/v1/products`;
+            const selects = [
+                "id,title,slug,price_eur,description,image_url,is_active,created_at,time_based_enabled",
+                "id,title,slug,price_eur,description,image_url,is_active,created_at"
+            ];
 
-            const res = await fetch(url, { headers: supaHeaders() });
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
-            return (data || []).map(p => ({ ...p, price_eur: Number(p.price_eur) }));
+            let data = null;
+            for (const select of selects) {
+                const url =
+                    `${base}` +
+                    `?select=${select}` +
+                    `&is_active=eq.true` +
+                    `&order=created_at.desc`;
+
+                const res = await fetch(url, { headers: supaHeaders() });
+                if (!res.ok) {
+                    // If optional column doesn't exist, Supabase returns 400.
+                    if (res.status === 400 && select !== selects[selects.length - 1]) continue;
+                    throw new Error(await res.text());
+                }
+                data = await res.json();
+                break;
+            }
+
+            return (data || []).map(p => ({
+                ...p,
+                price_eur: Number(p.price_eur),
+                time_based_enabled: Boolean(p.time_based_enabled)
+            }));
         }
-        let products = [];
+        
+        async function fetchVariantsByProductId(productId) {
+            const base = `${SUPABASE_URL}/rest/v1/product_variants`;
+            const selects = [
+                "id,product_id,duration_days,price_eur",
+                "duration_days,price_eur"
+            ];
+
+            for (const select of selects) {
+                const url =
+                    `${base}` +
+                    `?select=${select}` +
+                    `&product_id=eq.${encodeURIComponent(productId)}` +
+                    `&order=duration_days.asc`;
+
+                const res = await fetch(url, { headers: supaHeaders() });
+                if (!res.ok) {
+                    if (res.status === 400 && select !== selects[selects.length - 1]) continue;
+                    return [];
+                }
+                const data = await res.json();
+                return (data || []).map(v => ({
+                    ...v,
+                    price_eur: Number(v.price_eur),
+                    duration_days: v.duration_days !== null && v.duration_days !== undefined ? Number(v.duration_days) : null
+                }));
+            }
+            return [];
+        }
+
+        function priceRangeLabel(min, max) {
+            const a = Number(min);
+            const b = Number(max);
+            if (!Number.isFinite(a) || !Number.isFinite(b)) return "";
+            if (a === b) return `€${a.toFixed(2)}`;
+            return `€${a.toFixed(2)} – €${b.toFixed(2)}`;
+        }
+
+let products = [];
         // =========================
         // Shop render (NO add-to-cart here, only View product)
         // =========================
@@ -589,7 +648,9 @@
                     </div>
                     <div class="product-name">${escapeHtml(product.title)}</div>
                     <div class="product-description">${escapeHtml(product.description || "")}</div>
-                    <div class="product-price">€${Number(product.price_eur).toFixed(2)}</div>
+                    <div class="product-price">${Number.isFinite(product.price_min) && Number.isFinite(product.price_max)
+                        ? priceRangeLabel(product.price_min, product.price_max)
+                        : `€${Number(product.price_eur).toFixed(2)}`}</div>
 
                     <a class="add-to-cart" href="/rosina-shop/product/${encodeURIComponent(product.slug)}">
                         <i class="fas fa-eye"></i> View product
@@ -613,6 +674,16 @@
         (async () => {
             try {
                 products = await fetchActiveProducts();
+                // If a product is time-based, show min–max pricing on the main page.
+                // Best-effort: if variants table/columns are missing, we fall back to price_eur.
+                products = await Promise.all(products.map(async (p) => {
+                    // Best-effort: if this product has variants, show min–max pricing.
+                    const variants = await fetchVariantsByProductId(p.id);
+                    const prices = (variants || []).map(v => Number(v.price_eur)).filter(n => Number.isFinite(n));
+                    if (!prices.length) return p;
+                    return { ...p, time_based_enabled: true, price_min: Math.min(...prices), price_max: Math.max(...prices) };
+                }));
+
             } catch (e) {
                 console.error("Supabase fetch error:", e);
                 products = [];

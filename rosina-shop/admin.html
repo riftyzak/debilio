@@ -15,6 +15,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="manifest" href="/site.webmanifest">
+  <link rel="stylesheet" href="/styles/tailwind.css">
 
   <style>
     * {
@@ -95,7 +96,7 @@
       border-radius: 8px;
       cursor: pointer;
       font-family: inherit, monospace;
-      font-size: 13px;
+      font-size: 14px;
       transition: all 0.3s ease;
       text-decoration: none;
       display: inline-block;
@@ -225,6 +226,11 @@
       gap: 12px;
     }
 
+
+    .span2 {
+      grid-column: 1 / -1;
+    }
+
     label {
       display: block;
       color: #888;
@@ -335,6 +341,17 @@
       color: #aaa;
     }
 
+    /* Time-based toggle: hover color indicates action */
+    #timeBasedToggleBtn.enable-hover:hover {
+      border-color: #667eea !important;
+      color: #667eea !important;
+    }
+
+    #timeBasedToggleBtn.disable-hover:hover {
+      border-color: #ff6b81 !important;
+      color: #ff6b81 !important;
+    }
+
     .preview {
       width: 100%;
       height: 220px;
@@ -370,6 +387,15 @@
       width: 100%;
       border-collapse: collapse;
       min-width: 860px;
+    }
+
+    table.compact {
+      min-width: 0;
+    }
+
+    table.compact th,
+    table.compact td {
+      white-space: nowrap;
     }
 
     th,
@@ -657,6 +683,29 @@
       border-color: #667eea;
       transform: translateY(-1px);
     }
+  
+    .file-uploader {
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .file-btn {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .file-name {
+      color:#aaa;
+      font-size:12px;
+      font-family: inherit, monospace;
+    }
+
+  
+    .upload-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .upload-btn{display:inline-flex;align-items:center;gap:8px}
+    .upload-btn svg{width:16px;height:16px}
+
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -670,13 +719,19 @@
     const $ = (id) => document.getElementById(id);
 
     let slugManuallyEdited = false;
-    let supportsDeliveryFields = true;
-    let supportsVariantFields = true;
+
+    // Optional schema support flags (we auto-detect and degrade gracefully)
+    let supportsKeyPrefix = true;
+    let supportsTimeBasedFlag = true;
+    let supportsVariantsTable = true;
+
+    // Time-based editor state
+    let timeBasedEnabled = false;
+    let timeVariants = []; // { uid:string, duration_days:number, price_eur:number }
 
     let pendingDeleteId = null;
     let pendingDeleteTitle = "";
     let lastFocusEl = null;
-
 
     function setStatus(msg, kind = "") {
       const s = $("status");
@@ -706,31 +761,170 @@
       return "€" + (Number.isFinite(v) ? v.toFixed(2) : "0.00");
     }
 
-    function setDeliverySupport(isSupported) {
-      supportsDeliveryFields = isSupported;
-      const toggleIds = ["auto_deliver", "delivery_text", "duration_days"];
-      toggleIds.forEach((id) => {
-        const el = $(id);
-        if (el) el.disabled = !isSupported;
-      });
-      const note = $("deliverySupportNote");
-      if (note) {
-        note.textContent = isSupported
-          ? "Leave blank to auto-generate on purchase."
-          : "Add columns auto_deliver, delivery_text, duration_days to enable auto delivery/time-based products.";
-      }
+    function normalizePrefix(v) {
+      const s = String(v || "").trim();
+      if (!s) return "";
+      return s.replace(/-+$/g, "");
     }
 
-    function setVariantSupport(isSupported) {
-      supportsVariantFields = isSupported;
-      const variantSection = $("variantSection");
-      if (variantSection) variantSection.style.display = isSupported ? "block" : "none";
+    function setKeyPrefixSupport(isSupported) {
+      supportsKeyPrefix = isSupported;
+      const el = $("key_prefix");
+      // Always allow typing; if the DB column doesn't exist we simply won't persist it.
+      if (el) el.disabled = false;
+
+      const note = $("keyPrefixNote");
+      if (note) {
+        note.textContent = isSupported
+          ? 'Optional. If set to “xxx”, keys will start with “xxx-”.'
+          : 'Optional. If set to “xxx”, keys will start with “xxx-”. (Not saved until products.key_prefix exists.)';
+      }
+      updateKeyPrefixUI();
+    }
+
+    
+
+function updateKeyPrefixUI() {
+  const wrap = $("keyPrefixWrap");
+  const timeWrap = $("timeBasedWrap");
+  if (!wrap || !timeWrap) return;
+
+  // Show Key Prefix only for license-based products (time-based enabled) and only if schema supports it.
+  const shouldShow = !!supportsKeyPrefix && !!timeBasedEnabled;
+
+  wrap.style.display = shouldShow ? "block" : "none";
+  timeWrap.classList.toggle("span2", !shouldShow);
+}
+
+function setTimeBasedFlagSupport(isSupported) {
+      supportsTimeBasedFlag = isSupported;
+      // If not supported, we can still infer based on variants length, but we won't write flag to products.
+    }
+
+    function setVariantsSupport(isSupported) {
+      supportsVariantsTable = isSupported;
+      const section = $("timeVariantSection");
+      if (section) section.style.display = (isSupported && timeBasedEnabled) ? "block" : "none";
       const note = $("variantSupportNote");
       if (note) {
         note.textContent = isSupported
-          ? "Fill in price to enable a duration option."
-          : "Create a product_variants table to enable duration-based pricing.";
+          ? ""
+          : "Create a product_variants table (product_id, duration_days, price_eur) to enable time-based pricing.";
       }
+    }
+
+    
+    function updatePriceFieldUI() {
+      const priceEl = $("price_eur");
+      if (!priceEl) return;
+      priceEl.disabled = !!timeBasedEnabled;
+      priceEl.placeholder = timeBasedEnabled ? "Auto (min of durations)" : "0.00";
+    }
+
+    function setTimeBasedEnabledUI(enabled) {
+      timeBasedEnabled = !!enabled;
+
+      const btn = $("timeBasedToggleBtn");
+      const section = $("timeVariantSection");
+
+      if (btn) {
+        btn.textContent = timeBasedEnabled ? "Disable time-based product" : "Enable time-based product";
+        btn.classList.toggle("enable-hover", !timeBasedEnabled);
+        btn.classList.toggle("disable-hover", timeBasedEnabled);
+      }
+
+      if (section) section.style.display = (supportsVariantsTable && timeBasedEnabled) ? "block" : "none";
+
+      updatePriceFieldUI();
+      updateKeyPrefixUI();
+      renderTimeVariants();
+    }
+
+    
+    function renderTimeVariants() {
+      const body = $("variantTableBody");
+      if (!body) return;
+
+      const sorted = [...timeVariants].sort((a, b) => Number(a.duration_days) - Number(b.duration_days));
+
+      body.innerHTML = sorted.length
+        ? sorted.map((v) => {
+            const uid = v.uid;
+            const days = Number(v.duration_days);
+            const price = Number(v.price_eur || 0);
+            return `
+              <tr>
+                <td>
+                  <input type="number" step="1" min="1" value="${Number.isFinite(days) ? days : ""}"
+                    data-variant-days="${uid}" ${timeBasedEnabled ? "" : "disabled"} />
+                </td>
+                <td>
+                  <input type="number" step="0.01" min="0" value="${Number.isFinite(price) ? price : ""}"
+                    data-variant-price="${uid}" ${timeBasedEnabled ? "" : "disabled"} />
+                </td>
+                <td>
+                  <button type="button" class="danger" data-variant-remove="${uid}" ${timeBasedEnabled ? "" : "disabled"}>Remove</button>
+                </td>
+              </tr>
+            `;
+          }).join("")
+        : `
+            <tr>
+              <td colspan="3" class="muted">No durations added yet.</td>
+            </tr>
+          `;
+
+      document.querySelectorAll("[data-variant-remove]").forEach((b) => {
+        b.onclick = () => {
+          const uid = b.dataset.variantRemove;
+          timeVariants = timeVariants.filter((x) => x.uid !== uid);
+          renderTimeVariants();
+        };
+      });
+
+      document.querySelectorAll("[data-variant-days]").forEach((inp) => {
+        inp.oninput = () => {
+          const uid = inp.dataset.variantDays;
+          const v = timeVariants.find((x) => x.uid === uid);
+          if (!v) return;
+          v.duration_days = Number(inp.value || 0);
+        };
+      });
+
+      document.querySelectorAll("[data-variant-price]").forEach((inp) => {
+        inp.oninput = () => {
+          const uid = inp.dataset.variantPrice;
+          const v = timeVariants.find((x) => x.uid === uid);
+          if (!v) return;
+          v.price_eur = Number(inp.value || 0);
+        };
+      });
+    }
+
+    function addTimeVariantFromInputs() {
+      if (!timeBasedEnabled) return;
+
+      const daysEl = $("variant_add_days");
+      const priceEl = $("variant_add_price");
+      const days = Number(daysEl?.value || 0);
+      const priceRaw = priceEl?.value ?? "";
+      const price = Number(priceRaw || 0);
+
+      if (!Number.isFinite(days) || days <= 0 || !Number.isInteger(days)) {
+        return setStatus("Days must be a positive whole number.", "error");
+      }
+      if (priceRaw === "" || !Number.isFinite(price) || price < 0) {
+        return setStatus("Price must be a valid number (>= 0).", "error");
+      }
+      if (timeVariants.some((v) => Number(v.duration_days) === days)) {
+        return setStatus(`Duration ${days} days already exists.`, "error");
+      }
+
+      timeVariants.push({ uid: crypto.randomUUID(), duration_days: days, price_eur: price });
+      if (daysEl) daysEl.value = "";
+      if (priceEl) priceEl.value = "";
+      renderTimeVariants();
+      setStatus("");
     }
 
     async function refreshUI() {
@@ -747,6 +941,7 @@
       $("authCard").style.display = "none";
       $("app").style.display = "block";
       $("me").textContent = session.user.email;
+      $("logoutBtn").style.display = "inline-flex";
 
       await loadProducts();
     }
@@ -769,6 +964,18 @@
       await refreshUI();
     }
 
+    function productSelectWithOptional() {
+      // Order matters: we try with optional columns first; if Supabase complains about columns, we retry.
+      // Optional columns used by the admin UI:
+      // - products.time_based_enabled
+      // - products.key_prefix
+      return "id,title,slug,price_eur,description,image_url,is_active,created_at,time_based_enabled,key_prefix";
+    }
+
+    function productSelectFallback() {
+      return "id,title,slug,price_eur,description,image_url,is_active,created_at";
+    }
+
     async function loadProducts() {
       setStatus("Loading products…");
       let data = null;
@@ -776,20 +983,21 @@
 
       ({ data, error } = await sb
         .from("products")
-        .select("id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,delivery_text,duration_days")
+        .select(productSelectWithOptional())
         .order("created_at", { ascending: false }));
 
-      if (error && String(error.message || "").includes("column")) {
-        setDeliverySupport(false);
+      // Column detection: if the optional columns don't exist, retry without them.
+      if (error) {
+        setKeyPrefixSupport(false);
+        setTimeBasedFlagSupport(false);
         ({ data, error } = await sb
           .from("products")
-          .select("id,title,slug,price_eur,description,image_url,is_active,created_at")
+          .select(productSelectFallback())
           .order("created_at", { ascending: false }));
       } else {
-        setDeliverySupport(true);
+        setKeyPrefixSupport(true);
+        setTimeBasedFlagSupport(true);
       }
-
-      setVariantSupport(true);
 
       if (error) {
         setStatus("Load error: " + error.message + " (If RLS denied: add your user to public.admins.)", "error");
@@ -802,13 +1010,9 @@
           ? `<span class="tag on">active</span>`
           : `<span class="tag off">inactive</span>`;
 
-        const deliveryTag = p.auto_deliver
-          ? `<span class="tag on">auto-delivery</span>`
-          : `<span class="tag off">manual</span>`;
-
-        const durationTag = p.duration_days
-          ? `<span class="tag on">${Number(p.duration_days)}d</span>`
-          : `<span class="tag off">no duration</span>`;
+        const timeTag = (supportsTimeBasedFlag && p.time_based_enabled)
+          ? `<span class="tag on">time-based</span>`
+          : "";
 
         const thumb = p.image_url
           ? `<div class="thumb"><img src="${p.image_url}" alt=""></div>`
@@ -829,11 +1033,10 @@
             </div>
             <div class="small" style="margin-top:6px">${escapeHtml((p.description || "").slice(0, 90))}${(p.description || "").length > 90 ? "…" : ""}</div>
             <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-              ${supportsDeliveryFields ? deliveryTag : ""}
-              ${supportsDeliveryFields ? durationTag : ""}
+              ${timeTag}
             </div>
           </td>
-          <td>${money(p.price_eur)}</td>
+          <td id="pricecell-${p.id}">${(supportsTimeBasedFlag && p.time_based_enabled) ? `<span class="muted">…</span>` : money(p.price_eur)}</td>
           <td>${activeTag}</td>
           <td>${thumb}</td>
           <td>
@@ -849,6 +1052,32 @@
       document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editProduct(b.dataset.edit));
       document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => openDeleteModal(b.dataset.del, b.dataset.title));
 
+
+      // Fill in price ranges for time-based products
+      (data || []).forEach(async (p) => {
+        if (!(supportsTimeBasedFlag && p.time_based_enabled)) return;
+        const cell = document.getElementById(`pricecell-${p.id}`);
+        if (!cell) return;
+        const { data: vars, error: vErr } = await sb
+          .from("product_variants")
+          .select("price_eur")
+          .eq("product_id", p.id);
+
+        if (vErr) {
+          // Fallback to base price
+          cell.textContent = money(p.price_eur);
+          return;
+        }
+        const prices = (vars || []).map(v => Number(v.price_eur)).filter(n => Number.isFinite(n));
+        if (!prices.length) {
+          cell.textContent = money(p.price_eur);
+          return;
+        }
+        const minP = Math.min(...prices);
+        const maxP = Math.max(...prices);
+        cell.textContent = (minP === maxP) ? money(minP) : `${money(minP)}–${money(maxP)}`;
+      });
+
       setStatus("");
     }
 
@@ -859,19 +1088,21 @@
 
       ({ data, error } = await sb
         .from("products")
-        .select("id,title,slug,price_eur,description,image_url,is_active,auto_deliver,delivery_text,duration_days")
+        .select(productSelectWithOptional())
         .eq("id", id)
         .maybeSingle());
 
-      if (error && String(error.message || "").includes("column")) {
-        setDeliverySupport(false);
+      if (error) {
+        setKeyPrefixSupport(false);
+        setTimeBasedFlagSupport(false);
         ({ data, error } = await sb
           .from("products")
-          .select("id,title,slug,price_eur,description,image_url,is_active")
+          .select(productSelectFallback())
           .eq("id", id)
           .maybeSingle());
       } else {
-        setDeliverySupport(true);
+        setKeyPrefixSupport(true);
+        setTimeBasedFlagSupport(true);
       }
 
       if (error || !data) {
@@ -886,15 +1117,25 @@
       $("description").value = data.description || "";
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
-      $("auto_deliver").checked = Boolean(data.auto_deliver);
-      $("delivery_text").value = data.delivery_text || "";
-      $("duration_days").value = data.duration_days ? String(data.duration_days) : "";
+      const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
 
-      await loadVariants(id);
+      if (supportsKeyPrefix) $("key_prefix").value = data.key_prefix || "";
+      else $("key_prefix").value = "";
 
-      const auto = slugify(data.title || "");
+      // Determine time-based enabled:
+      // - If the flag exists, use it.
+      // - Otherwise infer from variants presence after loading variants.
+      const flagEnabled = supportsTimeBasedFlag ? Boolean(data.time_based_enabled) : false;
+
+      await loadTimeVariants(id);
+      if (supportsTimeBasedFlag) {
+        setTimeBasedEnabledUI(flagEnabled);
+      } else {
+        setTimeBasedEnabledUI(timeVariants.length > 0);
+      }
+
+const auto = slugify(data.title || "");
       const existing = (data.slug || "").trim();
-
       slugManuallyEdited = !!existing && existing !== auto;
 
       renderPreview(data.image_url || "");
@@ -911,10 +1152,13 @@
       $("description").value = "";
       $("image_url").value = "";
       $("image_file").value = "";
-      $("auto_deliver").checked = false;
-      $("delivery_text").value = "";
-      $("duration_days").value = "";
-      clearVariantsForm();
+      const fn1 = $("imageFileName"); if (fn1) fn1.textContent = "No file selected";
+      $("key_prefix").value = "";
+
+      timeVariants = [];
+
+      setTimeBasedEnabledUI(false);
+
       renderPreview("");
 
       // New product => slug auto-follows title unless user edits slug
@@ -930,7 +1174,6 @@
         : `<span class="muted">no image</span>`;
     }
 
-
     function openDeleteModal(id, title = "") {
       if (!id) return;
       lastFocusEl = document.activeElement;
@@ -945,7 +1188,6 @@
       overlay.setAttribute("aria-hidden", "false");
       overlay.inert = false;
 
-      // Focus cancel for easy escape
       $("deleteCancelBtn").focus();
     }
 
@@ -961,14 +1203,12 @@
       lastFocusEl = null;
     }
 
-
     async function confirmDeleteModal() {
       if (!pendingDeleteId) return closeDeleteModal();
       const id = pendingDeleteId;
       closeDeleteModal();
       await deleteProduct(id);
     }
-
 
     async function uploadImageIfAny() {
       const file = $("image_file").files?.[0];
@@ -996,17 +1236,24 @@
       const id = $("id").value.trim() || null;
       const title = $("title").value.trim();
 
-      // If user never manually edited slug, keep it synced to title
       const currentSlug = $("slug").value.trim();
       const slug = slugManuallyEdited ? currentSlug : (currentSlug || slugify(title));
 
-      const price_eur = Number($("price_eur").value || 0);
+      let price_eur = Number($("price_eur").value || 0);
+
+      // For time-based products, store the minimum duration price as the base price (read-only in UI)
+      if (timeBasedEnabled) {
+        const valid = [...timeVariants]
+          .map(v => ({ duration_days: Number(v.duration_days), price_eur: Number(v.price_eur) }))
+          .filter(v => Number.isFinite(v.duration_days) && v.duration_days > 0 && Number.isFinite(v.price_eur) && v.price_eur >= 0);
+        if (valid.length) price_eur = Math.min(...valid.map(v => v.price_eur));
+        else price_eur = 0;
+      }
       const is_active = $("is_active").value === "true";
       const description = $("description").value || "";
-      const auto_deliver = $("auto_deliver").checked;
-      const delivery_text = $("delivery_text").value || "";
-      const duration_days_raw = $("duration_days").value;
-      const duration_days = duration_days_raw ? Number(duration_days_raw) : null;
+
+      const key_prefix_raw = normalizePrefix($("key_prefix").value);
+      const key_prefix = timeBasedEnabled ? key_prefix_raw : null;
 
       if (!title) return setStatus("Title is required.", "error");
       if (!slug) return setStatus("Slug is required.", "error");
@@ -1022,15 +1269,15 @@
           is_active,
           description,
           image_url,
-          ...(supportsDeliveryFields
-            ? { auto_deliver, delivery_text, duration_days }
-            : {})
+          ...(supportsKeyPrefix && timeBasedEnabled ? { key_prefix } : {}),
+          ...(supportsTimeBasedFlag ? { time_based_enabled: timeBasedEnabled } : {})
         };
 
         setStatus("Saving…");
 
         let error = null;
         let savedId = id;
+
         if (id) {
           ({ error } = await sb.from("products").update(payload).eq("id", id));
         } else {
@@ -1043,8 +1290,11 @@
           savedId = inserted?.id || null;
         }
 
-        if (error && String(error.message || "").includes("column") && supportsDeliveryFields) {
-          setDeliverySupport(false);
+        // Optional-column fallback if schema doesn't match
+        if (error) {
+          // Retry without optional columns
+          setKeyPrefixSupport(false);
+          setTimeBasedFlagSupport(false);
           const fallbackPayload = {
             title,
             slug,
@@ -1056,15 +1306,21 @@
           if (id) {
             ({ error } = await sb.from("products").update(fallbackPayload).eq("id", id));
           } else {
-            ({ error } = await sb.from("products").insert(fallbackPayload));
+            const { data: inserted, error: insertError } = await sb
+              .from("products")
+              .insert(fallbackPayload)
+              .select("id")
+              .maybeSingle();
+            error = insertError;
+            savedId = inserted?.id || null;
           }
         }
 
         if (error) return setStatus("Save error: " + error.message, "error");
 
-        if (supportsVariantFields && savedId) {
-          const variantError = await saveVariants(savedId);
-          if (variantError) return setStatus("Variant save error: " + variantError, "error");
+        if (savedId) {
+          const vErr = await saveTimeVariants(savedId);
+          if (vErr) return setStatus("Time-based pricing save error: " + vErr, "error");
         }
 
         setStatus("Saved ✅", "ok");
@@ -1076,8 +1332,11 @@
     }
 
     async function deleteProduct(id) {
-
       setStatus("Deleting…");
+
+      // Best-effort: remove variants too (if table exists)
+      await sb.from("product_variants").delete().eq("product_id", id);
+
       const { error } = await sb.from("products").delete().eq("id", id);
       if (error) return setStatus("Delete error: " + error.message, "error");
 
@@ -1085,108 +1344,88 @@
       await loadProducts();
     }
 
-    function variantDurations() {
-      return [1, 3, 7, 30];
-    }
+    async function loadTimeVariants(productId) {
+      timeVariants = [];      renderTimeVariants();
 
-    function clearVariantsForm() {
-      variantDurations().forEach((days) => {
-        const priceEl = $(`variant_price_${days}`);
-        const keyEl = $(`variant_key_${days}`);
-        const autoEl = $(`variant_auto_${days}`);
-        if (priceEl) priceEl.value = "";
-        if (keyEl) keyEl.value = "";
-        if (autoEl) autoEl.checked = false;
-      });
-    }
+      if (!productId) return;
 
-    async function loadVariants(productId) {
-      if (!productId) return clearVariantsForm();
       let data = null;
       let error = null;
 
       ({ data, error } = await sb
         .from("product_variants")
-        .select("id,product_id,duration_days,price_eur,auto_deliver,delivery_text")
+        .select("duration_days,price_eur")
         .eq("product_id", productId));
 
       if (error && String(error.message || "").includes("relation")) {
-        setVariantSupport(false);
-        clearVariantsForm();
+        setVariantsSupport(false);
+        timeVariants = [];
+        renderTimeVariants();
         return;
       }
 
-      setVariantSupport(true);
-      clearVariantsForm();
+      setVariantsSupport(true);
+      timeVariants = (data || [])
+        .map((v) => ({ uid: crypto.randomUUID(), duration_days: Number(v.duration_days), price_eur: Number(v.price_eur) }))
+        .filter((v) => Number.isFinite(v.duration_days) && Number.isFinite(v.price_eur));
 
-      (data || []).forEach((variant) => {
-        const days = Number(variant.duration_days);
-        const priceEl = $(`variant_price_${days}`);
-        const keyEl = $(`variant_key_${days}`);
-        const autoEl = $(`variant_auto_${days}`);
-        if (priceEl) priceEl.value = variant.price_eur ?? "";
-        if (keyEl) keyEl.value = variant.delivery_text || "";
-        if (autoEl) autoEl.checked = Boolean(variant.auto_deliver);
-      });
+      renderTimeVariants();
     }
 
-    async function saveVariants(productId) {
-      let errorMessage = null;
-      const variants = variantDurations().map((days) => {
-        const priceEl = $(`variant_price_${days}`);
-        const keyEl = $(`variant_key_${days}`);
-        const autoEl = $(`variant_auto_${days}`);
-        const price = priceEl ? Number(priceEl.value || 0) : 0;
-        const hasPrice = priceEl && priceEl.value !== "";
-        if (!hasPrice) return null;
-        return {
-          product_id: productId,
-          duration_days: days,
-          price_eur: price,
-          auto_deliver: Boolean(autoEl?.checked),
-          delivery_text: keyEl?.value || ""
-        };
-      }).filter(Boolean);
+    async function saveTimeVariants(productId) {
+      // If table missing, skip
+      if (!supportsVariantsTable) return null;
 
-      if (!variants.length) {
-        const { error } = await sb
-          .from("product_variants")
-          .delete()
-          .eq("product_id", productId);
-        if (error && String(error.message || "").includes("relation")) {
-          setVariantSupport(false);
-          return null;
+      // If time-based is OFF, only delete variants if the user explicitly toggled it off
+      // (prevents accidental wipes when variants failed to load or when flag column doesn't exist).
+      if (!timeBasedEnabled) {
+        if (userExplicitlyDisabledTimeBased) {
+          const { error: delErr } = await sb.from("product_variants").delete().eq("product_id", productId);
+          if (delErr && String(delErr.message || "").includes("relation")) {
+            setVariantsSupport(false);
+            return null;
+          }
+          return delErr ? delErr.message : null;
         }
-        if (error) {
-          errorMessage = error.message;
-        }
-        return errorMessage;
+        return null;
       }
 
-      const { error: deleteError } = await sb
-        .from("product_variants")
-        .delete()
-        .eq("product_id", productId);
+      // Validate before touching DB
+      const cleaned = [...timeVariants]
+        .map(v => ({ duration_days: Number(v.duration_days), price_eur: Number(v.price_eur) }))
+        .filter(v => Number.isFinite(v.duration_days) && v.duration_days > 0 && Number.isFinite(v.price_eur) && v.price_eur >= 0);
+
+      const uniq = new Set();
+      for (const v of cleaned) {
+        const k = String(v.duration_days);
+        if (uniq.has(k)) return "Duplicate duration days: " + v.duration_days;
+        uniq.add(k);
+      }
+
+      if (!cleaned.length) return "Add at least one duration + price.";
+
+      // Replace variants atomically-ish: delete then insert
+      const { error: deleteError } = await sb.from("product_variants").delete().eq("product_id", productId);
       if (deleteError && String(deleteError.message || "").includes("relation")) {
-        setVariantSupport(false);
+        setVariantsSupport(false);
         return null;
       }
-      if (deleteError) {
-        return deleteError.message;
-      }
+      if (deleteError) return deleteError.message;
 
-      const { error: insertError } = await sb
-        .from("product_variants")
-        .insert(variants);
+      const payload = cleaned
+        .sort((a, b) => a.duration_days - b.duration_days)
+        .map(v => ({
+          product_id: productId,
+          duration_days: v.duration_days,
+          price_eur: v.price_eur
+        }));
+
+      const { error: insertError } = await sb.from("product_variants").insert(payload);
       if (insertError && String(insertError.message || "").includes("relation")) {
-        setVariantSupport(false);
+        setVariantsSupport(false);
         return null;
       }
-      if (insertError) {
-        errorMessage = insertError.message;
-      }
-
-      return errorMessage;
+      return insertError ? insertError.message : null;
     }
 
     function initBgText() {
@@ -1208,13 +1447,22 @@
 
     window.addEventListener("DOMContentLoaded", async () => {
       initBgText();
-      setDeliverySupport(true);
-      setVariantSupport(true);
+      setKeyPrefixSupport(true);
+      setTimeBasedFlagSupport(true);
+      setVariantsSupport(true);
+
+      setTimeBasedEnabledUI(false);
+      renderTimeVariants();
 
       $("loginBtn").onclick = signIn;
       $("logoutBtn").onclick = signOut;
       $("productForm").onsubmit = saveProduct;
       $("clearBtn").onclick = clearForm;
+
+      $("timeBasedToggleBtn").onclick = () => {
+        setTimeBasedEnabledUI(!timeBasedEnabled);
+      };
+      $("variantAddBtn").onclick = addTimeVariantFromInputs;
 
       ["email", "pass"].forEach((id) => {
         const el = $(id);
@@ -1223,6 +1471,18 @@
           if (e.key === "Enter") {
             e.preventDefault();
             signIn();
+          }
+        });
+      });
+
+      // Add variant on Enter in price field
+      ["variant_add_days", "variant_add_price"].forEach((id) => {
+        const el = $(id);
+        if (!el) return;
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            addTimeVariantFromInputs();
           }
         });
       });
@@ -1258,8 +1518,13 @@
       });
 
       $("image_url").addEventListener("input", () => renderPreview($("image_url").value));
+      const uploadBtn = $("imageUploadBtn");
+      if (uploadBtn) uploadBtn.onclick = () => $("image_file").click();
+
       $("image_file").addEventListener("change", () => {
         const file = $("image_file").files?.[0];
+        const label = $("imageFileName");
+        if (label) label.textContent = file ? file.name : "No file selected";
         if (!file) return;
         const localUrl = URL.createObjectURL(file);
         renderPreview(localUrl);
@@ -1348,110 +1613,51 @@
             </div>
           </div>
 
-          <div class="grid4" style="margin-top:12px;">
-            <div>
-              <label>Auto delivery</label>
-              <div class="checkbox-row">
-                <input id="auto_deliver" type="checkbox" />
-                <span class="small">Auto output license / key</span>
+          <div class="grid2" style="margin-top:12px;">
+            <div id="keyPrefixWrap" style="display:none;">
+              <label>Key prefix (optional)</label>
+              <input id="key_prefix" type="text" placeholder="e.g. XXX" />
+              <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “xxx”, keys will start with “xxx-”.</div>
+            </div>
+            <div id="timeBasedWrap">
+              <label>Time-based product</label>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <button id="timeBasedToggleBtn" type="button" class="ghost enable-hover">Enable time-based product</button>
               </div>
-            </div>
-            <div>
-              <label>Delivery text / key</label>
-              <input id="delivery_text" type="text" placeholder="e.g. LICENSE-XXXXX" />
-              <div class="muted" id="deliverySupportNote" style="margin-top:6px;">Leave blank to auto-generate on purchase.</div>
-            </div>
-            <div>
-              <label>Duration</label>
-              <select id="duration_days">
-                <option value="">No time limit</option>
-                <option value="1">1 day</option>
-                <option value="3">3 days</option>
-                <option value="7">7 days</option>
-                <option value="30">30 days</option>
-              </select>
-              <div class="muted" style="margin-top:6px;">Used for time-based products.</div>
-            </div>
+</div>
           </div>
 
-          <div id="variantSection" style="margin-top:16px;">
-            <div class="section-title">Duration pricing (1d / 3d / 7d / 30d)</div>
-            <div class="muted" id="variantSupportNote">Fill in price to enable a duration option.</div>
-            <div class="variant-grid">
-              <div class="variant-row">
-                <div>
-                  <div class="variant-title">1 day</div>
-                  <label>Price (EUR)</label>
-                  <input id="variant_price_1" type="number" step="0.01" placeholder="0.00" />
-                </div>
-                <div>
-                  <label>Delivery key</label>
-                  <input id="variant_key_1" type="text" placeholder="LICENSE-XXXX" />
-                </div>
-                <div>
-                  <label>Auto deliver</label>
-                  <div class="checkbox-row">
-                    <input id="variant_auto_1" type="checkbox" />
-                    <span class="small">Auto output key</span>
-                  </div>
-                </div>
+          <div id="timeVariantSection" style="margin-top:16px; display:none;">
+            <div class="section-title">Time-based pricing</div>
+            <div class="muted" id="variantSupportNote"></div>
+
+            <div class="grid3" style="margin-top:10px;">
+              <div>
+                <label>Days</label>
+                <input id="variant_add_days" type="number" step="1" min="1" placeholder="e.g. 14" />
               </div>
-              <div class="variant-row">
-                <div>
-                  <div class="variant-title">3 days</div>
-                  <label>Price (EUR)</label>
-                  <input id="variant_price_3" type="number" step="0.01" placeholder="0.00" />
-                </div>
-                <div>
-                  <label>Delivery key</label>
-                  <input id="variant_key_3" type="text" placeholder="LICENSE-XXXX" />
-                </div>
-                <div>
-                  <label>Auto deliver</label>
-                  <div class="checkbox-row">
-                    <input id="variant_auto_3" type="checkbox" />
-                    <span class="small">Auto output key</span>
-                  </div>
-                </div>
+              <div>
+                <label>Price (EUR)</label>
+                <input id="variant_add_price" type="number" step="0.01" placeholder="0.00" />
               </div>
-              <div class="variant-row">
-                <div>
-                  <div class="variant-title">7 days</div>
-                  <label>Price (EUR)</label>
-                  <input id="variant_price_7" type="number" step="0.01" placeholder="0.00" />
-                </div>
-                <div>
-                  <label>Delivery key</label>
-                  <input id="variant_key_7" type="text" placeholder="LICENSE-XXXX" />
-                </div>
-                <div>
-                  <label>Auto deliver</label>
-                  <div class="checkbox-row">
-                    <input id="variant_auto_7" type="checkbox" />
-                    <span class="small">Auto output key</span>
-                  </div>
-                </div>
-              </div>
-              <div class="variant-row">
-                <div>
-                  <div class="variant-title">30 days</div>
-                  <label>Price (EUR)</label>
-                  <input id="variant_price_30" type="number" step="0.01" placeholder="0.00" />
-                </div>
-                <div>
-                  <label>Delivery key</label>
-                  <input id="variant_key_30" type="text" placeholder="LICENSE-XXXX" />
-                </div>
-                <div>
-                  <label>Auto deliver</label>
-                  <div class="checkbox-row">
-                    <input id="variant_auto_30" type="checkbox" />
-                    <span class="small">Auto output key</span>
-                  </div>
-                </div>
+              <div style="display:flex; align-items:end;">
+                <button id="variantAddBtn" type="button" class="primary" style="width:100%;">Add</button>
               </div>
             </div>
-          </div>
+
+            <div class="table-wrap" style="margin-top:12px;">
+              <table class="compact">
+                <thead>
+                  <tr>
+                    <th>Days</th>
+                    <th>Price</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="variantTableBody"></tbody>
+              </table>
+            </div>
+</div>
 
           <div style="margin-top:12px;">
             <label>Description</label>
@@ -1460,12 +1666,18 @@
 
           <div class="grid2" style="margin-top:12px;">
             <div>
-              <label>Upload image (overrides URL)</label>
-              <input id="image_file" type="file" accept="image/*" />
-              <div class="muted" style="margin-top:8px;">
-                Uses bucket <b>product-images</b> and saves public URL into <b>image_url</b>.
-              </div>
-            </div>
+  <label>Upload image</label>
+  <div class="upload-row">
+    <input id="image_file" type="file" accept="image/*" style="display:none" />
+    <button id="imageUploadBtn" type="button" class="ghost upload-btn" aria-label="Upload image">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Upload</span>
+    </button>
+    <span id="imageFileName" class="muted">No file selected</span>
+  </div>
+</div>
             <div>
               <label>Preview</label>
               <div id="preview" class="preview"><span class="muted">no image</span></div>
@@ -1475,7 +1687,6 @@
           <div class="row-actions">
             <button class="primary" type="submit">Save</button>
             <button id="clearBtn" type="button" class="ghost">Clear</button>
-            <span class="muted">Tip: leave slug empty to auto-generate from title.</span>
           </div>
         </form>
       </div>
@@ -1498,12 +1709,7 @@
             <tbody id="tableBody"></tbody>
           </table>
         </div>
-
-        <div class="muted" style="margin-top:10px;">
-          If you only see active products on the public site, that’s correct — your storefront reads
-          <b>is_active=true</b>.
-        </div>
-      </div>
+</div>
     </div>
   </div>
 

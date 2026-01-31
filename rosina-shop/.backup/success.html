@@ -7,6 +7,7 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/styles/tailwind.css">
 
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -74,6 +75,48 @@
       text-align:left;
     }
 
+    .section-title{
+      margin-top: 18px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+    }
+
+    .order-items{
+      margin-top: 10px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .order-item{
+      border: 1px solid #222;
+      border-radius: 10px;
+      padding: 12px;
+      background: rgba(0,0,0,0.35);
+    }
+
+    .order-item-title{
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .order-item-meta{
+      color:#888;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .delivery-box{
+      border: 1px dashed #333;
+      border-radius: 10px;
+      padding: 10px;
+      color: #cfe1ff;
+      background: rgba(74, 144, 226, 0.12);
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
     .row{
       display:flex;
       justify-content:space-between;
@@ -122,7 +165,7 @@
 
   <div class="container">
     <div class="title">Order successful</div>
-    <div class="sub">Thanks — your cart was cleared.</div>
+    <div class="sub">Sebastian Rosina personally thanks you for your order.</div>
 
     <div class="card">
       <div class="row">
@@ -130,13 +173,12 @@
         <div class="v" id="provider">—</div>
       </div>
       <div class="row">
-        <div class="k">Session / Charge ID</div>
-        <div class="v" id="sid">—</div>
-      </div>
-      <div class="row">
         <div class="k">Time</div>
         <div class="v" id="time">—</div>
       </div>
+
+      <div class="section-title">Purchased items</div>
+      <div id="orderItems" class="order-items"></div>
 
       <a class="btn" href="/rosina-shop/"><i class="fas fa-arrow-left"></i> Back to shop</a>
       <div class="muted">
@@ -160,15 +202,66 @@
     // Clear cart on success
     const CART_KEY = "rosina_cart_v1";
     const PROMO_KEY = "rosina_promo_v1";
+    const ORDER_KEY = "rosina_last_order_v1";
     try { localStorage.removeItem(CART_KEY); } catch (_) {}
     try { localStorage.removeItem(PROMO_KEY); } catch (_) {}
 
     // Show ids if present
     const sp = new URLSearchParams(window.location.search);
     const sessionId = sp.get("session_id") || sp.get("charge_id") || sp.get("id") || "";
-    document.getElementById("sid").textContent = sessionId || "—";
     document.getElementById("provider").textContent = (sessionId && sessionId.startsWith("cs_")) ? "Stripe" : "Stripe / Coinbase";
     document.getElementById("time").textContent = new Date().toLocaleString();
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function generateKey() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const chunk = () => Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      return `${chunk()}-${chunk()}-${chunk()}`;
+    }
+
+    function renderOrderItems() {
+      const target = document.getElementById("orderItems");
+      if (!target) return;
+
+      let order = null;
+      try {
+        order = JSON.parse(localStorage.getItem(ORDER_KEY) || "null");
+      } catch (_) {
+        order = null;
+      }
+
+      if (!order || !Array.isArray(order.items) || !order.items.length) {
+        target.innerHTML = `<div class="muted">We couldn't find your order items yet. Please check your email or contact support.</div>`;
+        return;
+      }
+
+      const now = new Date();
+      target.innerHTML = order.items.map(item => {
+        const qty = Number(item.qty || 1);
+        const durationDays = item.duration_days ? Number(item.duration_days) : null;
+        const expiresAt = durationDays ? new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000) : null;
+        const deliveryText = item.auto_deliver ? (item.delivery_text || generateKey()) : "";
+
+        return `
+          <div class="order-item">
+            <div class="order-item-title">${escapeHtml(item.title || "Product")} × ${qty}</div>
+            <div class="order-item-meta">${durationDays ? `Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}` : "No duration"}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>
+            ${deliveryText ? `<div class="delivery-box">Delivery: ${escapeHtml(deliveryText)}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
+
+    renderOrderItems();
+    try { localStorage.removeItem(ORDER_KEY); } catch (_) {}
   </script>
 </body>
 </html>
