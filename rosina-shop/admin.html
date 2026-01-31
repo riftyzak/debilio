@@ -1083,6 +1083,7 @@ function setTimeBasedFlagSupport(isSupported) {
 
     async function editProduct(id) {
       setStatus("Loading product…");
+      userExplicitlyDisabledTimeBased = false;
       let data = null;
       let error = null;
 
@@ -1144,6 +1145,8 @@ const auto = slugify(data.title || "");
     }
 
     function clearForm() {
+      userExplicitlyDisabledTimeBased = false;
+
       $("id").value = "";
       $("title").value = "";
       $("slug").value = "";
@@ -1376,6 +1379,9 @@ const auto = slugify(data.title || "");
       // If table missing, skip
       if (!supportsVariantsTable) return null;
 
+      // Reset explicit-disable flag if time-based is enabled
+      if (timeBasedEnabled) userExplicitlyDisabledTimeBased = false;
+
       // If time-based is OFF, only delete variants if the user explicitly toggled it off
       // (prevents accidental wipes when variants failed to load or when flag column doesn't exist).
       if (!timeBasedEnabled) {
@@ -1460,7 +1466,11 @@ const auto = slugify(data.title || "");
       $("clearBtn").onclick = clearForm;
 
       $("timeBasedToggleBtn").onclick = () => {
-        setTimeBasedEnabledUI(!timeBasedEnabled);
+        const next = !timeBasedEnabled;
+        // Track whether the user explicitly turned OFF time-based mode (used to decide whether to delete variants)
+        userExplicitlyDisabledTimeBased = (timeBasedEnabled === true && next === false);
+        if (next === true) userExplicitlyDisabledTimeBased = false;
+        setTimeBasedEnabledUI(next);
       };
       $("variantAddBtn").onclick = addTimeVariantFromInputs;
 
