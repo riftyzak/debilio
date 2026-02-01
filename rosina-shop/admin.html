@@ -1136,11 +1136,9 @@
 
       wireTableActions();
 
-      // If time-based flag exists, show price ranges for time-based products (best-effort).
-      if (supportsTimeBasedFlag && supportsVariantsTable) {
-        (data || [])
-          .filter(p => p.time_based_enabled)
-          .forEach(async (p) => {
+      // Show price ranges when variants exist (best-effort).
+      if (supportsVariantsTable) {
+        (data || []).forEach(async (p) => {
             const cell = document.getElementById(`pricecell-${p.id}`);
             if (!cell) return;
 
