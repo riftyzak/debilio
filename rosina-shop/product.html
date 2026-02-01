@@ -651,6 +651,12 @@
 
       return [];
     }
+    async function fetchVariantStock(productId) {
+      const res = await fetch(`/api/stock?product_id=${encodeURIComponent(productId)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data?.variants || [];
+    }
 
 
     // =========================
@@ -801,12 +807,7 @@
         }
       }
 
-      async function fetchVariantStock(productId) {
-        const res = await fetch(`/api/stock?product_id=${encodeURIComponent(productId)}`);
-        if (!res.ok) return [];
-        const data = await res.json();
-        return data?.variants || [];
-      }
+
 
       function selectVariantById(variantId) {
         const variant = currentVariants.find((v) => String(v.id) === String(variantId));
