@@ -618,7 +618,6 @@
     async function fetchVariantsByProductId(productId) {
       const base = `${SUPABASE_URL}/rest/v1/product_variants`;
       const selects = [
-        "id,product_id,duration_days,price_eur,auto_deliver,delivery_text",
         "id,product_id,duration_days,price_eur"
       ];
 
