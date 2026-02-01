@@ -17,6 +17,13 @@
       font-family:'Courier New', monospace;
       padding:20px;
     }
+    html, body {
+      overflow: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE 10+ */
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar { width: 0; height: 0; }
     .card{
       width:min(720px, 100%);
       background:rgba(20,20,20,0.95);

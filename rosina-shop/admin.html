@@ -33,6 +33,13 @@
       overflow-x: hidden;
       position: relative;
     }
+    html, body {
+      overflow: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE 10+ */
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar { width: 0; height: 0; }
 
     button,
     input,
@@ -932,7 +939,7 @@
           const uid = inp.dataset.variantDays;
           const v = timeVariants.find((x) => x.uid === uid);
           if (!v) return;
-          v.duration_days = Number(inp.value || 0);
+          v.duration_days = inp.value === "" ? "" : Number(inp.value);
         };
       });
 
@@ -941,7 +948,7 @@
           const uid = inp.dataset.variantPrice;
           const v = timeVariants.find((x) => x.uid === uid);
           if (!v) return;
-          v.price_eur = Number(inp.value || 0);
+          v.price_eur = inp.value === "" ? "" : Number(inp.value);
         };
       });
     }
@@ -1505,10 +1512,22 @@
         return null;
       }
 
+      const invalidDuration = timeVariants.find((v) => {
+        const d = Number(v.duration_days);
+        return !Number.isFinite(d) || d <= 0 || !Number.isInteger(d);
+      });
+      if (invalidDuration) return "Each duration must be a positive whole number.";
+
+      const invalidPrice = timeVariants.find((v) => {
+        const p = Number(v.price_eur);
+        return !Number.isFinite(p) || p < 0;
+      });
+      if (invalidPrice) return "Each price must be a valid number (>= 0).";
+
       // Validate before touching DB
       const cleaned = [...timeVariants]
         .map(v => ({ duration_days: Number(v.duration_days), price_eur: Number(v.price_eur) }))
-        .filter(v => Number.isFinite(v.duration_days) && v.duration_days > 0 && Number.isFinite(v.price_eur) && v.price_eur >= 0);
+        .filter(v => Number.isFinite(v.duration_days) && Number.isInteger(v.duration_days) && v.duration_days > 0 && Number.isFinite(v.price_eur) && v.price_eur >= 0);
 
       const uniq = new Set();
       for (const v of cleaned) {

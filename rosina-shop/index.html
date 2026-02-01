@@ -16,15 +16,22 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Georama', sans-serif;
-            background: #000;
-            color: #fff;
-            min-height: 100vh;
-            padding: 40px 20px;
-            overflow-x: hidden;
-            position: relative;
-        }
+    body {
+      font-family: 'Georama', sans-serif;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+    html, body {
+      overflow: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE 10+ */
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar { width: 0; height: 0; }
 
         .background-text {
             position: fixed;
