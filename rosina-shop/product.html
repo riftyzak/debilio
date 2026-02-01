@@ -587,7 +587,7 @@
     async function fetchProductBySlug(slug) {
       const base = `${SUPABASE_URL}/rest/v1/products`;
       const selects = [
-        "id,title,slug,price_eur,description,image_url,is_active,duration_days,auto_deliver,delivery_text",
+        "id,title,slug,price_eur,description,image_url,is_active,duration_days",
         "id,title,slug,price_eur,description,image_url,is_active"
       ];
 
