@@ -218,7 +218,10 @@
     }
 
     .content {
-      padding: 28px
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
     .name {
@@ -245,7 +248,13 @@
     .actions {
       display: flex;
       gap: 10px;
-      flex-wrap: wrap
+      flex-wrap: wrap;
+      margin-top: auto;
+    }
+    .price-actions {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
     }
 
     .btn {
@@ -748,11 +757,13 @@
           </div>
           ` : ``}
 
-          <div class="price" id="priceLabel">${moneyEUR(hasVariants ? defaultVariant?.price_eur : p.price_eur)}</div>
+          <div class="price-actions">
+            <div class="price" id="priceLabel">${moneyEUR(hasVariants ? defaultVariant?.price_eur : p.price_eur)}</div>
 
-          <div class="actions actions--row">
-            <button class="btn" id="addToCartBtn"><i class="fas fa-cart-plus"></i> Add to cart</button>
-            <button class="btn" id="buyNowBtn"><i class="fas fa-bolt"></i> Buy now</button>
+            <div class="actions actions--row">
+              <button class="btn" id="addToCartBtn"><i class="fas fa-cart-plus"></i> Add to cart</button>
+              <button class="btn" id="buyNowBtn"><i class="fas fa-bolt"></i> Buy now</button>
+            </div>
           </div>
 
         </div>
