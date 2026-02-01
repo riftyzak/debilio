@@ -1,1 +1,120 @@
-function toHex(t){return[...new Uint8Array(t)].map(t=>t.toString(16).padStart(2,"0")).join("")}async function sha256Hex(t){t=(new TextEncoder).encode(t);return toHex(await crypto.subtle.digest("SHA-256",t))}function intervalHoursForDuration(t){return!Number.isFinite(t)||t<=1?1:t<=7?3:t<=30?6:12}function mapToStock(t){return t<10?{status:"out_of_stock",qty:0}:t<25?{status:"low_stock",qty:1+t%5}:{status:"in_stock",qty:6+t%55}}async function onRequestGet({request:t,env:e}){try{var n=new URL(t.url).searchParams.get("product_id");if(!n)return new Response(JSON.stringify({error:"Missing product_id"}),{status:400,headers:{"content-type":"application/json"}});var r=e.SUPABASE_URL,a=e.SUPABASE_ANON_KEY,o=e.STOCK_SECRET;if(!r||!a||!o)return new Response(JSON.stringify({error:"Missing env vars. Need SUPABASE_URL, SUPABASE_ANON_KEY, STOCK_SECRET"}),{status:500,headers:{"content-type":"application/json"}});var s=r+"/rest/v1/product_variants?select=id,duration_days&product_id=eq."+encodeURIComponent(n)+"&order=duration_days.asc",i=await fetch(s,{headers:{apikey:a,Authorization:"Bearer "+a,Accept:"application/json"}});if(!i.ok)return new Response(JSON.stringify({error:"Failed to fetch variants",details:await i.text()}),{status:500,headers:{"content-type":"application/json"}});var u=await i.json(),c=Date.now(),d=[];for(const w of u){var p=null==w.duration_days?null:Number(w.duration_days),S=intervalHoursForDuration(p),_=60*S*60*1e3,y=Math.floor(c/_),l=await sha256Hex(`${o}:${w.id}:`+y),f=mapToStock(parseInt(l.slice(0,8),16)%100),h=(y+1)*_;d.push({id:String(w.id),duration_days:p,interval_hours:S,bucket:y,next_change_utc:new Date(h).toISOString(),...f})}return new Response(JSON.stringify({product_id:n,variants:d}),{headers:{"content-type":"application/json"}})}catch(t){return new Response(JSON.stringify({error:String(t)}),{status:500,headers:{"content-type":"application/json"}})}}export{onRequestGet};
+// Cloudflare Pages Function: GET /api/stock?product_id=...
+// Returns deterministic "random" stock per variant, with refresh interval based on duration_days.
+
+function toHex(buffer) {
+  return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256Hex(input) {
+  const data = new TextEncoder().encode(input);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return toHex(hash);
+}
+
+function intervalHoursForDuration(durationDays) {
+  // Tweak these however you want:
+  if (!Number.isFinite(durationDays) || durationDays <= 1) return 1;   // 1 day: hourly
+  if (durationDays <= 7) return 3;                                     // week-ish: every 3h
+  if (durationDays <= 30) return 6;                                    // month-ish: every 6h
+  return 12;                                                           // longer: every 12h
+}
+
+function mapToStock(n0to99) {
+  // 10% sold out, 15% low stock, 75% in stock
+  if (n0to99 < 10) return { status: "out_of_stock", qty: 0 };
+  if (n0to99 < 25) return { status: "low_stock", qty: 1 + (n0to99 % 5) };   // 1..5
+  return { status: "in_stock", qty: 6 + (n0to99 % 55) };                     // 6..60
+}
+
+export async function onRequestGet({ request, env }) {
+  try {
+    const url = new URL(request.url);
+    const productId = url.searchParams.get("product_id");
+    if (!productId) {
+      return new Response(JSON.stringify({ error: "Missing product_id" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    const SUPABASE_URL = env.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
+    const STOCK_SECRET = env.STOCK_SECRET;
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !STOCK_SECRET) {
+      return new Response(JSON.stringify({
+        error: "Missing env vars. Need SUPABASE_URL, SUPABASE_ANON_KEY, STOCK_SECRET"
+      }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    // Pull variants for this product
+    const variantsUrl =
+      `${SUPABASE_URL}/rest/v1/product_variants` +
+      `?select=id,duration_days` +
+      `&product_id=eq.${encodeURIComponent(productId)}` +
+      `&order=duration_days.asc`;
+
+    const variantsRes = await fetch(variantsUrl, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!variantsRes.ok) {
+      return new Response(JSON.stringify({
+        error: "Failed to fetch variants",
+        details: await variantsRes.text(),
+      }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    const variants = await variantsRes.json();
+
+    const now = Date.now();
+
+    const out = [];
+    for (const v of variants) {
+      const durationDays = v.duration_days == null ? null : Number(v.duration_days);
+      const intervalH = intervalHoursForDuration(durationDays);
+      const intervalMs = intervalH * 60 * 60 * 1000;
+
+      const bucket = Math.floor(now / intervalMs);
+
+      // Deterministic per variant + bucket, unpredictable because STOCK_SECRET is server-side
+      const hex = await sha256Hex(`${STOCK_SECRET}:${v.id}:${bucket}`);
+      const n = parseInt(hex.slice(0, 8), 16) % 100;
+
+      const stock = mapToStock(n);
+
+      const nextChangeMs = (bucket + 1) * intervalMs;
+      out.push({
+        id: String(v.id),
+        duration_days: durationDays,
+        interval_hours: intervalH,
+        bucket,
+        next_change_utc: new Date(nextChangeMs).toISOString(),
+        ...stock,
+      });
+    }
+
+    return new Response(JSON.stringify({
+      product_id: productId,
+      variants: out,
+    }), {
+      headers: { "content-type": "application/json" },
+    });
+
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e) }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
+}
