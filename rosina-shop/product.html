@@ -25,13 +25,21 @@
       overflow-x: hidden;
       position: relative
     }
-    html, body {
+
+    html,
+    body {
       overflow: auto;
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none; /* IE 10+ */
+      scrollbar-width: none;
+      /* Firefox */
+      -ms-overflow-style: none;
+      /* IE 10+ */
     }
+
     html::-webkit-scrollbar,
-    body::-webkit-scrollbar { width: 0; height: 0; }
+    body::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
 
     /* match your "continuous" background approach */
     .background-text {
@@ -251,6 +259,7 @@
       flex-wrap: wrap;
       margin-top: auto;
     }
+
     .price-actions {
       margin-top: auto;
       display: flex;
@@ -707,36 +716,36 @@
             <label id="durationPickerLabel" style="display:block;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Choose duration</label>
             <div id="durationPicker" class="duration-grid" role="radiogroup" aria-labelledby="durationPickerLabel">
               ${currentVariants.map((variant) => {
-                const id = String(variant.id);
+            const id = String(variant.id);
 
-                // Title: prefer provided title/name/label, else derive from duration_days
-                const daysNum = (variant.duration_days ?? null);
-                const daySuffix = Number(daysNum) === 1 ? "" : "s";
-                const derivedTitle = daysNum !== null ? `${daysNum} Day${daySuffix}` : "Duration";
-                const title = (variant.title || variant.name || variant.label || "").trim() || derivedTitle;
+            // Title: prefer provided title/name/label, else derive from duration_days
+            const daysNum = (variant.duration_days ?? null);
+            const daySuffix = Number(daysNum) === 1 ? "" : "s";
+            const derivedTitle = daysNum !== null ? `${daysNum} Day${daySuffix}` : "Duration";
+            const title = (variant.title || variant.name || variant.label || "").trim() || derivedTitle;
 
-                // Stock (UI-only): if no stock info exists in data, defaults to "In stock"
-                const qtyRaw =
-                  variant.stock_qty ?? variant.stock ?? variant.quantity ?? variant.inventory_qty ?? variant.qty ?? null;
-                const qty = (qtyRaw === null || qtyRaw === undefined || qtyRaw === "") ? null : Number(qtyRaw);
+            // Stock (UI-only): if no stock info exists in data, defaults to "In stock"
+            const qtyRaw =
+              variant.stock_qty ?? variant.stock ?? variant.quantity ?? variant.inventory_qty ?? variant.qty ?? null;
+            const qty = (qtyRaw === null || qtyRaw === undefined || qtyRaw === "") ? null : Number(qtyRaw);
 
-                const explicitOut =
-                  variant.is_in_stock === false ||
-                  variant.out_of_stock === true ||
-                  variant.purchase_disabled === true ||
-                  variant.disabled === true ||
-                  variant.is_active === false;
+            const explicitOut =
+              variant.is_in_stock === false ||
+              variant.out_of_stock === true ||
+              variant.purchase_disabled === true ||
+              variant.disabled === true ||
+              variant.is_active === false;
 
-                const isOut = explicitOut || (Number.isFinite(qty) && qty <= 0);
-                const isLow = !isOut && Number.isFinite(qty) && qty > 0 && qty <= 3;
+            const isOut = explicitOut || (Number.isFinite(qty) && qty <= 0);
+            const isLow = !isOut && Number.isFinite(qty) && qty > 0 && qty <= 3;
 
-                const stockText = isOut ? "Out of stock" : (isLow ? "Low stock" : "In stock");
-                const stockClass = isOut ? "stock--out" : (isLow ? "stock--low" : "stock--in");
+            const stockText = isOut ? "Out of stock" : (isLow ? "Low stock" : "In stock");
+            const stockClass = isOut ? "stock--out" : (isLow ? "stock--low" : "stock--in");
 
-                const isDisabled = isOut;
-                const isSelected = !isDisabled && id === selectedVariantId;
+            const isDisabled = isOut;
+            const isSelected = !isDisabled && id === selectedVariantId;
 
-                return `
+            return `
                   <button
                     type="button"
                     class="duration-card${isSelected ? " is-selected" : ""}${isDisabled ? " is-disabled" : ""}"
@@ -752,7 +761,7 @@
                     <span class="variant-price">${moneyEUR(variant.price_eur)}</span>
                   </button>
                 `;
-              }).join("")}
+          }).join("")}
             </div>
           </div>
           ` : ``}
@@ -790,6 +799,13 @@
           const firstEnabled = buttons.find(b => !b.disabled && b.getAttribute("aria-disabled") !== "true");
           if (firstEnabled) firstEnabled.tabIndex = 0;
         }
+      }
+
+      async function fetchVariantStock(productId) {
+        const res = await fetch(`/api/stock?product_id=${encodeURIComponent(productId)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data?.variants || [];
       }
 
       function selectVariantById(variantId) {
@@ -879,7 +895,23 @@
 
       if (currentProduct) {
         currentVariants = await fetchVariantsByProductId(currentProduct.id);
+
+        // Inject random stock into variants
+        const stockList = await fetchVariantStock(currentProduct.id);
+        const stockById = new Map(stockList.map(s => [String(s.id), s]));
+
+        currentVariants = currentVariants.map(v => {
+          const s = stockById.get(String(v.id));
+          if (!s) return v;
+          return {
+            ...v,
+            stock_qty: s.qty,                 // <-- your UI already reads this
+            is_in_stock: s.status !== "out_of_stock",
+            out_of_stock: s.status === "out_of_stock",
+          };
+        });
       }
+
 
       renderProduct(currentProduct);
     })();
