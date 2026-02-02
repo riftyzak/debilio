@@ -171,7 +171,12 @@
       transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
     .redeem-btn:disabled { opacity: 0.7; }
-    .redeem-label { display: inline-block; }
+    .redeem-label {
+      display: inline-block;
+      min-width: 9ch;
+      text-align: center;
+      white-space: nowrap;
+    }
     .redeem-icon {
       position: relative;
       width: 16px;
