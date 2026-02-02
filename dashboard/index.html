@@ -654,14 +654,19 @@
       }
 
       const { ok, json, text } = await api("/api/auth/register", { username, password });
-      setAuthBusy(false);
-      if (ok) {
-        showToast("Account created. Please sign in.", { type: "success" });
-        clearAuthError();
-        authMode = "login";
-        renderAuth();
-      } else {
+      if (!ok) {
+        setAuthBusy(false);
         setAuthError(json?.error || text || "Create account failed.", true);
+        return;
+      }
+      const loginRes = await api("/api/auth/login", { username, password });
+      setAuthBusy(false);
+      if (loginRes.ok) {
+        showToast("Signed in", { type: "success" });
+        clearAuthError();
+        await refresh();
+      } else {
+        setAuthError(loginRes.json?.error || loginRes.text || "Sign in failed.", true);
       }
     }
 
