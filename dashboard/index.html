@@ -416,11 +416,6 @@
           </div>
         </div>
 
-        <div id="recentDeliveryCard" class="card fade-up" hidden>
-          <div class="strong" style="font-size: 20px;">Recent delivery</div>
-          <div id="recentDeliveryRow" class="delivery-row"></div>
-        </div>
-
         <div class="card fade-up">
           <div class="strong" style="font-size: 20px;">Order history</div>
           <div id="historyList" class="list muted"></div>
@@ -444,15 +439,11 @@
     const passInput = document.getElementById("pass");
     const confirmInput = document.getElementById("confirm");
     const authWrap = document.querySelector(".auth-center") || authBox;
-    const recentCard = document.getElementById("recentDeliveryCard");
-    const recentRow = document.getElementById("recentDeliveryRow");
     const toasts = document.getElementById("toasts");
 
     let authMode = "login";
     let authBusy = false;
 
-    const RECENT_KEY = "rosina_recent_delivery_v1";
-    const RECENT_TTL = 24 * 60 * 60 * 1000;
 
     function showToast(message, opts) {
       const type = opts?.type || "info";
@@ -503,50 +494,6 @@
       return `€${n.toFixed(2)}`;
     }
 
-    function setRecentDelivery(key) {
-      if (!key) return;
-      try {
-        localStorage.setItem(RECENT_KEY, JSON.stringify({ key, ts: Date.now() }));
-      } catch (_) {}
-      renderRecentDelivery();
-    }
-
-    function getRecentDelivery() {
-      try {
-        const raw = localStorage.getItem(RECENT_KEY);
-        if (!raw) return null;
-        const data = JSON.parse(raw);
-        if (!data?.key || !data?.ts) return null;
-        if (Date.now() - data.ts > RECENT_TTL) {
-          localStorage.removeItem(RECENT_KEY);
-          return null;
-        }
-        return data.key;
-      } catch (_) {
-        return null;
-      }
-    }
-
-    function clearRecentDelivery() {
-      try { localStorage.removeItem(RECENT_KEY); } catch (_) {}
-      renderRecentDelivery();
-    }
-
-    function renderRecentDelivery() {
-      const key = getRecentDelivery();
-      if (!key) {
-        recentCard.hidden = true;
-        return;
-      }
-      recentCard.hidden = false;
-      recentRow.innerHTML = `
-        <span>Recent delivery: <span class="strong">${key}</span></span>
-        <button class="btn" type="button" id="clearRecent" style="padding: 6px 10px; font-size: 12px;">Clear</button>
-      `;
-      const clearBtn = document.getElementById("clearRecent");
-      if (clearBtn) clearBtn.onclick = () => clearRecentDelivery();
-    }
-
     function extractLicense(group) {
       const direct = group?.license || group?.delivery || group?.key || group?.license_key || group?.licenseKey;
       if (direct) return String(direct);
@@ -556,17 +503,6 @@
         if (k) return String(k);
       }
       return "";
-    }
-
-    function ingestLastKeys() {
-      try {
-        const raw = localStorage.getItem("rosina_last_keys_v1");
-        if (!raw) return;
-        const data = JSON.parse(raw);
-        const keys = Array.isArray(data?.keys) ? data.keys : [];
-        const first = keys[0]?.key || keys[0];
-        if (first) setRecentDelivery(String(first));
-      } catch (_) {}
     }
 
     async function loadDashboard() {
@@ -622,7 +558,6 @@
           const priceLine = hasPrice ? moneyEUR(total) : "";
           const date = group.redeemed_at ? new Date(group.redeemed_at).toLocaleString() : "";
           const licenseKey = extractLicense(group);
-          if (licenseKey) setRecentDelivery(licenseKey);
           return `
             <div class="item" style="align-items: flex-start;">
               <div style="flex: 1; min-width: 0;">
@@ -644,7 +579,6 @@
           `;
         }).join("");
       }
-      renderRecentDelivery();
     }
 
     async function refresh() {
@@ -661,7 +595,6 @@
       dashBox.hidden = false;
       dashBox.setAttribute("aria-hidden", "false");
       document.getElementById("me").textContent = json.username || json.user_id;
-      ingestLastKeys();
       await loadDashboard();
     }
 

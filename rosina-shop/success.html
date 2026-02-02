@@ -121,13 +121,17 @@
       color: #cfe1ff;
       background: rgba(74, 144, 226, 0.12);
       font-size: 13px;
-      white-space: pre-wrap;
     }
     .delivery-row{
       display:flex;
       align-items:center;
       gap:8px;
       justify-content:space-between;
+    }
+    .delivery-key{
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .copy-btn{
       border:1px solid #333;
@@ -143,6 +147,39 @@
     }
     .copy-btn:hover{ border-color:#4a90e2; }
     .copy-icon{ width:14px; height:14px; }
+    .copy-btn.is-copied{
+      border-color: rgba(70,200,140,0.6);
+      color: #7fe3b3;
+    }
+    .copy-check{ width:14px; height:14px; display:none; }
+    .copy-btn.is-copied .copy-icon{ display:none; }
+    .copy-btn.is-copied .copy-check{ display:block; }
+    .toasts{
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 200;
+      display: grid;
+      gap: 8px;
+      max-width: min(360px, calc(100vw - 32px));
+    }
+    .toast{
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(10,10,10,0.9);
+      border: 1px solid #333;
+      color: #fff;
+      font-size: 13px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+      backdrop-filter: blur(8px);
+      animation: toastIn 0.2s ease both;
+    }
+    .toast-success{ border-color: rgba(70,200,140,0.4); }
+    .toast-error{ border-color: rgba(255,71,87,0.5); }
+    @keyframes toastIn{
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     .row{
       display:flex;
@@ -356,11 +393,14 @@
               return `
                 <div class="delivery-box">
                   <div class="delivery-row">
-                    <span>Delivery: ${keyText}</span>
+                    <span class="delivery-key">Delivery: ${keyText}</span>
                     <button class="copy-btn" data-copy="${keyText}" aria-label="Copy license">
                       <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="9" y="9" width="13" height="13" rx="2"></rect>
                         <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+                      </svg>
+                      <svg class="copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5"></path>
                       </svg>
                     </button>
                   </div>
@@ -398,13 +438,33 @@
       try { localStorage.removeItem(ORDER_KEY); } catch (_) {}
     })();
 
+    const toasts = document.createElement("div");
+    toasts.className = "toasts";
+    document.body.appendChild(toasts);
+    function showToast(message, type = "success", duration = 2200) {
+      const el = document.createElement("div");
+      el.className = `toast toast-${type}`;
+      el.textContent = message;
+      toasts.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        el.style.transform = "translateY(-6px)";
+        setTimeout(() => el.remove(), 180);
+      }, duration);
+    }
+
     document.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-copy]");
       if (!btn) return;
       const value = btn.getAttribute("data-copy") || "";
       try {
         await navigator.clipboard.writeText(value);
-      } catch (_) {}
+        btn.classList.add("is-copied");
+        setTimeout(() => btn.classList.remove("is-copied"), 1400);
+        showToast("Copied", "success");
+      } catch (_) {
+        showToast("Copy failed", "error");
+      }
     });
   </script>
 </body>
