@@ -11,12 +11,7 @@
   <link rel="stylesheet" href="/styles/tailwind.css">
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Georama', sans-serif;
       background: #000;
@@ -26,304 +21,81 @@
       overflow-x: hidden;
       position: relative;
     }
-
-    html,
-    body {
-      overflow: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    html::-webkit-scrollbar,
-    body::-webkit-scrollbar {
-      width: 0;
-      height: 0;
-    }
+    html, body { overflow: auto; scrollbar-width: none; -ms-overflow-style: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; }
 
     .background-text {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 320%;
-      height: 320%;
-      font-size: 120px;
-      font-weight: bold;
+      position: fixed; top: 0; left: 0;
+      width: 320%; height: 320%;
+      font-size: 120px; font-weight: bold;
       color: rgba(255, 255, 255, 0.08);
-      line-height: 1.1;
-      letter-spacing: 8px;
-      overflow: hidden;
-      z-index: 0;
-      pointer-events: none;
+      line-height: 1.1; letter-spacing: 8px;
+      overflow: hidden; z-index: 0; pointer-events: none;
       animation: scroll-diagonal 50s linear infinite;
       font-family: 'Courier New', monospace;
     }
+    .background-text div { white-space: nowrap; }
+    .background-text div:nth-child(even) { padding-left: 150px; }
+    @keyframes scroll-diagonal { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-33.333%, -33.333%, 0); } }
+    @keyframes gradient-shift { 0%,100% { background-position: 0% center; } 50% { background-position: 100% center; } }
 
-    .background-text div {
-      white-space: nowrap;
-    }
-
-    .background-text div:nth-child(even) {
-      padding-left: 150px;
-    }
-
-    @keyframes scroll-diagonal {
-      0% {
-        transform: translate3d(0, 0, 0);
-      }
-
-      100% {
-        transform: translate3d(-33.333%, -33.333%, 0);
-      }
-    }
-
-    @keyframes gradient-shift {
-
-      0%,
-      100% {
-        background-position: 0% center;
-      }
-
-      50% {
-        background-position: 100% center;
-      }
-    }
-
-    .container {
-      position: relative;
-      z-index: 1;
-      max-width: 900px;
-      margin: 0 auto;
-      text-align: center;
-    }
-
+    .container { position: relative acknowledges; z-index: 1; max-width: 900px; margin: 0 auto; text-align: center; }
     .title {
-      font-size: 48px;
-      font-weight: 700;
-      margin-bottom: 10px;
+      font-size: 48px; font-weight: 700; margin-bottom: 10px;
       background: linear-gradient(90deg, #fff, #4a90e2, #357abd, #fff);
       background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: gradient-shift 3s ease infinite;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; animation: gradient-shift 3s ease infinite;
     }
-
-    .sub {
-      color: #888;
-      margin-bottom: 26px;
-    }
-
-    .card {
-      background: rgba(20, 20, 20, 0.95);
-      border: 2px solid #333;
-      border-radius: 14px;
-      padding: 22px;
-      text-align: left;
-    }
-
-    .section-title {
-      margin-top: 18px;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #888;
-    }
-
-    .order-items {
-      margin-top: 10px;
-      display: grid;
-      gap: 12px;
-    }
-
-    .order-item {
-      border: 1px solid #222;
-      border-radius: 10px;
-      padding: 12px;
-      background: rgba(0, 0, 0, 0.35);
-    }
-
-    .order-item-title {
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .order-item-meta {
-      color: #888;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-
-    .delivery-box {
-      border: 1px dashed #333;
-      border-radius: 10px;
-      padding: 10px;
-      color: #cfe1ff;
-      background: rgba(74, 144, 226, 0.12);
-      font-size: 13px;
-    }
-
-    .delivery-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      justify-content: space-between;
-    }
-
-    .delivery-key {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
+    .sub { color: #888; margin-bottom: 26px; }
+    .card { background: rgba(20, 20, 20, 0.95); border: 2px solid #333; border-radius: 14px; padding: 22px; text-align: left; }
+    .section-title { margin-top: 18px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+    .order-items { margin-top: 10px; display: grid; gap: 12px; }
+    .order-item { border: 1px solid #222; border-radius: 10px; padding: 12px; background: rgba(0, 0, 0, 0.35); }
+    .order-item-title { font-weight: 700; margin-bottom: 6px; }
+    .order-item-meta { color: #888; font-size: 12px; margin-bottom: 8px; }
+    .delivery-box { border: 1px dashed #333; border-radius: 10px; padding: 10px; color: #cfe1ff; background: rgba(74, 144, 226, 0.12); font-size: 13px; }
+    .delivery-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+    .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .copy-btn {
-      border: 1px solid #333;
-      background: rgba(0, 0, 0, 0.4);
-      color: #fff;
-      border-radius: 8px;
-      padding: 4px 6px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      border: 1px solid #333; background: rgba(0, 0, 0, 0.4); color: #fff;
+      border-radius: 8px; padding: 4px 6px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
       transition: border-color 0.2s ease, background 0.2s ease;
     }
+    .copy-btn:hover { border-color: #4a90e2; }
+    .copy-icon { width: 14px; height: 14px; }
+    .copy-btn.is-copied { border-color: rgba(70, 200, 140, 0.6); color: #7fe3b3; }
+    .copy-check { width: 14px; height: 14px; display: none; }
+    .copy-btn.is-copied .copy-icon { display: none; }
+    .copy-btn.is-copied .copy-check { display: block; }
 
-    .copy-btn:hover {
-      border-color: #4a90e2;
-    }
+    .toasts { position: fixed; top: 16px; right: 16px; z-index: 200; display: grid; gap: 8px; max-width: min(360px, calc(100vw - 32px)); }
+    .toast { padding: 10px 12px; border-radius: 10px; background: rgba(10, 10, 10, 0.9); border: 1px solid #333; color: #fff; font-size: 13px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); animation: toastIn 0.2s ease both; }
+    .toast-success { border-color: rgba(70, 200, 140, 0.4); }
+    .toast-error { border-color: rgba(255, 71, 87, 0.5); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
-    .copy-icon {
-      width: 14px;
-      height: 14px;
-    }
-
-    .copy-btn.is-copied {
-      border-color: rgba(70, 200, 140, 0.6);
-      color: #7fe3b3;
-    }
-
-    .copy-check {
-      width: 14px;
-      height: 14px;
-      display: none;
-    }
-
-    .copy-btn.is-copied .copy-icon {
-      display: none;
-    }
-
-    .copy-btn.is-copied .copy-check {
-      display: block;
-    }
-
-    .toasts {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      z-index: 200;
-      display: grid;
-      gap: 8px;
-      max-width: min(360px, calc(100vw - 32px));
-    }
-
-    .toast {
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: rgba(10, 10, 10, 0.9);
-      border: 1px solid #333;
-      color: #fff;
-      font-size: 13px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
-      backdrop-filter: blur(8px);
-      animation: toastIn 0.2s ease both;
-    }
-
-    .toast-success {
-      border-color: rgba(70, 200, 140, 0.4);
-    }
-
-    .toast-error {
-      border-color: rgba(255, 71, 87, 0.5);
-    }
-
-    @keyframes toastIn {
-      from {
-        opacity: 0;
-        transform: translateY(-6px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 0;
-      border-bottom: 1px solid #222;
-      flex-wrap: wrap;
-    }
-
-    .row:last-child {
-      border-bottom: none;
-    }
-
-    .k {
-      color: #888;
-    }
-
-    .v {
-      font-weight: 700;
-      word-break: break-all;
-    }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222; flex-wrap: wrap; }
+    .row:last-child { border-bottom: none; }
+    .k { color: #888; }
+    .v { font-weight: 700; word-break: break-all; }
 
     .btn {
-      margin-top: 18px;
-      width: 100%;
+      margin-top: 18px; width: 100%;
       background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-      border: none;
-      color: #fff;
-      padding: 14px;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      text-decoration: none;
+      border: none; color: #fff; padding: 14px; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center;
+      gap: 10px; text-decoration: none;
     }
-
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
-    }
-
-    .muted {
-      margin-top: 12px;
-      color: #888;
-      font-size: 12px;
-      line-height: 1.6;
-    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); }
+    .muted { margin-top: 12px; color: #888; font-size: 12px; line-height: 1.6; }
 
     @media (max-width: 480px) {
-      body {
-        padding: 80px 14px 20px;
-      }
-
-      .background-text {
-        font-size: 72px;
-        letter-spacing: 5px;
-      }
-
-      .title {
-        font-size: 38px;
-      }
+      body { padding: 80px 14px 20px; }
+      .background-text { font-size: 72px; letter-spacing: 5px; }
+      .title { font-size: 38px; }
     }
   </style>
 </head>
@@ -465,12 +237,19 @@
             buyer_email: buyerEmail || undefined,
             order
           };
+
           const res = await postJson("/api/fulfill", payload);
+
           if (res.ok) {
             issuedKeys = Array.isArray(res.json?.keys) ? res.json.keys : [];
             if (issuedKeys.length) storeKeys(issuedKeys);
-            if (res.json?.buyer_email) {
+
+            // FIX: Only claim "emailed" if the backend confirms it.
+            if (res.json?.email_sent === true && res.json?.buyer_email) {
               emailLine = `We emailed your keys to ${escapeHtml(res.json.buyer_email)}.`;
+            } else if (res.json?.email_sent === false) {
+              const reason = res.json?.email_error ? ` (${escapeHtml(res.json.email_error)})` : "";
+              emailLine = `Email was not sent${reason}`;
             }
           } else if (res.status === 409) {
             infoLine = "Waiting for crypto confirmation. Refresh in a moment.";
@@ -497,27 +276,29 @@
         const expiresAt = isTimeBased ? new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000) : null;
         const itemKeys = isTimeBased ? issuedKeys.slice(keyIndex, keyIndex + qty) : [];
         if (isTimeBased) keyIndex += qty;
+
         const deliveryBoxes = isTimeBased
           ? itemKeys.map(k => {
             const keyText = escapeHtml(k.key || k);
             return `
-                <div class="delivery-box">
-                  <div class="delivery-row">
-                    <span class="delivery-key">Delivery: ${keyText}</span>
-                    <button class="copy-btn" data-copy="${keyText}" aria-label="Copy license">
-                      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                        <rect x="3" y="3" width="13" height="13" rx="2"></rect>
-                      </svg>
-                      <svg class="copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 6L9 17l-5-5"></path>
-                      </svg>
-                    </button>
-                  </div>
+              <div class="delivery-box">
+                <div class="delivery-row">
+                  <span class="delivery-key">Delivery: ${keyText}</span>
+                  <button class="copy-btn" data-copy="${keyText}" aria-label="Copy license">
+                    <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                      <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+                    </svg>
+                    <svg class="copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 6L9 17l-5-5"></path>
+                    </svg>
+                  </button>
                 </div>
-              `;
+              </div>
+            `;
           }).join("")
           : "";
+
         const metaLine = isTimeBased
           ? `<div class="order-item-meta">Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>`
           : "";
@@ -552,6 +333,7 @@
     const toasts = document.createElement("div");
     toasts.className = "toasts";
     document.body.appendChild(toasts);
+
     function showToast(message, type = "success", duration = 2200) {
       const el = document.createElement("div");
       el.className = `toast toast-${type}`;

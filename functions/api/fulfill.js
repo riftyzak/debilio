@@ -81,6 +81,13 @@ function makeKey(prefix) {
 }
 
 async function resendEmail(env, toEmail, keys) {
+  const apiKey = env.RESEND_API_KEY;
+  const from = env.EMAIL_FROM;
+
+  if (!apiKey || !from) {
+    return { ok: false, error: "Missing RESEND_API_KEY or EMAIL_FROM in Cloudflare env" };
+  }
+
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;color:#111;">
       <p>Your license keys:</p>
@@ -88,20 +95,36 @@ async function resendEmail(env, toEmail, keys) {
       <p>If you need help, reply to this email.</p>
     </div>
   `;
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: env.EMAIL_FROM,
-      to: toEmail,
-      subject: "Your license keys",
-      html
-    })
-  });
-  return res.ok;
+
+  let res;
+  let text = "";
+  try {
+    res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: toEmail,
+        subject: "Your license keys",
+        html,
+        // Optional: set a reply-to you actually read
+        reply_to: env.REPLY_TO || undefined
+      })
+    });
+    text = await res.text();
+  } catch (e) {
+    console.log("RESEND fetch failed:", String(e?.message || e));
+    return { ok: false, error: `Resend fetch failed: ${String(e?.message || e)}` };
+  }
+
+  // This will show up in Cloudflare logs
+  console.log("RESEND status:", res.status, "body:", text.slice(0, 600));
+
+  if (!res.ok) return { ok: false, error: text || `Resend error (status ${res.status})` };
+  return { ok: true };
 }
 
 export async function onRequestPost({ request, env }) {
@@ -144,7 +167,7 @@ export async function onRequestPost({ request, env }) {
   );
 
   if (!orderRes.ok) {
-    return jsonResponse({ error: "Failed to load order", details: await orderRes.text() }, 500);
+    return jsonResponse({ error: "Failed to load order acknowledged", details: await orderRes.text() }, 500);
   }
 
   const orderRows = await orderRes.json();
@@ -181,15 +204,21 @@ export async function onRequestPost({ request, env }) {
     order = inserted[0];
   }
 
+  // If keys already exist in checkout_orders, return them and (optionally) send email if not emailed.
   if (order?.keys_encrypted) {
     const payload = await decryptKeys(encKey, order.keys_encrypted);
     const keys = Array.isArray(payload?.keys) ? payload.keys : [];
+
     let emailSent = Boolean(order.emailed_at);
-    let buyerEmail = order.buyer_email || buyer_email_input || "";
+    let emailError = "";
+    const buyerEmail = order.buyer_email || buyer_email_input || "";
+
     if (!emailSent && buyerEmail && keys.length) {
-      const ok = await resendEmail(env, buyerEmail, keys.map(k => k.key || k));
-      if (ok) {
-        emailSent = true;
+      const emailRes = await resendEmail(env, buyerEmail, keys.map(k => k.key || k));
+      emailSent = emailRes.ok;
+      emailError = emailRes.ok ? "" : (emailRes.error || "Unknown resend error");
+
+      if (emailSent) {
         await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
           method: "PATCH",
           headers: {
@@ -205,7 +234,14 @@ export async function onRequestPost({ request, env }) {
         });
       }
     }
-    return jsonResponse({ ok: true, keys, email_sent: emailSent, buyer_email: buyerEmail });
+
+    return jsonResponse({
+      ok: true,
+      keys,
+      email_sent: emailSent,
+      email_error: emailError || undefined,
+      buyer_email: buyerEmail
+    });
   }
 
   let buyerEmail = order?.buyer_email || buyer_email_input || "";
@@ -274,11 +310,18 @@ export async function onRequestPost({ request, env }) {
         coinbase_charge: coinbaseCharge || order?.coinbase_charge || null
       })
     });
-    return jsonResponse({ ok: true, keys: [], email_sent: false, buyer_email: buyerEmail });
+
+    return jsonResponse({
+      ok: true,
+      keys: [],
+      email_sent: false,
+      buyer_email: buyerEmail
+    });
   }
 
   const productIds = [...new Set(timeItems.map(it => it?.id).filter(Boolean).map(String))];
   const prefixMap = new Map();
+
   if (productIds.length) {
     const idsParam = productIds.map(encodeURIComponent).join(",");
     const res = await fetch(
@@ -294,11 +337,13 @@ export async function onRequestPost({ request, env }) {
 
   const issued = [];
   const inserts = [];
+
   for (const it of timeItems) {
     const qty = Math.max(1, Number(it?.qty || 1));
     const product_id = it?.id ? String(it.id) : null;
     const product_variant_id = it?.variant_id ? String(it.variant_id) : null;
     const prefix = product_id ? (prefixMap.get(product_id) || "") : "";
+
     for (let i = 0; i < qty; i++) {
       const key = makeKey(prefix);
       const key_hash = await sha256Hex(`${KEY_SECRET}:${key}`);
@@ -329,6 +374,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const encrypted = await encryptKeys(encKey, { keys: issued });
+
   await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
     method: "PATCH",
     headers: {
@@ -348,9 +394,15 @@ export async function onRequestPost({ request, env }) {
     })
   });
 
+  // Try emailing now; report status accurately
   let emailSent = false;
+  let emailError = "";
+
   if (issued.length) {
-    emailSent = await resendEmail(env, buyerEmail, issued.map(k => k.key || k));
+    const emailRes = await resendEmail(env, buyerEmail, issued.map(k => k.key || k));
+    emailSent = emailRes.ok;
+    emailError = emailRes.ok ? "" : (emailRes.error || "Unknown resend error");
+
     if (emailSent) {
       await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
         method: "PATCH",
@@ -368,5 +420,11 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  return jsonResponse({ ok: true, keys: issued, email_sent: emailSent, buyer_email: buyerEmail });
+  return jsonResponse({
+    ok: true,
+    keys: issued,
+    email_sent: emailSent,
+    email_error: emailError || undefined,
+    buyer_email: buyerEmail
+  });
 }
