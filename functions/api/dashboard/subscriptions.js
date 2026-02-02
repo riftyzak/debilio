@@ -55,7 +55,7 @@ export async function onRequestGet({ request, env }) {
 
   if (variantIds.length) {
     const idsParam = variantIds.map(encodeURIComponent).join(",");
-    const vRes = await fetch(`${SUPABASE_URL}/rest/v1/product_variants?select=id,product_id,duration_days,price&id=in.(${idsParam})`, {
+    const vRes = await fetch(`${SUPABASE_URL}/rest/v1/product_variants?select=id,product_id,duration_days&id=in.(${idsParam})`, {
       headers: { apikey: SRV, Authorization: `Bearer ${SRV}` }
     });
     if (!vRes.ok) {
