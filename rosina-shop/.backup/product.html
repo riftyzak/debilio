@@ -26,7 +26,7 @@
       position: relative
     }
 
-    /* match your "continuous" background approach */
+    
     .background-text {
       position: fixed;
       top: 0;
@@ -297,7 +297,7 @@
       border-color: #dc3545
     }
 
-    /* minimal cart styles (inline matches shop) */
+    
     .qty {
       width: 70px;
       background: rgba(0, 0, 0, .5);
@@ -387,7 +387,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- Cart modal -->
+  
   <div class="cart-modal" id="cartModal"
     style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);z-index:1000;align-items:center;justify-content:center;">
     <div class="cart-content"
@@ -406,9 +406,9 @@
   </div>
 
   <script>
-    // =========================
-    // Background
-    // =========================
+
+
+
     const bgText = document.getElementById('bgText');
     const text = 'I LOVE RADEK NEVARIL ';
     let bgHtml = '';
@@ -419,9 +419,8 @@
     }
     bgText.innerHTML = bgHtml;
 
-    // =========================
-    // Supabase (REST) config
-    // =========================
+
+
     const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
@@ -434,11 +433,10 @@
     }
 
     function getSlugFromPath() {
-      // /rosina-shop/product/<slug>
+
       const m = window.location.pathname.match(/\/rosina-shop\/product\/([^/?#]+)/);
       if (m && m[1]) return decodeURIComponent(m[1]);
 
-      // fallback: ?slug=
       const sp = new URLSearchParams(window.location.search);
       return sp.get("slug");
     }
@@ -512,9 +510,7 @@
     }
 
 
-    // =========================
-    // Product rendering
-    // =========================
+
     function moneyEUR(v) { return `€${Number(v).toFixed(2)}`; }
 
     function escapeHtml(str) {
@@ -599,9 +595,8 @@
 
     let currentProduct = null;
 
-    // =========================
-    // Init
-    // =========================
+
+
     (async () => {
 
       const slug = getSlugFromPath();
@@ -633,3 +628,4 @@
 </body>
 
 </html>
+

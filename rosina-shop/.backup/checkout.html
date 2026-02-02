@@ -292,7 +292,7 @@
   </div>
 
     <script>
-    // Background
+
     const bgText = document.getElementById('bgText');
     const text = 'I LOVE RADEK NEVARIL ';
     let html = '';
@@ -303,7 +303,6 @@
     }
     bgText.innerHTML = html;
 
-    // Config
     const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
     const FN_BASE = `${SUPABASE_URL}/functions/v1`;
@@ -544,7 +543,7 @@
         const orderPayload = buildOrderPayload(cart, products, variants, loadPromoCode());
         localStorage.setItem(ORDER_KEY_LOCAL, JSON.stringify(orderPayload));
       } catch (e) {
-        // If order snapshot fails, continue to checkout anyway.
+
       }
 
       const payload = {
@@ -572,7 +571,6 @@
 
     renderSummary();
 
-    // Re-render totals when promo changes (promo UI is handled by cart.js)
     window.addEventListener("click", (e) => {
       if (e.target && (e.target.id === "promoBtn" || e.target.closest && e.target.closest("#promoBtn"))) {
         setTimeout(() => { renderSummary().catch(()=>{}); }, 0);
@@ -594,3 +592,4 @@
   <script src="/rosina-shop/cart.js"></script>
 </body>
 </html>
+

@@ -188,7 +188,7 @@
   </div>
 
   <script>
-    // Background
+
     const bgText = document.getElementById('bgText');
     const text = 'I LOVE RADEK NEVARIL ';
     let html = '';
@@ -199,14 +199,12 @@
     }
     bgText.innerHTML = html;
 
-    // Clear cart on success
     const CART_KEY = "rosina_cart_v1";
     const PROMO_KEY = "rosina_promo_v1";
     const ORDER_KEY = "rosina_last_order_v1";
     try { localStorage.removeItem(CART_KEY); } catch (_) {}
     try { localStorage.removeItem(PROMO_KEY); } catch (_) {}
 
-    // Show ids if present
     const sp = new URLSearchParams(window.location.search);
     const sessionId = sp.get("session_id") || sp.get("charge_id") || sp.get("id") || "";
     document.getElementById("provider").textContent = (sessionId && sessionId.startsWith("cs_")) ? "Stripe" : "Stripe / Coinbase";
@@ -265,3 +263,4 @@
   </script>
 </body>
 </html>
+

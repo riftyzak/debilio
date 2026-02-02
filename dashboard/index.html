@@ -283,21 +283,6 @@
       margin-bottom: 6px;
     }
 
-    .copy-btn {
-      border: 1px solid #333;
-      background: rgba(0,0,0,0.4);
-      color: #fff;
-      border-radius: 8px;
-      padding: 4px 6px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color 0.2s ease, background 0.2s ease;
-    }
-    .copy-btn:hover { border-color: #4a90e2; }
-    .copy-icon { width: 14px; height: 14px; }
-
     .delivery-row {
       margin-top: 8px;
       display: flex;
@@ -556,12 +541,6 @@
       recentCard.hidden = false;
       recentRow.innerHTML = `
         <span>Recent delivery: <span class="strong">${key}</span></span>
-        <button class="copy-btn" data-copy="${key}" aria-label="Copy license">
-          <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-            <rect x="3" y="3" width="13" height="13" rx="2"></rect>
-          </svg>
-        </button>
         <button class="btn" type="button" id="clearRecent" style="padding: 6px 10px; font-size: 12px;">Clear</button>
       `;
       const clearBtn = document.getElementById("clearRecent");
@@ -658,12 +637,6 @@
                 ${licenseKey ? `
                   <div class="delivery-row">
                     <span>Delivery: <span class="strong">${licenseKey}</span></span>
-                    <button class="copy-btn" data-copy="${licenseKey}" aria-label="Copy license">
-                      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                        <rect x="3" y="3" width="13" height="13" rx="2"></rect>
-                      </svg>
-                    </button>
                   </div>
                 ` : ""}
               </div>
@@ -785,18 +758,6 @@
       }
     };
 
-    document.addEventListener("click", async (e) => {
-      const btn = e.target.closest("[data-copy]");
-      if (!btn) return;
-      const value = btn.getAttribute("data-copy") || "";
-      try {
-        await navigator.clipboard.writeText(value);
-        showToast("Copied", { type: "success" });
-      } catch (_) {
-        showToast("Copy failed", { type: "error" });
-      }
-    });
-
     renderAuth();
     refresh();
 
@@ -812,3 +773,4 @@
   </script>
 </body>
 </html>
+

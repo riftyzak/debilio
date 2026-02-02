@@ -41,7 +41,7 @@
       font: inherit;
     }
 
-    /* Background watermark text like your other pages :contentReference[oaicite:4]{index=4} */
+    
     .background-text {
       position: fixed;
       top: 0;
@@ -84,7 +84,7 @@
       margin: 0 auto;
     }
 
-    /* Back button style like your other pages :contentReference[oaicite:5]{index=5} */
+    
     .back-button {
       position: fixed;
       top: 15px;
@@ -120,7 +120,7 @@
       margin-bottom: 18px;
     }
 
-    /* Gradient animated title like your pages :contentReference[oaicite:6]{index=6} */
+    
     .title {
       font-size: 32px;
       font-weight: bold;
@@ -306,7 +306,7 @@
     }
 
     button.primary {
-      /* Make Login/Save match the other buttons */
+      
       background: rgba(0, 0, 0, 0.5);
       border: 2px solid #333;
       font-weight: inherit;
@@ -321,7 +321,7 @@
     }
 
     button.danger {
-      /* No red outline until hover (like blue hover on normal buttons) */
+      
       border-color: #333;
       color: #ff4757;
     }
@@ -586,7 +586,7 @@
       font-family: "Courier New", Courier, monospace !important;
     }
 
-    /* Custom delete modal */
+    
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -918,7 +918,6 @@
       clearVariantsForm();
       renderPreview("");
 
-      // New product => slug auto-follows title unless user edits slug
       slugManuallyEdited = false;
 
       setStatus("");
@@ -946,7 +945,6 @@
       overlay.setAttribute("aria-hidden", "false");
       overlay.inert = false;
 
-      // Focus cancel for easy escape
       $("deleteCancelBtn").focus();
     }
 
@@ -997,7 +995,6 @@
       const id = $("id").value.trim() || null;
       const title = $("title").value.trim();
 
-      // If user never manually edited slug, keep it synced to title
       const currentSlug = $("slug").value.trim();
       const slug = slugManuallyEdited ? currentSlug : (currentSlug || slugify(title));
 
@@ -1228,7 +1225,6 @@
         });
       });
 
-      // Delete modal wiring
       $("deleteCancelBtn").onclick = closeDeleteModal;
       $("deleteConfirmBtn").onclick = confirmDeleteModal;
       $("deleteCloseBtn").onclick = closeDeleteModal;
@@ -1239,18 +1235,15 @@
         if (e.key === "Escape" && $("deleteOverlay").style.display === "flex") closeDeleteModal();
       });
 
-      // Title -> slug (keeps updating until you manually touch slug)
       $("title").addEventListener("input", () => {
         if (slugManuallyEdited) return;
         $("slug").value = slugify($("title").value);
       });
 
-      // If user types into slug, stop auto-sync
       $("slug").addEventListener("input", () => {
         slugManuallyEdited = $("slug").value.trim().length > 0;
       });
 
-      // If user clears slug fully, resume auto-sync
       $("slug").addEventListener("blur", () => {
         if (!$("slug").value.trim()) {
           slugManuallyEdited = false;
@@ -1266,7 +1259,6 @@
         renderPreview(localUrl);
       });
 
-      // Start in "new product" mode
       clearForm();
 
       await refreshUI();
@@ -1293,7 +1285,7 @@
       </div>
     </div>
 
-    <!-- LOGIN -->
+    
     <div id="authCard" class="card" style="display:none;">
       <div class="section-title">Login</div>
       <div class="login-grid">
@@ -1311,9 +1303,9 @@
       </div>
     </div>
 
-    <!-- APP -->
+    
     <div id="app" style="display:none;">
-      <!-- EDITOR -->
+      
       <div class="card">
         <div class="section-title">Create / Edit product</div>
 
@@ -1481,7 +1473,7 @@
         </form>
       </div>
 
-      <!-- TABLE -->
+      
       <div class="card">
         <div class="section-title">All products</div>
 
@@ -1508,7 +1500,7 @@
     </div>
   </div>
 
-  <!-- Custom Delete Modal -->
+  
   <div id="deleteOverlay" class="modal-overlay" aria-hidden="true" inert>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
       <div class="modal-head">
@@ -1531,3 +1523,4 @@
 </body>
 
 </html>
+

@@ -30,7 +30,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            /* Oversize the layer so the loop reset is visually seamless */
+            
             width: 320%;
             height: 320%;
             font-size: 120px;
@@ -232,7 +232,7 @@
             margin-bottom: 15px;
         }
 
-        /* Reuse existing button style (we'll use it as "View product") */
+        
         .add-to-cart {
             background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
             border: none;
@@ -530,9 +530,9 @@
     </div>
 
     <script>
-        // =========================
-        // Background
-        // =========================
+
+
+
         const bgText = document.getElementById('bgText');
         const text = 'I LOVE RADEK NEVARIL ';
         let html = '';
@@ -543,9 +543,8 @@
         }
         bgText.innerHTML = html;
 
-        // =========================
-        // Supabase (REST) config
-        // =========================
+
+
         const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
@@ -570,9 +569,9 @@
             return (data || []).map(p => ({ ...p, price_eur: Number(p.price_eur) }));
         }
         let products = [];
-        // =========================
-        // Shop render (NO add-to-cart here, only View product)
-        // =========================
+
+
+
         function renderProducts() {
             const grid = document.getElementById('productsGrid');
 
@@ -609,9 +608,8 @@
                 .replaceAll("'", "&#039;");
         }
 
-        // =========================
-        // Init
-        // =========================
+
+
         (async () => {
             try {
                 products = await fetchActiveProducts();

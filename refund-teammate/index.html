@@ -735,8 +735,7 @@
             const profileError = document.getElementById('profileError');
             const checkboxes = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
             const submitBtn = document.getElementById('submitBtn');
-            
-            // Validate profile link format
+
             const unmatchedRegex = /^(https?:\/\/)?(www\.)?unmatched\.gg\/user\/[\w-]+$/i;
             const isValidProfile = unmatchedRegex.test(profileLink);
             
@@ -771,8 +770,7 @@
             selectedPaymentMethod = method;
             selectedCrypto = null;
             paymentDetailsValid = false;
-            
-            // Move to step 2
+
             setTimeout(() => {
                 showPaymentDetailsStep(method);
             }, 300);

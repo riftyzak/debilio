@@ -74,7 +74,6 @@
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-    // Use the SAME values as in your admin.html / storefront
     const SUPABASE_URL = "YOUR_SUPABASE_URL";
     const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
@@ -89,8 +88,8 @@
 
     async function run() {
       try {
-        // If Supabase returned tokens in the URL hash, this will store the session.
-        // In supabase-js v2, getSession() will reflect the stored session after the callback.
+
+
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -99,8 +98,8 @@
         }
 
         if (!data.session) {
-          // Some flows rely on code exchange; this handles it if present
-          // (No harm if it isn't present)
+
+
           try {
             await supabase.auth.exchangeCodeForSession(window.location.href);
           } catch (_) {}
@@ -110,7 +109,7 @@
 
         if (after.session) {
           set("Signed in as " + after.session.user.email + " ✅", "ok");
-          // Auto-forward to admin after a short moment
+
           setTimeout(() => {
             window.location.href = "/rosina-shop/admin.html";
           }, 900);
@@ -126,3 +125,4 @@
   </script>
 </body>
 </html>
+

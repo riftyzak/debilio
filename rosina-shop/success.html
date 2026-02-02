@@ -23,8 +23,8 @@
     }
     html, body {
       overflow: auto;
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none; /* IE 10+ */
+      scrollbar-width: none; 
+      -ms-overflow-style: none; 
     }
     html::-webkit-scrollbar,
     body::-webkit-scrollbar { width: 0; height: 0; }
@@ -123,6 +123,26 @@
       font-size: 13px;
       white-space: pre-wrap;
     }
+    .delivery-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      justify-content:space-between;
+    }
+    .copy-btn{
+      border:1px solid #333;
+      background: rgba(0,0,0,0.4);
+      color:#fff;
+      border-radius:8px;
+      padding:4px 6px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      transition:border-color 0.2s ease, background 0.2s ease;
+    }
+    .copy-btn:hover{ border-color:#4a90e2; }
+    .copy-icon{ width:14px; height:14px; }
 
     .row{
       display:flex;
@@ -196,7 +216,6 @@
   </div>
 
   <script>
-    // Background
     const bgText = document.getElementById('bgText');
     const text = 'I LOVE RADEK NEVARIL ';
     let html = '';
@@ -207,14 +226,12 @@
     }
     bgText.innerHTML = html;
 
-    // Clear cart on success
     const CART_KEY = "rosina_cart_v1";
     const PROMO_KEY = "rosina_promo_v1";
     const ORDER_KEY = "rosina_last_order_v1";
     try { localStorage.removeItem(CART_KEY); } catch (_) {}
     try { localStorage.removeItem(PROMO_KEY); } catch (_) {}
 
-    // Show ids if present
     const sp = new URLSearchParams(window.location.search);
     const sessionId = sp.get("session_id") || sp.get("charge_id") || sp.get("id") || "";
     const provider = sp.get("session_id") ? "stripe" : "coinbase";
@@ -334,7 +351,22 @@
         const itemKeys = isTimeBased ? issuedKeys.slice(keyIndex, keyIndex + qty) : [];
         if (isTimeBased) keyIndex += qty;
         const deliveryBoxes = isTimeBased
-          ? itemKeys.map(k => `<div class="delivery-box">Delivery: ${escapeHtml(k.key || k)}</div>`).join("")
+          ? itemKeys.map(k => {
+              const keyText = escapeHtml(k.key || k);
+              return `
+                <div class="delivery-box">
+                  <div class="delivery-row">
+                    <span>Delivery: ${keyText}</span>
+                    <button class="copy-btn" data-copy="${keyText}" aria-label="Copy license">
+                      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                        <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join("")
           : "";
         const metaLine = isTimeBased
           ? `<div class="order-item-meta">Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>`
@@ -365,6 +397,16 @@
       await renderOrderItems();
       try { localStorage.removeItem(ORDER_KEY); } catch (_) {}
     })();
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-copy]");
+      if (!btn) return;
+      const value = btn.getAttribute("data-copy") || "";
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch (_) {}
+    });
   </script>
 </body>
 </html>
+

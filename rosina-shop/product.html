@@ -30,9 +30,9 @@
     body {
       overflow: auto;
       scrollbar-width: none;
-      /* Firefox */
+      
       -ms-overflow-style: none;
-      /* IE 10+ */
+      
     }
 
     html::-webkit-scrollbar,
@@ -41,7 +41,7 @@
       height: 0;
     }
 
-    /* match your "continuous" background approach */
+    
     .background-text {
       position: fixed;
       top: 0;
@@ -323,7 +323,7 @@
       border-color: #dc3545
     }
 
-    /* minimal cart styles (inline matches shop) */
+    
     .qty {
       width: 70px;
       background: rgba(0, 0, 0, .5);
@@ -385,11 +385,9 @@
       animation: gradient-shift 3s ease infinite;
     }
 
-    /* ============================
-       Duration picker (UPDATED UI)
-       ============================ */
+    
 
-    /* Variants as vertical stacked cards */
+    
     .duration-grid {
       display: flex;
       flex-direction: column;
@@ -409,7 +407,7 @@
       transition: all .2s ease;
       font-family: inherit;
 
-      /* two-column layout: left info + right price */
+      
       display: grid;
       grid-template-columns: 1fr auto;
       column-gap: 14px;
@@ -432,7 +430,7 @@
       box-shadow: 0 0 0 3px rgba(74, 144, 226, .35);
     }
 
-    /* Disabled / out-of-stock variants */
+    
     .duration-card.is-disabled,
     .duration-card:disabled {
       opacity: .55;
@@ -471,17 +469,17 @@
       color: #2ecc71;
     }
 
-    /* green */
+    
     .stock--low {
       color: #f39c12;
     }
 
-    /* orange */
+    
     .stock--out {
       color: #e74c3c;
     }
 
-    /* red */
+    
 
     .variant-price {
       font-size: 18px;
@@ -490,9 +488,9 @@
       white-space: nowrap;
     }
 
-    /* Always show the standalone price */
+    
 
-    /* Actions buttons: force same row like screenshot */
+    
     .actions.actions--row {
       flex-wrap: nowrap;
     }
@@ -528,7 +526,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- Cart modal -->
+  
   <div class="cart-modal" id="cartModal"
     style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);z-index:1000;align-items:center;justify-content:center;">
     <div class="cart-content"
@@ -547,9 +545,9 @@
   </div>
 
   <script>
-    // =========================
-    // Background
-    // =========================
+
+
+
     const bgText = document.getElementById('bgText');
     const text = 'I LOVE RADEK NEVARIL ';
     let bgHtml = '';
@@ -560,9 +558,8 @@
     }
     bgText.innerHTML = bgHtml;
 
-    // =========================
-    // Supabase (REST) config
-    // =========================
+
+
     const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
 
@@ -575,11 +572,10 @@
     }
 
     function getSlugFromPath() {
-      // /rosina-shop/product/<slug>
+
       const m = window.location.pathname.match(/\/rosina-shop\/product\/([^/?#]+)/);
       if (m && m[1]) return decodeURIComponent(m[1]);
 
-      // fallback: ?slug=
       const sp = new URLSearchParams(window.location.search);
       return sp.get("slug");
     }
@@ -658,9 +654,7 @@
     }
 
 
-    // =========================
-    // Product rendering
-    // =========================
+
     function moneyEUR(v) { return `€${Number(v).toFixed(2)}`; }
 
     function escapeHtml(str) {
@@ -683,7 +677,6 @@
 
       const hasVariants = Array.isArray(currentVariants) && currentVariants.length > 0;
 
-      // UI-only: disabled/out-of-stock guard (does NOT change backend)
       function isVariantDisabled(variant) {
         const qtyRaw =
           variant.stock_qty ?? variant.stock ?? variant.quantity ?? variant.inventory_qty ?? variant.qty ?? null;
@@ -723,13 +716,11 @@
               ${currentVariants.map((variant) => {
             const id = String(variant.id);
 
-            // Title: prefer provided title/name/label, else derive from duration_days
             const daysNum = (variant.duration_days ?? null);
             const daySuffix = Number(daysNum) === 1 ? "" : "s";
             const derivedTitle = daysNum !== null ? `${daysNum} Day${daySuffix}` : "Duration";
             const title = (variant.title || variant.name || variant.label || "").trim() || derivedTitle;
 
-            // Stock (UI-only): if no stock info exists in data, defaults to "In stock"
             const qtyRaw =
               variant.stock_qty ?? variant.stock ?? variant.quantity ?? variant.inventory_qty ?? variant.qty ?? null;
             const qty = (qtyRaw === null || qtyRaw === undefined || qtyRaw === "") ? null : Number(qtyRaw);
@@ -814,7 +805,6 @@
 
         selectedVariantId = String(variant.id);
 
-        // Keep wired to existing priceLabel updates (label is hidden in CSS)
         if (priceLabel) priceLabel.textContent = moneyEUR(variant.price_eur);
 
         syncVariantUI();
@@ -859,7 +849,6 @@
         });
       }
 
-      // Ensure aria + selection classes are in sync on initial render.
       syncVariantUI();
 
       const addBtn = document.getElementById("addToCartBtn");
@@ -870,9 +859,8 @@
 
     let currentProduct = null;
 
-    // =========================
-    // Init
-    // =========================
+
+
     (async () => {
 
       const slug = getSlugFromPath();
@@ -896,7 +884,6 @@
       if (currentProduct) {
         currentVariants = await fetchVariantsByProductId(currentProduct.id);
 
-        // Inject random stock into variants
         const stockList = await fetchVariantStock(currentProduct.id);
         const stockById = new Map(stockList.map(s => [String(s.id), s]));
 

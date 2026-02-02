@@ -35,8 +35,8 @@
     }
     html, body {
       overflow: auto;
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none; /* IE 10+ */
+      scrollbar-width: none; 
+      -ms-overflow-style: none; 
     }
     html::-webkit-scrollbar,
     body::-webkit-scrollbar { width: 0; height: 0; }
@@ -48,7 +48,7 @@
       font: inherit;
     }
 
-    /* Background watermark text like your other pages :contentReference[oaicite:4]{index=4} */
+    
     .background-text {
       position: fixed;
       top: 0;
@@ -91,7 +91,7 @@
       margin: 0 auto;
     }
 
-    /* Back button style like your other pages :contentReference[oaicite:5]{index=5} */
+    
     .back-button {
       position: fixed;
       top: 15px;
@@ -127,7 +127,7 @@
       margin-bottom: 18px;
     }
 
-    /* Gradient animated title like your pages :contentReference[oaicite:6]{index=6} */
+    
     .title {
       font-size: 32px;
       font-weight: bold;
@@ -318,7 +318,7 @@
     }
 
     button.primary {
-      /* Make Login/Save match the other buttons */
+      
       background: rgba(0, 0, 0, 0.5);
       border: 2px solid #333;
       font-weight: inherit;
@@ -333,7 +333,7 @@
     }
 
     button.danger {
-      /* No red outline until hover (like blue hover on normal buttons) */
+      
       border-color: #333;
       color: #ff4757;
     }
@@ -348,7 +348,7 @@
       color: #aaa;
     }
 
-    /* Time-based toggle: hover color indicates action */
+    
     #timeBasedToggleBtn.enable-hover:hover {
       border-color: #667eea !important;
       color: #667eea !important;
@@ -618,7 +618,7 @@
       font-family: "Courier New", Courier, monospace !important;
     }
 
-    /* Custom delete modal */
+    
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -740,9 +740,8 @@
 
     const BUCKET = "product-images";
 
-    // When time-based (variants) are enabled, what should we store in products.price_eur?
-    // - "min_variant" (safer): keep products.price_eur synced to the cheapest variant so legacy UI still shows a price.
-    // - "wipe" (riskier): set products.price_eur = null when variants exist (can break code or NOT NULL constraints).
+
+
     const TIME_BASED_BASE_PRICE_MODE = "min_variant";
     const memoryStorage = (() => {
       const store = {};
@@ -753,8 +752,7 @@
       };
     })();
 
-    // Use in-memory auth storage to avoid Safari/Firefox tracking-prevention blocks on third-party storage.
-    // Note: this means you will need to log in again after a page refresh.
+
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         persistSession: false,
@@ -767,16 +765,13 @@
 
     let slugManuallyEdited = false;
 
-    // Optional schema support flags (we auto-detect and degrade gracefully)
     let supportsKeyPrefix = false;
     let supportsDashboardIcon = false;
     let supportsTimeBasedFlag = false;
     let supportsVariantsTable = true;
 
-
-    // Cache schema detection so we don't spam 400s on every refresh
     let productsSchemaMode = "unknown"; // "unknown" | "optional" | "fallback"
-    // Time-based editor state
+
     let timeBasedEnabled = false;
     let userExplicitlyDisabledTimeBased = false;
     let timeVariants = []; // { uid:string, duration_days:number, price_eur:number }
@@ -822,7 +817,7 @@
     function setKeyPrefixSupport(isSupported) {
       supportsKeyPrefix = isSupported;
       const el = $("key_prefix");
-      // Always allow typing; if the DB column doesn't exist we simply won't persist it.
+
       if (el) el.disabled = false;
 
       const note = $("keyPrefixNote");
@@ -852,7 +847,6 @@
       const timeWrap = $("timeBasedWrap");
       if (!wrap || !timeWrap) return;
 
-      // Show prefix when time-based is enabled (and the input exists)
       const shouldShow = !!timeBasedEnabled;
 
       wrap.style.display = shouldShow ? "block" : "none";
@@ -862,14 +856,14 @@
     function updateDashboardIconUI() {
       const wrap = $("dashboardIconWrap");
       if (!wrap) return;
-      // Only relevant for time-based products
+
       wrap.style.display = timeBasedEnabled ? "block" : "none";
     }
 
 
     function setTimeBasedFlagSupport(isSupported) {
       supportsTimeBasedFlag = isSupported;
-      // If not supported, we can still infer based on variants length, but we won't write flag to products.
+
     }
 
     function setVariantsSupport(isSupported) {
@@ -1037,8 +1031,8 @@
     }
 
     function productSelectWithOptional() {
-      // Use select="*" so optional columns (e.g. products.key_prefix, products.dashboard_icon_url)
-      // won't break the admin if they're missing.
+
+
       return "*";
     }
 
@@ -1051,7 +1045,7 @@
     function isMissingColumnError(err) {
       const code = err?.code || "";
       const msg = String(err?.message || "").toLowerCase();
-      // PostgREST: PGRST204 - column not found in schema cache
+
       return code === "PGRST204" || msg.includes("schema cache") || msg.includes("could not find") || msg.includes("does not exist") && msg.includes("column");
     }
 
@@ -1059,7 +1053,7 @@
       const code = err?.code || "";
       const msg = String(err?.message || "").toLowerCase();
       const t = String(tableName || "").toLowerCase();
-      // Missing table often surfaces as schema cache error; sometimes as "relation does not exist"
+
       return (code && code.startsWith("PGRST") && msg.includes("schema cache") && msg.includes(t)) ||
         (msg.includes("schema cache") && msg.includes(t)) ||
         (msg.includes("relation") && msg.includes(t) && msg.includes("does not exist"));
@@ -1157,7 +1151,6 @@
 
       wireTableActions();
 
-      // Show price ranges when variants exist (best-effort).
       if (supportsVariantsTable) {
         (data || []).forEach(async (p) => {
             const cell = document.getElementById(`pricecell-${p.id}`);
@@ -1245,7 +1238,6 @@
       $("image_file").value = "";
       const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
 
-      // Back-compat: if older schema used a different column name, still populate the field.
       $("dashboard_icon_url").value = data.dashboard_icon_url || data.icon_url || data.icon || "";
       $("dashboard_icon_file").value = "";
       const ifn = $("dashboardIconFileName"); if (ifn) ifn.textContent = "No file selected";
@@ -1253,9 +1245,8 @@
       if (supportsKeyPrefix) $("key_prefix").value = data.key_prefix || "";
       else $("key_prefix").value = "";
 
-      // Determine time-based enabled:
-      // - If the flag exists, use it.
-      // - Otherwise infer from variants presence after loading variants.
+
+
       const flagEnabled = supportsTimeBasedFlag ? Boolean(data.time_based_enabled) : false;
 
       await loadTimeVariants(id);
@@ -1299,7 +1290,6 @@
       renderPreview("");
       renderDashboardIconPreview("");
 
-      // New product => slug auto-follows title unless user edits slug
       slugManuallyEdited = false;
 
       setStatus("");
@@ -1408,9 +1398,8 @@
 
       let price_eur = Number($("price_eur").value || 0);
 
-      // For time-based products, decide what we store in products.price_eur:
-      // - "min_variant" (safer): keep it synced to the cheapest variant so legacy UI still shows a price
-      // - "wipe" (riskier): set it to null when variants exist
+
+
       if (timeBasedEnabled) {
         const valid = [...timeVariants]
           .map(v => ({ duration_days: Number(v.duration_days), price_eur: Number(v.price_eur) }))
@@ -1436,8 +1425,7 @@
         const uploadedUrl = await uploadImageIfAny();
         const image_url = uploadedUrl || ($("image_url").value.trim() || null);
 
-        // Optional dashboard-only icon for time-based products.
-        // Stored in products.dashboard_icon_url (if the column exists).
+
         const uploadedIconUrl = await uploadDashboardIconIfAny();
         const dashboard_icon_url = uploadedIconUrl || ($("dashboard_icon_url").value.trim() || null);
 
@@ -1469,9 +1457,8 @@
           savedId = inserted?.id || null;
         }
 
-        // Optional-column fallback ONLY if schema doesn't match
         if (error && isMissingColumnError(error)) {
-          // Retry without optional columns
+
           setKeyPrefixSupport(false);
           setDashboardIconSupport(false);
           setTimeBasedFlagSupport(false);
@@ -1498,7 +1485,6 @@
           }
         }
 
-        // If we still have an error here, show it (don't silently drop key_prefix)
         if (error) return setStatus("Save error: " + error.message, "error");
 
 
@@ -1518,7 +1504,6 @@
     async function deleteProduct(id) {
       setStatus("Deleting…");
 
-      // Best-effort: remove variants too (if table exists)
       {
         const { error: vErr } = await sb.from("product_variants").delete().eq("product_id", id);
         if (vErr && isMissingTableError(vErr, "product_variants")) setVariantsSupport(false);
@@ -1559,14 +1544,12 @@
     }
 
     async function saveTimeVariants(productId) {
-      // If table missing, skip
+
       if (!supportsVariantsTable) return null;
 
-      // Reset explicit-disable flag if time-based is enabled
       if (timeBasedEnabled) userExplicitlyDisabledTimeBased = false;
 
-      // If time-based is OFF, only delete variants if the user explicitly toggled it off
-      // (prevents accidental wipes when variants failed to load or when flag column doesn't exist).
+
       if (!timeBasedEnabled) {
         if (userExplicitlyDisabledTimeBased) {
           const { error: delErr } = await sb.from("product_variants").delete().eq("product_id", productId);
@@ -1591,7 +1574,6 @@
       });
       if (invalidPrice) return "Each price must be a valid number (>= 0).";
 
-      // Validate before touching DB
       const cleaned = [...timeVariants]
         .map(v => ({ duration_days: Number(v.duration_days), price_eur: Number(v.price_eur) }))
         .filter(v => Number.isFinite(v.duration_days) && Number.isInteger(v.duration_days) && v.duration_days > 0 && Number.isFinite(v.price_eur) && v.price_eur >= 0);
@@ -1605,7 +1587,6 @@
 
       if (!cleaned.length) return "Add at least one duration + price.";
 
-      // Replace variants atomically-ish: delete then insert
       const { error: deleteError } = await sb.from("product_variants").delete().eq("product_id", productId);
       if (deleteError && isMissingTableError(deleteError, "product_variants")) {
         setVariantsSupport(false);
@@ -1663,7 +1644,7 @@
 
       $("timeBasedToggleBtn").onclick = () => {
         const next = !timeBasedEnabled;
-        // Track whether the user explicitly turned OFF time-based mode (used to decide whether to delete variants)
+
         userExplicitlyDisabledTimeBased = (timeBasedEnabled === true && next === false);
         if (next === true) userExplicitlyDisabledTimeBased = false;
         setTimeBasedEnabledUI(next);
@@ -1681,7 +1662,6 @@
         });
       });
 
-      // Add variant on Enter in price field
       ["variant_add_days", "variant_add_price"].forEach((id) => {
         const el = $(id);
         if (!el) return;
@@ -1693,7 +1673,6 @@
         });
       });
 
-      // Delete modal wiring
       $("deleteCancelBtn").onclick = closeDeleteModal;
       $("deleteConfirmBtn").onclick = confirmDeleteModal;
       $("deleteCloseBtn").onclick = closeDeleteModal;
@@ -1704,18 +1683,15 @@
         if (e.key === "Escape" && $("deleteOverlay").style.display === "flex") closeDeleteModal();
       });
 
-      // Title -> slug (keeps updating until you manually touch slug)
       $("title").addEventListener("input", () => {
         if (slugManuallyEdited) return;
         $("slug").value = slugify($("title").value);
       });
 
-      // If user types into slug, stop auto-sync
       $("slug").addEventListener("input", () => {
         slugManuallyEdited = $("slug").value.trim().length > 0;
       });
 
-      // If user clears slug fully, resume auto-sync
       $("slug").addEventListener("blur", () => {
         if (!$("slug").value.trim()) {
           slugManuallyEdited = false;
@@ -1736,7 +1712,6 @@
         renderPreview(localUrl);
       });
 
-      // Dashboard icon (time-based products)
       $("dashboard_icon_url").addEventListener("input", () => renderDashboardIconPreview($("dashboard_icon_url").value));
       const iconUploadBtn = $("dashboardIconUploadBtn");
       if (iconUploadBtn) iconUploadBtn.onclick = () => $("dashboard_icon_file").click();
@@ -1750,7 +1725,6 @@
         renderDashboardIconPreview(localUrl);
       });
 
-      // Start in "new product" mode
       clearForm();
 
       await refreshUI();
@@ -1777,7 +1751,7 @@
       </div>
     </div>
 
-    <!-- LOGIN -->
+    
     <div id="authCard" class="card" style="display:none;">
       <div class="section-title">Login</div>
       <div class="login-grid">
@@ -1795,9 +1769,9 @@
       </div>
     </div>
 
-    <!-- APP -->
+    
     <div id="app" style="display:none;">
-      <!-- EDITOR -->
+      
       <div class="card">
         <div class="section-title">Create / Edit product</div>
 
@@ -1948,7 +1922,7 @@
         </form>
       </div>
 
-      <!-- TABLE -->
+      
       <div class="card">
         <div class="section-title">All products</div>
 
@@ -1971,7 +1945,7 @@
     </div>
   </div>
 
-  <!-- Custom Delete Modal -->
+  
   <div id="deleteOverlay" class="modal-overlay" aria-hidden="true" inert>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
       <div class="modal-head">
@@ -1994,3 +1968,4 @@
 </body>
 
 </html>
+
