@@ -7,7 +7,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/tailwind.css">
   <style>
-    /* Match Rosina Shop site styling */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
@@ -22,8 +21,8 @@
 
     html, body {
       overflow: auto;
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none; /* IE 10+ */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
     html::-webkit-scrollbar,
     body::-webkit-scrollbar { width: 0; height: 0; }
@@ -181,14 +180,6 @@
       gap: 10px;
     }
 
-    .pill {
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid #333;
-      color: #aaa;
-    }
-
     .item {
       border: 2px solid #333;
       border-radius: 12px;
@@ -292,20 +283,75 @@
       margin-bottom: 6px;
     }
 
-    @media (min-width: 980px) {
-      .grid-2 { grid-template-columns: 1fr 1fr; }
+    .copy-btn {
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.4);
+      color: #fff;
+      border-radius: 8px;
+      padding: 4px 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .copy-btn:hover { border-color: #4a90e2; }
+    .copy-icon { width: 14px; height: 14px; }
+
+    .delivery-row {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #cfe1ff;
     }
 
-    .auth-center {
+    .recent-card {
       display: flex;
-      justify-content: center;
-      width: 100%;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toasts {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 200;
+      display: grid;
+      gap: 8px;
+      max-width: min(360px, calc(100vw - 32px));
+    }
+    .toast {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(10,10,10,0.9);
+      border: 1px solid #333;
+      color: #fff;
+      font-size: 13px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+      backdrop-filter: blur(8px);
+      animation: toastIn 0.2s ease both;
+    }
+    .toast-info { border-color: rgba(74,144,226,0.4); }
+    .toast-success { border-color: rgba(70,200,140,0.4); }
+    .toast-error { border-color: rgba(255,71,87,0.5); }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (min-width: 980px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
     }
 
     @media (min-width: 900px) {
       .auth-center {
         min-height: 60vh;
+        display: flex;
         align-items: center;
+        justify-content: center;
       }
     }
 
@@ -352,7 +398,6 @@
                 <input id="confirm" type="password" placeholder="confirm password" class="field" autocomplete="new-password" />
               </div>
               <button id="authSubmit" type="submit" class="btn btn-primary" style="width: 100%; padding: 12px 14px;">Sign in</button>
-              <div id="authMsg" class="muted" style="min-height: 1.25rem;"></div>
             </form>
           </div>
         </div>
@@ -372,37 +417,38 @@
             <div class="row" style="align-items: flex-start;">
               <div>
                 <div class="strong" style="font-size: 20px;">Redeem a key</div>
-                <div class="muted" style="margin-top: 4px;">Use your key to activate a subscription.</div>
               </div>
-              <span id="redeemStatus" class="pill" style="display:none"></span>
             </div>
             <div style="margin-top: 12px; flex: 1;" class="grid">
               <input id="key" placeholder="paste your key here" class="field" />
               <button id="redeem" type="button" class="btn btn-primary" style="width: 100%; padding: 12px 14px; margin-top: auto;">Redeem</button>
-              <div id="redeemMsg" class="muted" style="min-height: 1.25rem;"></div>
             </div>
           </div>
 
           <div class="card fade-up">
             <div class="strong" style="font-size: 20px;">Active subscriptions</div>
-            <div id="subsList" class="list muted">Loading...</div>
+            <div id="subsList" class="list muted"></div>
           </div>
+        </div>
+
+        <div id="recentDeliveryCard" class="card fade-up" hidden>
+          <div class="strong" style="font-size: 20px;">Recent delivery</div>
+          <div id="recentDeliveryRow" class="delivery-row"></div>
         </div>
 
         <div class="card fade-up">
           <div class="strong" style="font-size: 20px;">Order history</div>
-          <div id="historyList" class="list muted">Loading...</div>
+          <div id="historyList" class="list muted"></div>
         </div>
       </div>
     </div>
   </div>
 
+  <div id="toasts" class="toasts"></div>
+
   <script>
     const authBox = document.getElementById("authBox");
     const dashBox = document.getElementById("dashBox");
-    const authMsg = document.getElementById("authMsg");
-    const redeemMsg = document.getElementById("redeemMsg");
-    const redeemStatus = document.getElementById("redeemStatus");
     const subsList = document.getElementById("subsList");
     const historyList = document.getElementById("historyList");
     const authForm = document.getElementById("authForm");
@@ -413,16 +459,28 @@
     const passInput = document.getElementById("pass");
     const confirmInput = document.getElementById("confirm");
     const authWrap = document.querySelector(".auth-center") || authBox;
+    const recentCard = document.getElementById("recentDeliveryCard");
+    const recentRow = document.getElementById("recentDeliveryRow");
+    const toasts = document.getElementById("toasts");
 
     let authMode = "login";
     let authBusy = false;
 
-    function setAuthMsg(t){ authMsg.textContent = t || ""; }
-    function setRedeemMsg(t){ redeemMsg.textContent = t || ""; }
-    function setRedeemStatus(t){
-      const v = t || "";
-      redeemStatus.textContent = v;
-      redeemStatus.style.display = v ? "inline-flex" : "none";
+    const RECENT_KEY = "rosina_recent_delivery_v1";
+    const RECENT_TTL = 24 * 60 * 60 * 1000;
+
+    function showToast(message, opts) {
+      const type = opts?.type || "info";
+      const duration = opts?.duration || 2800;
+      const el = document.createElement("div");
+      el.className = `toast toast-${type}`;
+      el.textContent = message;
+      toasts.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        el.style.transform = "translateY(-6px)";
+        setTimeout(() => el.remove(), 180);
+      }, duration);
     }
 
     function setAuthBusy(isBusy) {
@@ -439,10 +497,7 @@
       confirmWrap.style.display = authMode === "register" ? "block" : "none";
       passInput.setAttribute("autocomplete", authMode === "login" ? "current-password" : "new-password");
       authSubmit.textContent = authMode === "login" ? "Sign in" : "Create account";
-      if (authMode === "login") {
-        confirmInput.value = "";
-      }
-      setAuthMsg("");
+      if (authMode === "login") confirmInput.value = "";
     }
 
     async function api(path, body) {
@@ -463,10 +518,86 @@
       return `€${n.toFixed(2)}`;
     }
 
+    function setRecentDelivery(key) {
+      if (!key) return;
+      try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify({ key, ts: Date.now() }));
+      } catch (_) {}
+      renderRecentDelivery();
+    }
+
+    function getRecentDelivery() {
+      try {
+        const raw = localStorage.getItem(RECENT_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (!data?.key || !data?.ts) return null;
+        if (Date.now() - data.ts > RECENT_TTL) {
+          localStorage.removeItem(RECENT_KEY);
+          return null;
+        }
+        return data.key;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function clearRecentDelivery() {
+      try { localStorage.removeItem(RECENT_KEY); } catch (_) {}
+      renderRecentDelivery();
+    }
+
+    function renderRecentDelivery() {
+      const key = getRecentDelivery();
+      if (!key) {
+        recentCard.hidden = true;
+        return;
+      }
+      recentCard.hidden = false;
+      recentRow.innerHTML = `
+        <span>Recent delivery: <span class="strong">${key}</span></span>
+        <button class="copy-btn" data-copy="${key}" aria-label="Copy license">
+          <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+            <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+          </svg>
+        </button>
+        <button class="btn" type="button" id="clearRecent" style="padding: 6px 10px; font-size: 12px;">Clear</button>
+      `;
+      const clearBtn = document.getElementById("clearRecent");
+      if (clearBtn) clearBtn.onclick = () => clearRecentDelivery();
+    }
+
+    function extractLicense(group) {
+      const direct = group?.license || group?.delivery || group?.key || group?.license_key || group?.licenseKey;
+      if (direct) return String(direct);
+      const items = Array.isArray(group?.items) ? group.items : [];
+      for (const item of items) {
+        const k = item?.license || item?.delivery || item?.key || item?.license_key || item?.licenseKey;
+        if (k) return String(k);
+      }
+      return "";
+    }
+
+    function ingestLastKeys() {
+      try {
+        const raw = localStorage.getItem("rosina_last_keys_v1");
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        const keys = Array.isArray(data?.keys) ? data.keys : [];
+        const first = keys[0]?.key || keys[0];
+        if (first) setRecentDelivery(String(first));
+      } catch (_) {}
+    }
+
     async function loadDashboard() {
+      subsList.textContent = "";
+      historyList.textContent = "";
+
       const subsRes = await api("/api/dashboard/subscriptions");
       if (!subsRes.ok) {
-        subsList.textContent = subsRes.json?.error || subsRes.text || "Failed to load";
+        showToast(subsRes.json?.error || subsRes.text || "Failed to load subscriptions", { type: "error" });
+        subsList.textContent = "No active subscriptions yet.";
       } else if (!subsRes.json?.items?.length) {
         subsList.textContent = "No active subscriptions yet.";
       } else {
@@ -492,9 +623,10 @@
 
       const histRes = await api("/api/dashboard/history");
       if (!histRes.ok) {
-        historyList.textContent = histRes.json?.error || histRes.text || "Failed to load";
+        showToast(histRes.json?.error || histRes.text || "Failed to load history", { type: "error" });
+        historyList.textContent = "No orders yet.";
       } else if (!histRes.json?.items?.length) {
-        historyList.textContent = "No redemptions yet.";
+        historyList.textContent = "No orders yet.";
       } else {
         historyList.innerHTML = histRes.json.items.map(group => {
           const titles = (group.items || []).map(i => i.title).filter(Boolean);
@@ -510,6 +642,8 @@
           const total = items.reduce((sum, it) => sum + (Number(it.price_eur) || 0), 0);
           const priceLine = hasPrice ? moneyEUR(total) : "";
           const date = group.redeemed_at ? new Date(group.redeemed_at).toLocaleString() : "";
+          const licenseKey = extractLicense(group);
+          if (licenseKey) setRecentDelivery(licenseKey);
           return `
             <div class="item" style="align-items: flex-start;">
               <div style="flex: 1; min-width: 0;">
@@ -521,11 +655,23 @@
                   <div class="muted" style="font-size: 12px;">${date}</div>
                 </div>
                 <div class="muted" style="margin-top: 6px;">${priceLine || ""}</div>
+                ${licenseKey ? `
+                  <div class="delivery-row">
+                    <span>Delivery: <span class="strong">${licenseKey}</span></span>
+                    <button class="copy-btn" data-copy="${licenseKey}" aria-label="Copy license">
+                      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                        <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+                      </svg>
+                    </button>
+                  </div>
+                ` : ""}
               </div>
             </div>
           `;
         }).join("");
       }
+      renderRecentDelivery();
     }
 
     async function refresh() {
@@ -542,6 +688,7 @@
       dashBox.hidden = false;
       dashBox.setAttribute("aria-hidden", "false");
       document.getElementById("me").textContent = json.username || json.user_id;
+      ingestLastKeys();
       await loadDashboard();
     }
 
@@ -553,28 +700,34 @@
       if (authMode === "register") {
         const confirm = confirmInput.value;
         if (password !== confirm) {
-          setAuthMsg("Passwords do not match.");
+          showToast("Passwords do not match", { type: "error" });
           return;
         }
       }
 
       setAuthBusy(true);
-      setAuthMsg("");
+      showToast(authMode === "login" ? "Signing in" : "Creating account", { type: "info", duration: 1600 });
 
       if (authMode === "login") {
         const { ok, json, text } = await api("/api/auth/login", { username, password });
         setAuthBusy(false);
-        setAuthMsg(ok ? "OK" : (json?.error || text));
-        if (ok) await refresh();
+        if (ok) {
+          showToast("Signed in", { type: "success" });
+          await refresh();
+        } else {
+          showToast(json?.error || text || "Sign in failed", { type: "error" });
+        }
         return;
       }
 
       const { ok, json, text } = await api("/api/auth/register", { username, password });
       setAuthBusy(false);
-      setAuthMsg(ok ? "Account created. Please sign in." : (json?.error || text));
       if (ok) {
+        showToast("Account created. Please sign in.", { type: "success" });
         authMode = "login";
         renderAuth();
+      } else {
+        showToast(json?.error || text || "Create account failed", { type: "error" });
       }
     }
 
@@ -609,25 +762,44 @@
 
     document.getElementById("logout").onclick = async () => {
       await api("/api/auth/logout", {});
+      showToast("Signed out", { type: "success" });
       await refresh();
     };
 
     document.getElementById("redeem").onclick = async () => {
-      setRedeemStatus("Redeeming...");
-      setRedeemMsg("");
       const key = document.getElementById("key").value.trim();
+      if (!key) {
+        showToast("Enter a key first", { type: "error" });
+        return;
+      }
+      const btn = document.getElementById("redeem");
+      btn.disabled = true;
+      showToast("Redeeming", { type: "info", duration: 1600 });
       const { ok, json, text } = await api("/api/redeem", { key });
-      setRedeemStatus("");
-      setRedeemMsg(ok ? "Redeemed." : (json?.error || text));
-      if (ok) await loadDashboard();
+      btn.disabled = false;
+      if (ok) {
+        showToast("Redeemed", { type: "success" });
+        await loadDashboard();
+      } else {
+        showToast(json?.error || text || "Redeem failed", { type: "error" });
+      }
     };
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-copy]");
+      if (!btn) return;
+      const value = btn.getAttribute("data-copy") || "";
+      try {
+        await navigator.clipboard.writeText(value);
+        showToast("Copied", { type: "success" });
+      } catch (_) {
+        showToast("Copy failed", { type: "error" });
+      }
+    });
 
     renderAuth();
     refresh();
 
-    // =========================
-    // Background (match shop)
-    // =========================
     const bgText = document.getElementById('bgText');
     const text = 'I LOVE RADEK NEVARIL ';
     let html = '';
