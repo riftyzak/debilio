@@ -86,13 +86,16 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse({ error: "Failed to store charge", details: await res.text() }, 500);
   }
 
-  return jsonResponse({ ok: true });
-}
+  let fulfillStatus = null;
+  if (status === "CONFIRMED") {
+    const origin = new URL(request.url).origin;
+    const fulfillRes = await fetch(`${origin}/api/fulfill`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Webhook": "1" },
+      body: JSON.stringify({ provider: "coinbase", charge_id: chargeId })
+    });
+    fulfillStatus = fulfillRes.status;
+  }
 
-// If you don't already have a storage table for Coinbase charge status, add:
-// create table if not exists coinbase_charges (
-//   id text primary key,
-//   status text,
-//   updated_at timestamptz,
-//   raw jsonb
-// );
+  return jsonResponse({ ok: true, fulfill_status: fulfillStatus });
+}

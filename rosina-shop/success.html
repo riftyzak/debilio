@@ -290,10 +290,35 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch (_) { json = null; }
+      return { ok: res.ok, status: res.status, json, text };
+    }
+
+    const KEY_STORE = "rosina_last_keys_v1";
+    const KEY_TTL = 7 * 24 * 60 * 60 * 1000;
+
+    function readStoredKeys() {
+      try {
+        const raw = localStorage.getItem(KEY_STORE);
+        if (!raw) return [];
+        const data = JSON.parse(raw);
+        if (!data?.ts || !Array.isArray(data?.keys)) return [];
+        if (Date.now() - data.ts > KEY_TTL) {
+          localStorage.removeItem(KEY_STORE);
+          return [];
+        }
+        return data.keys;
+      } catch (_) {
+        return [];
       }
-      return res.json();
+    }
+
+    function storeKeys(keys) {
+      try {
+        localStorage.setItem(KEY_STORE, JSON.stringify({ ts: Date.now(), keys }));
+      } catch (_) {}
     }
 
     async function renderOrderItems() {
@@ -319,62 +344,41 @@
 
       let issuedKeys = [];
       let issueError = "";
-      let pendingNotice = "";
-
-      async function issueKeys() {
-        const issued = await postJson("/api/issue-keys", {
-          session_id: sessionId || "no_session",
-          items: timeBasedItems,
-          provider,
-          charge_id: provider === "coinbase" ? (sp.get("charge_id") || sp.get("id") || "") : ""
-        });
-        issuedKeys = Array.isArray(issued.keys) ? issued.keys : [];
-        try {
-          localStorage.setItem("rosina_last_keys_v1", JSON.stringify({
-            ts: Date.now(),
-            keys: issuedKeys
-          }));
-          setTimeout(() => {
-            try { localStorage.removeItem("rosina_last_keys_v1"); } catch (_) {}
-          }, 30 * 60 * 1000);
-        } catch (_) {}
-      }
-
-      async function waitForCoinbaseConfirmation() {
-        const chargeId = sp.get("charge_id") || sp.get("id") || "";
-        if (!chargeId) {
-          pendingNotice = "Waiting for crypto confirmation. Please refresh in a moment.";
-          return;
-        }
-        let attempts = 0;
-        let delay = 3000;
-        while (attempts < 30) {
-          attempts += 1;
-          try {
-            const res = await fetch(`/api/payment-status?provider=coinbase&charge_id=${encodeURIComponent(chargeId)}`);
-            const data = await res.json();
-            if (data?.status === "CONFIRMED") return;
-          } catch (_) {
-          }
-          await new Promise(r => setTimeout(r, delay));
-          if (delay < 8000) delay += 1000;
-        }
-        pendingNotice = "Waiting for crypto confirmation. Please refresh in a moment.";
-      }
+      let infoLine = "";
+      let emailLine = "";
+      const buyerEmail = (localStorage.getItem("rosina_buyer_email_v1") || "").trim();
+      const chargeId = sp.get("charge_id") || sp.get("id") || "";
 
       if (hasTimeBased) {
+        infoLine = "Issuing keys and sending email...";
         try {
-          if (provider === "coinbase") {
-            pendingNotice = "Waiting for crypto confirmation. This may take a minute...";
-            await waitForCoinbaseConfirmation();
-          }
-          if (!pendingNotice) {
-            await issueKeys();
+          const payload = {
+            provider,
+            session_id: provider === "stripe" ? sessionId : undefined,
+            charge_id: provider === "coinbase" ? chargeId : undefined,
+            buyer_email: buyerEmail || undefined,
+            order
+          };
+          const res = await postJson("/api/fulfill", payload);
+          if (res.ok) {
+            issuedKeys = Array.isArray(res.json?.keys) ? res.json.keys : [];
+            if (issuedKeys.length) storeKeys(issuedKeys);
+            if (res.json?.buyer_email) {
+              emailLine = `We emailed your keys to ${escapeHtml(res.json.buyer_email)}.`;
+            }
+          } else if (res.status === 409) {
+            infoLine = "Waiting for crypto confirmation. Refresh in a moment.";
+          } else {
+            issueError = "Couldn't issue keys. Please check your email.";
           }
         } catch (_) {
-          issueError = "Couldn't issue keys; try refresh.";
-          issuedKeys = [];
+          issueError = "Couldn't issue keys. Please check your email.";
         }
+      }
+
+      if (!issuedKeys.length) {
+        const cached = readStoredKeys();
+        if (cached.length) issuedKeys = cached;
       }
 
       const now = new Date();
@@ -426,8 +430,9 @@
         : "";
 
       target.innerHTML = `
-        ${pendingNotice ? `<div class="muted">${pendingNotice}</div>` : ""}
+        ${infoLine ? `<div class="muted">${infoLine}</div>` : ""}
         ${issueError ? `<div class="muted">${issueError}</div>` : ""}
+        ${emailLine ? `<div class="muted">${emailLine}</div>` : ""}
         ${itemsHtml}
         ${warningLine}
       `;

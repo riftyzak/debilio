@@ -277,6 +277,11 @@
 
       <div class="card">
         <div class="card-title"><i class="fas fa-credit-card"></i> Payment</div>
+        <div style="margin-bottom:12px;">
+          <div style="color:#888;font-size:13px;margin-bottom:6px;">Email</div>
+          <input type="email" id="buyerEmail" placeholder="you@email.com"
+            style="width:100%;background:rgba(0,0,0,.5);border:2px solid #333;color:#fff;padding:10px 15px;border-radius:10px;font-family:'Georama',sans-serif;font-size:14px;" />
+        </div>
 
         <button class="btn" id="payStripe"><i class="fas fa-lock"></i> Pay with Card</button>
         <button class="btn secondary" id="payCrypto"><i class="fab fa-bitcoin"></i> Pay with Crypto</button>
@@ -317,6 +322,7 @@
     const CART_KEY_LOCAL = "rosina_cart_v1";
     const PROMO_KEY_LOCAL = "rosina_promo_v1";
     const ORDER_KEY_LOCAL = "rosina_last_order_v1";
+    const BUYER_EMAIL_KEY = "rosina_buyer_email_v1";
 
     const PROMOS_LOCAL = {
       xrs: { type: "multiplier", multiplier: 2 },
@@ -343,6 +349,10 @@
     }
 
     function moneyEUR(v) { return `€${Number(v).toFixed(2)}`; }
+
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+    }
 
     async function fetchProductsByIds(ids) {
       const list = ids.map(x => String(x)).join(',');
@@ -535,6 +545,14 @@
     async function start(provider) {
       setStatus("Creating checkout…");
 
+      const emailInput = document.getElementById("buyerEmail");
+      const buyerEmail = emailInput ? emailInput.value.trim() : "";
+      if (!isValidEmail(buyerEmail)) {
+        setStatus("Enter a valid email.");
+        return;
+      }
+      try { localStorage.setItem(BUYER_EMAIL_KEY, buyerEmail); } catch (_) {}
+
       const cart = loadCart();
       if (!cart.length) {
         setStatus("Your cart is empty.");
@@ -555,6 +573,7 @@
 
       const payload = {
         cart,
+        buyer_email: buyerEmail,
         promo_code: loadPromoCode(),
         success_url: `${location.origin}/rosina-shop/success.html?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${location.origin}/rosina-shop/checkout.html`
@@ -577,6 +596,11 @@
     document.getElementById("payCrypto").onclick = () => start("coinbase");
 
     renderSummary();
+
+    const emailInput = document.getElementById("buyerEmail");
+    if (emailInput) {
+      try { emailInput.value = localStorage.getItem(BUYER_EMAIL_KEY) || ""; } catch (_) {}
+    }
 
     window.addEventListener("click", (e) => {
       if (e.target && (e.target.id === "promoBtn" || e.target.closest && e.target.closest("#promoBtn"))) {
