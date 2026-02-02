@@ -1,5 +1,6 @@
 <!doctype html>
 <html>
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -7,7 +8,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/tailwind.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     body {
       font-family: 'Georama', sans-serif;
@@ -19,15 +24,22 @@
       position: relative;
     }
 
-    html, body {
+    html,
+    body {
       overflow: auto;
       scrollbar-width: none;
       -ms-overflow-style: none;
     }
-    html::-webkit-scrollbar,
-    body::-webkit-scrollbar { width: 0; height: 0; }
 
-    [hidden] { display: none !important; }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
 
     .background-text {
       position: fixed;
@@ -46,11 +58,23 @@
       animation: scroll-diagonal 50s linear infinite;
       font-family: 'Courier New', monospace;
     }
-    .background-text div { white-space: nowrap; }
-    .background-text div:nth-child(even) { padding-left: 150px; }
+
+    .background-text div {
+      white-space: nowrap;
+    }
+
+    .background-text div:nth-child(even) {
+      padding-left: 150px;
+    }
+
     @keyframes scroll-diagonal {
-      0% { transform: translate3d(0, 0, 0); }
-      100% { transform: translate3d(-33.333%, -33.333%, 0); }
+      0% {
+        transform: translate3d(0, 0, 0);
+      }
+
+      100% {
+        transform: translate3d(-33.333%, -33.333%, 0);
+      }
     }
 
     .container {
@@ -78,7 +102,11 @@
       align-items: center;
       gap: 10px;
     }
-    .back-button:hover { border-color: #4a90e2; transform: translateX(-5px); }
+
+    .back-button:hover {
+      border-color: #4a90e2;
+      transform: translateX(-5px);
+    }
 
     .header {
       text-align: center;
@@ -96,18 +124,30 @@
       background-clip: text;
       animation: gradient-shift 3s ease infinite;
     }
+
     @keyframes gradient-shift {
-      0%, 100% { background-position: 0% center; }
-      50% { background-position: 100% center; }
+
+      0%,
+      100% {
+        background-position: 0% center;
+      }
+
+      50% {
+        background-position: 100% center;
+      }
     }
-    .sub { color: #888; font-size: 16px; }
+
+    .sub {
+      color: #888;
+      font-size: 16px;
+    }
 
     .card {
       background: rgba(20, 20, 20, 0.95);
       border: 2px solid #333;
       border-radius: 12px;
       padding: 18px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(10px);
     }
 
@@ -119,8 +159,16 @@
       flex-wrap: wrap;
     }
 
-    .muted { color: #aaa; font-size: 13px; line-height: 1.4; }
-    .strong { color: #fff; font-weight: 700; }
+    .muted {
+      color: #aaa;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .strong {
+      color: #fff;
+      font-weight: 700;
+    }
 
     .field {
       width: 100%;
@@ -133,14 +181,15 @@
       outline: none;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
+
     .field:focus {
       border-color: #4a90e2;
-      box-shadow: 0 0 0 3px rgba(74,144,226,0.2);
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
     }
 
     .btn {
       border: 2px solid #333;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.5);
       color: #fff;
       padding: 10px 14px;
       border-radius: 10px;
@@ -149,14 +198,22 @@
       transition: all 0.2s ease;
       font-family: 'Georama', sans-serif;
     }
-    .btn:hover { border-color: #4a90e2; }
+
+    .btn:hover {
+      border-color: #4a90e2;
+    }
+
     .btn-primary {
       background: #4a90e2;
       color: #000;
       border-color: #4a90e2;
       font-weight: 700;
     }
-    .btn-primary:hover { filter: brightness(1.05); }
+
+    .btn-primary:hover {
+      filter: brightness(1.05);
+    }
+
     .btn-primary:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -170,13 +227,18 @@
       min-height: 44px;
       transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
-    .redeem-btn:disabled { opacity: 0.7; }
+
+    .redeem-btn:disabled {
+      opacity: 0.7;
+    }
+
     .redeem-label {
       display: inline-block;
       min-width: 9ch;
       text-align: center;
       white-space: nowrap;
     }
+
     .redeem-icon {
       position: relative;
       width: 16px;
@@ -186,6 +248,7 @@
       justify-content: center;
       flex-shrink: 0;
     }
+
     .redeem-spinner,
     .redeem-check {
       position: absolute;
@@ -193,12 +256,14 @@
       opacity: 0;
       transition: opacity 0.15s ease;
     }
+
     .redeem-spinner {
       border: 2px solid rgba(0, 0, 0, 0.25);
       border-top-color: rgba(0, 0, 0, 0.85);
       border-radius: 999px;
       animation: redeemSpin 0.75s linear infinite;
     }
+
     .redeem-check {
       stroke: #0b3a1f;
       stroke-width: 2.4;
@@ -208,22 +273,50 @@
       transform: scale(0.85);
       transform-origin: center;
     }
-    .redeem--loading .redeem-spinner { opacity: 1; }
+
+    .redeem--loading .redeem-spinner {
+      opacity: 1;
+    }
+
     .redeem--success {
       background: #2fbf71;
       border-color: #2fbf71;
       color: #031c10;
     }
-    .redeem--success .redeem-check { opacity: 1; }
-    @keyframes redeemSpin { to { transform: rotate(360deg); } }
+
+    .redeem--success .redeem-check {
+      opacity: 1;
+    }
+
+    @keyframes redeemSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     @keyframes redeemPop {
-      0% { transform: scale(0.7); opacity: 0; }
-      70% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
+      0% {
+        transform: scale(0.7);
+        opacity: 0;
+      }
+
+      70% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
+
     @media (prefers-reduced-motion: no-preference) {
-      .redeem--success .redeem-check { animation: redeemPop 0.25s ease both; }
+      .redeem--success .redeem-check {
+        animation: redeemPop 0.25s ease both;
+      }
     }
+
     .sr-only {
       position: absolute;
       width: 1px;
@@ -258,23 +351,25 @@
       border: 2px solid #333;
       border-radius: 12px;
       padding: 12px;
-      background: rgba(0,0,0,0.35);
+      background: rgba(0, 0, 0, 0.35);
       display: flex;
       align-items: center;
       gap: 12px;
     }
+
     .thumb {
       width: 52px;
       height: 52px;
       border-radius: 10px;
       overflow: hidden;
-      background: rgba(20,20,20,0.95);
+      background: rgba(20, 20, 20, 0.95);
       border: 2px solid #333;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
+
     .thumb img {
       width: 100%;
       height: 100%;
@@ -302,13 +397,33 @@
       border: 1px solid #333;
       white-space: nowrap;
     }
-    .badge-ok { color: #8fd3ff; border-color: rgba(74,144,226,0.6); background: rgba(74,144,226,0.15); }
-    .badge-bad { color: #ff9aa6; border-color: rgba(255,71,87,0.6); background: rgba(255,71,87,0.12); }
 
-    .fade-up { animation: fadeUp 0.5s ease both; }
+    .badge-ok {
+      color: #8fd3ff;
+      border-color: rgba(74, 144, 226, 0.6);
+      background: rgba(74, 144, 226, 0.15);
+    }
+
+    .badge-bad {
+      color: #ff9aa6;
+      border-color: rgba(255, 71, 87, 0.6);
+      background: rgba(255, 71, 87, 0.12);
+    }
+
+    .fade-up {
+      animation: fadeUp 0.5s ease both;
+    }
+
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .auth-wrap {
@@ -317,6 +432,7 @@
       justify-content: center;
       width: 100%;
     }
+
     .auth-card {
       position: relative;
       z-index: 1;
@@ -329,11 +445,12 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
-      background: rgba(0,0,0,0.4);
+      background: rgba(0, 0, 0, 0.4);
       border: 1px solid #333;
       border-radius: 12px;
       padding: 6px;
     }
+
     .tab-btn {
       border: 1px solid transparent;
       border-radius: 8px;
@@ -345,9 +462,10 @@
       transition: all 0.2s ease;
       font-family: 'Georama', sans-serif;
     }
+
     .tab-btn[aria-selected="true"] {
-      background: rgba(74,144,226,0.2);
-      border-color: rgba(74,144,226,0.6);
+      background: rgba(74, 144, 226, 0.2);
+      border-color: rgba(74, 144, 226, 0.6);
       color: #fff;
     }
 
@@ -361,22 +479,25 @@
       display: none;
       padding: 10px 12px;
       border-radius: 10px;
-      border: 1px solid rgba(255,71,87,0.5);
-      background: rgba(255,71,87,0.08);
+      border: 1px solid rgba(255, 71, 87, 0.5);
+      background: rgba(255, 71, 87, 0.08);
       color: #ffd2d6;
       font-size: 13px;
       margin-top: 12px;
     }
 
     .delivery-row {
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: #cfe1ff;
+      min-width: 0;
     }
 
+    .delivery-row .strong {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      /* or: break-all; if you want aggressive breaking */
+    }
+
+    .item { min-width: 0; }
+    
     .recent-card {
       display: flex;
       align-items: center;
@@ -393,27 +514,47 @@
       gap: 8px;
       max-width: min(360px, calc(100vw - 32px));
     }
+
     .toast {
       padding: 10px 12px;
       border-radius: 10px;
-      background: rgba(10,10,10,0.9);
+      background: rgba(10, 10, 10, 0.9);
       border: 1px solid #333;
       color: #fff;
       font-size: 13px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
       backdrop-filter: blur(8px);
       animation: toastIn 0.2s ease both;
     }
-    .toast-info { border-color: rgba(74,144,226,0.4); }
-    .toast-success { border-color: rgba(70,200,140,0.4); }
-    .toast-error { border-color: rgba(255,71,87,0.5); }
+
+    .toast-info {
+      border-color: rgba(74, 144, 226, 0.4);
+    }
+
+    .toast-success {
+      border-color: rgba(70, 200, 140, 0.4);
+    }
+
+    .toast-error {
+      border-color: rgba(255, 71, 87, 0.5);
+    }
+
     @keyframes toastIn {
-      from { opacity: 0; transform: translateY(-6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     @media (min-width: 980px) {
-      .grid-2 { grid-template-columns: 1fr 1fr; }
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
     @media (min-width: 900px) {
@@ -426,14 +567,31 @@
     }
 
     @media (max-width: 600px) {
-      body { padding: 40px 14px 20px; }
-      .background-text { font-size: 72px; letter-spacing: 5px; }
-      .back-button { padding: 10px 16px; font-size: 13px; }
-      .title { font-size: 38px; }
-      .auth-card { padding: 20px; }
+      body {
+        padding: 40px 14px 20px;
+      }
+
+      .background-text {
+        font-size: 72px;
+        letter-spacing: 5px;
+      }
+
+      .back-button {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+
+      .title {
+        font-size: 38px;
+      }
+
+      .auth-card {
+        padding: 20px;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="background-text" id="bgText"></div>
 
@@ -451,7 +609,8 @@
           <div id="authBox" class="card fade-up auth-card">
             <div class="tabs" role="tablist" aria-label="Authentication tabs">
               <button id="tabLogin" type="button" class="tab-btn" role="tab" aria-selected="true">Sign in</button>
-              <button id="tabRegister" type="button" class="tab-btn" role="tab" aria-selected="false">Create account</button>
+              <button id="tabRegister" type="button" class="tab-btn" role="tab" aria-selected="false">Create
+                account</button>
             </div>
 
             <div id="authAlert" class="auth-alert" role="alert" aria-live="polite"></div>
@@ -467,9 +626,11 @@
               </div>
               <div id="confirmWrap" style="display:none;">
                 <div class="label">Confirm password</div>
-                <input id="confirm" type="password" placeholder="confirm password" class="field" autocomplete="new-password" />
+                <input id="confirm" type="password" placeholder="confirm password" class="field"
+                  autocomplete="new-password" />
               </div>
-              <button id="authSubmit" type="submit" class="btn btn-primary" style="width: 100%; padding: 12px 14px;">Sign in</button>
+              <button id="authSubmit" type="submit" class="btn btn-primary"
+                style="width: 100%; padding: 12px 14px;">Sign in</button>
             </form>
           </div>
         </div>
@@ -493,7 +654,8 @@
             </div>
             <div style="margin-top: 12px; flex: 1;" class="grid">
               <input id="key" placeholder="paste your key here" class="field" />
-              <button id="redeem" type="button" class="btn btn-primary redeem-btn" style="width: 100%; padding: 12px 14px; margin-top: auto;" aria-busy="false">
+              <button id="redeem" type="button" class="btn btn-primary redeem-btn"
+                style="width: 100%; padding: 12px 14px; margin-top: auto;" aria-busy="false">
                 <span class="redeem-label">Redeem</span>
                 <span class="redeem-icon" aria-hidden="true">
                   <span class="redeem-spinner"></span>
@@ -879,5 +1041,5 @@
     bgText.innerHTML = html;
   </script>
 </body>
-</html>
 
+</html>
