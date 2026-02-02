@@ -130,9 +130,12 @@
       color: #fff;
       font-size: 14px;
       outline: none;
-      transition: border-color 0.2s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .field:focus { border-color: #4a90e2; }
+    .field:focus {
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 3px rgba(74,144,226,0.2);
+    }
 
     .btn {
       border: 2px solid #333;
@@ -153,6 +156,10 @@
       font-weight: 700;
     }
     .btn-primary:hover { filter: brightness(1.05); }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
 
     .grid {
       display: grid;
@@ -210,7 +217,6 @@
       user-select: none;
     }
 
-    /* Small inline icon used in Order history titles */
     .mini-icon {
       width: 18px;
       height: 18px;
@@ -238,8 +244,66 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    .auth-wrap {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    .auth-overlay {
+      position: absolute;
+      inset: -14px;
+      background: rgba(0,0,0,0.55);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      z-index: 0;
+    }
+    .auth-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 720px;
+      padding: 26px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 6px;
+    }
+    .tab-btn {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: transparent;
+      color: #aaa;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Georama', sans-serif;
+    }
+    .tab-btn[aria-selected="true"] {
+      background: rgba(74,144,226,0.2);
+      border-color: rgba(74,144,226,0.6);
+      color: #fff;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
     @media (min-width: 980px) {
       .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (min-width: 900px) {
+      .auth-center { min-height: 50vh; display: flex; align-items: center; }
     }
 
     @media (max-width: 600px) {
@@ -247,6 +311,7 @@
       .background-text { font-size: 72px; letter-spacing: 5px; }
       .back-button { padding: 10px 16px; font-size: 13px; }
       .title { font-size: 38px; }
+      .auth-card { padding: 20px; }
     }
   </style>
 </head>
@@ -262,17 +327,33 @@
     </div>
 
     <div class="grid">
-      <div id="authBox" class="card fade-up" style="max-width: 720px; margin: 0 auto;">
-        <div class="muted" style="margin-bottom: 12px;">Login or create account</div>
-        <div class="grid" style="gap: 10px;">
-          <input id="username" placeholder="username" class="field" />
-          <input id="pass" type="password" placeholder="password" class="field" />
+      <div class="auth-center">
+        <div class="auth-wrap" id="authWrap">
+          <div class="auth-overlay"></div>
+          <div id="authBox" class="card fade-up auth-card">
+            <div class="tabs" role="tablist" aria-label="Authentication tabs">
+              <button id="tabLogin" type="button" class="tab-btn" role="tab" aria-selected="true">Sign in</button>
+              <button id="tabRegister" type="button" class="tab-btn" role="tab" aria-selected="false">Create account</button>
+            </div>
+
+            <form id="authForm" class="grid" style="gap: 12px; margin-top: 16px;">
+              <div>
+                <div class="label">Username</div>
+                <input id="username" placeholder="username" class="field" autocomplete="username" />
+              </div>
+              <div>
+                <div class="label">Password</div>
+                <input id="pass" type="password" placeholder="password" class="field" />
+              </div>
+              <div id="confirmWrap" style="display:none;">
+                <div class="label">Confirm password</div>
+                <input id="confirm" type="password" placeholder="confirm password" class="field" autocomplete="new-password" />
+              </div>
+              <button id="authSubmit" type="submit" class="btn btn-primary" style="width: 100%; padding: 12px 14px;">Sign in</button>
+              <div id="authMsg" class="muted" style="min-height: 1.25rem;"></div>
+            </form>
+          </div>
         </div>
-        <div class="row" style="margin-top: 12px; justify-content: flex-start;">
-          <button id="login" type="button" class="btn btn-primary">Login</button>
-          <button id="signup" type="button" class="btn">Register</button>
-        </div>
-        <div id="authMsg" class="muted" style="margin-top: 10px; min-height: 1.25rem;"></div>
       </div>
 
       <div id="dashBox" class="grid" style="display:none; gap: 18px;">
@@ -323,6 +404,16 @@
     const redeemStatus = document.getElementById("redeemStatus");
     const subsList = document.getElementById("subsList");
     const historyList = document.getElementById("historyList");
+    const authForm = document.getElementById("authForm");
+    const authSubmit = document.getElementById("authSubmit");
+    const tabLogin = document.getElementById("tabLogin");
+    const tabRegister = document.getElementById("tabRegister");
+    const confirmWrap = document.getElementById("confirmWrap");
+    const passInput = document.getElementById("pass");
+    const confirmInput = document.getElementById("confirm");
+
+    let authMode = "login";
+    let authBusy = false;
 
     function setAuthMsg(t){ authMsg.textContent = t || ""; }
     function setRedeemMsg(t){ redeemMsg.textContent = t || ""; }
@@ -330,6 +421,26 @@
       const v = t || "";
       redeemStatus.textContent = v;
       redeemStatus.style.display = v ? "inline-flex" : "none";
+    }
+
+    function setAuthBusy(isBusy) {
+      authBusy = isBusy;
+      authSubmit.disabled = isBusy;
+      authSubmit.textContent = isBusy
+        ? (authMode === "login" ? "Signing in..." : "Creating...")
+        : (authMode === "login" ? "Sign in" : "Create account");
+    }
+
+    function renderAuth() {
+      tabLogin.setAttribute("aria-selected", authMode === "login" ? "true" : "false");
+      tabRegister.setAttribute("aria-selected", authMode === "register" ? "true" : "false");
+      confirmWrap.style.display = authMode === "register" ? "block" : "none";
+      passInput.setAttribute("autocomplete", authMode === "login" ? "current-password" : "new-password");
+      authSubmit.textContent = authMode === "login" ? "Sign in" : "Create account";
+      if (authMode === "login") {
+        confirmInput.value = "";
+      }
+      setAuthMsg("");
     }
 
     async function api(path, body) {
@@ -342,12 +453,6 @@
       let json = null;
       try { json = JSON.parse(text); } catch { json = null; }
       return { ok: res.ok, json, text };
-    }
-
-    function moneyEUR(v) {
-      const n = Number(v);
-      if (!Number.isFinite(n)) return "";
-      return `€${n.toFixed(2)}`;
     }
 
     function moneyEUR(v) {
@@ -434,22 +539,67 @@
       await loadDashboard();
     }
 
-    document.getElementById("login").onclick = async () => {
-      setAuthMsg("Logging in...");
+    async function handleAuthSubmit() {
+      if (authBusy) return;
       const username = document.getElementById("username").value.trim().toLowerCase();
-      const password = document.getElementById("pass").value;
-      const { ok, json, text } = await api("/api/auth/login", { username, password });
-      setAuthMsg(ok ? "OK" : (json?.error || text));
-      await refresh();
-    };
+      const password = passInput.value;
 
-    document.getElementById("signup").onclick = async () => {
-      setAuthMsg("Creating account...");
-      const username = document.getElementById("username").value.trim().toLowerCase();
-      const password = document.getElementById("pass").value;
+      if (authMode === "register") {
+        const confirm = confirmInput.value;
+        if (password !== confirm) {
+          setAuthMsg("Passwords do not match.");
+          return;
+        }
+      }
+
+      setAuthBusy(true);
+      setAuthMsg("");
+
+      if (authMode === "login") {
+        const { ok, json, text } = await api("/api/auth/login", { username, password });
+        setAuthBusy(false);
+        setAuthMsg(ok ? "OK" : (json?.error || text));
+        if (ok) await refresh();
+        return;
+      }
+
       const { ok, json, text } = await api("/api/auth/register", { username, password });
-      setAuthMsg(ok ? "Registered. You can log in now." : (json?.error || text));
-    };
+      setAuthBusy(false);
+      setAuthMsg(ok ? "Account created. Please sign in." : (json?.error || text));
+      if (ok) {
+        authMode = "login";
+        renderAuth();
+      }
+    }
+
+    tabLogin.addEventListener("click", () => {
+      authMode = "login";
+      renderAuth();
+    });
+    tabRegister.addEventListener("click", () => {
+      authMode = "register";
+      renderAuth();
+    });
+
+    authForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      handleAuthSubmit();
+    });
+
+    tabLogin.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        authMode = "login";
+        renderAuth();
+      }
+    });
+    tabRegister.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        authMode = "register";
+        renderAuth();
+      }
+    });
 
     document.getElementById("logout").onclick = async () => {
       await api("/api/auth/logout", {});
@@ -466,6 +616,7 @@
       if (ok) await loadDashboard();
     };
 
+    renderAuth();
     refresh();
 
     // =========================
