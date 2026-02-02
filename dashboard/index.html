@@ -367,6 +367,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex: 0 0 52px;
       flex-shrink: 0;
     }
 
@@ -375,7 +376,6 @@
       height: 100%;
       object-fit: cover;
       -webkit-user-drag: none;
-      user-drag: none;
       user-select: none;
     }
 
@@ -554,6 +554,9 @@
     @media (min-width: 980px) {
       .grid-2 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .grid-2 > * {
+        min-width: 0;
       }
     }
 
