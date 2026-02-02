@@ -3,36 +3,77 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dashboard</title>
+  <title>Dashboard • Rosina Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/tailwind.css">
+  <style>
+    body { font-family: 'Georama', sans-serif; }
+    .fade-up { animation: fadeUp 0.5s ease both; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .glow { box-shadow: 0 0 30px rgba(74,144,226,0.25); }
+  </style>
 </head>
-<body style="background:#000;color:#fff;padding:24px;font-family:system-ui;">
-  <h1 style="font-size:28px;font-weight:800;margin-bottom:14px;">dashboard</h1>
-
-  <div id="authBox" style="max-width:520px;border:2px solid #333;border-radius:12px;padding:16px;background:rgba(20,20,20,.95);">
-    <div style="margin-bottom:10px;color:#aaa;">Login or create account</div>
-    <input id="username" placeholder="username" style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
-    <input id="pass" type="password" placeholder="password" style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
-    <div style="display:flex;gap:10px;margin-top:10px;">
-      <button id="login" style="padding:10px 14px;border:2px solid #333;border-radius:8px;background:#000;color:#fff;cursor:pointer;">Login</button>
-      <button id="signup" style="padding:10px 14px;border:2px solid #333;border-radius:8px;background:#000;color:#fff;cursor:pointer;">Register</button>
-    </div>
-    <div id="authMsg" style="margin-top:10px;color:#aaa;white-space:pre-wrap;"></div>
+<body class="bg-black text-white min-h-screen">
+  <div class="fixed inset-0 pointer-events-none">
+    <div class="absolute -top-20 -left-20 w-[420px] h-[420px] bg-blue-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 right-0 w-[480px] h-[480px] bg-blue-400/10 rounded-full blur-3xl"></div>
   </div>
 
-  <div id="dashBox" style="display:none;max-width:520px;margin-top:18px;border:2px solid #333;border-radius:12px;padding:16px;background:rgba(20,20,20,.95);">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
-      <div>Signed in as <b id="me"></b></div>
-      <button id="logout" style="padding:8px 12px;border:2px solid #333;border-radius:8px;background:#000;color:#fff;cursor:pointer;">Logout</button>
+  <div class="relative max-w-5xl mx-auto px-6 py-16">
+    <div class="mb-10">
+      <h1 class="text-4xl font-bold tracking-tight">Dashboard</h1>
+      <p class="text-gray-400 mt-2">Manage your keys and subscriptions.</p>
     </div>
 
-    <hr style="border:0;border-top:1px solid #222;margin:14px 0;">
+    <div id="authBox" class="fade-up max-w-xl border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
+      <div class="text-sm text-gray-400 mb-4">Login or create account</div>
+      <div class="grid gap-3">
+        <input id="username" placeholder="username" class="w-full rounded-lg bg-black/60 border border-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input id="pass" type="password" placeholder="password" class="w-full rounded-lg bg-black/60 border border-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button id="login" type="button" class="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 transition text-black font-semibold">Login</button>
+        <button id="signup" type="button" class="px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-400 transition">Register</button>
+      </div>
+      <div id="authMsg" class="text-sm text-gray-400 mt-3 min-h-[1.25rem]"></div>
+    </div>
 
-    <div style="margin-bottom:8px;color:#aaa;">Redeem a key</div>
-    <input id="key" placeholder="xxxxx-xxxxx-..." style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
-    <button id="redeem" style="margin-top:10px;padding:10px 14px;border:2px solid #333;border-radius:8px;background:#000;color:#fff;cursor:pointer;">Redeem</button>
+    <div id="dashBox" class="hidden space-y-8">
+      <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur flex items-center justify-between">
+        <div>
+          <div class="text-sm text-gray-400">Signed in as</div>
+          <div id="me" class="text-lg font-semibold"></div>
+        </div>
+        <button id="logout" type="button" class="px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-400 transition">Logout</button>
+      </div>
 
-    <div id="redeemMsg" style="margin-top:10px;color:#aaa;white-space:pre-wrap;"></div>
+      <div class="grid lg:grid-cols-2 gap-8">
+        <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Redeem a key</h2>
+            <span id="redeemStatus" class="text-xs text-gray-400"></span>
+          </div>
+          <div class="mt-4 space-y-3">
+            <input id="key" placeholder="prefix-XXXXXXXXXXXXXXXXXXXXXXXX" class="w-full rounded-lg bg-black/60 border border-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <button id="redeem" type="button" class="w-full px-4 py-3 rounded-lg bg-blue-500 hover:bg-blue-400 transition text-black font-semibold">Redeem</button>
+            <div id="redeemMsg" class="text-sm text-gray-400 min-h-[1.25rem]"></div>
+          </div>
+        </div>
+
+        <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
+          <h2 class="text-xl font-semibold">Active subscriptions</h2>
+          <div id="subsList" class="mt-4 space-y-3 text-sm text-gray-400">Loading...</div>
+        </div>
+      </div>
+
+      <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
+        <h2 class="text-xl font-semibold">Order history</h2>
+        <div id="historyList" class="mt-4 space-y-4 text-sm text-gray-400">Loading...</div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -40,9 +81,13 @@
     const dashBox = document.getElementById("dashBox");
     const authMsg = document.getElementById("authMsg");
     const redeemMsg = document.getElementById("redeemMsg");
+    const redeemStatus = document.getElementById("redeemStatus");
+    const subsList = document.getElementById("subsList");
+    const historyList = document.getElementById("historyList");
 
     function setAuthMsg(t){ authMsg.textContent = t || ""; }
     function setRedeemMsg(t){ redeemMsg.textContent = t || ""; }
+    function setRedeemStatus(t){ redeemStatus.textContent = t || ""; }
 
     async function api(path, body) {
       const res = await fetch(path, {
@@ -56,16 +101,65 @@
       return { ok: res.ok, json, text };
     }
 
+    async function loadDashboard() {
+      const subsRes = await api("/api/dashboard/subscriptions");
+      if (!subsRes.ok) {
+        subsList.textContent = subsRes.json?.error || subsRes.text || "Failed to load";
+      } else if (!subsRes.json?.items?.length) {
+        subsList.textContent = "No active subscriptions yet.";
+      } else {
+        subsList.innerHTML = subsRes.json.items.map(item => {
+          const days = item.days_left;
+          const badge = days <= 0 ? "Expired" : `${days} day${days === 1 ? "" : "s"} left`;
+          const badgeClass = days <= 0 ? "bg-red-500/20 text-red-300" : "bg-blue-500/20 text-blue-200";
+          return `
+            <div class="flex items-center gap-4 border border-gray-800 rounded-xl p-3 bg-black/30">
+              <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-900 border border-gray-800 flex items-center justify-center">
+                ${item.image_url ? `<img src="${item.image_url}" alt="" class="w-full h-full object-cover">` : `<div class="text-xs text-gray-500">IMG</div>`}
+              </div>
+              <div class="flex-1">
+                <div class="text-white font-semibold">${item.title}</div>
+                <div class="text-xs text-gray-400">Duration: ${item.duration_days} day${item.duration_days === 1 ? "" : "s"}</div>
+              </div>
+              <div class="text-xs px-2 py-1 rounded-full ${badgeClass}">${badge}</div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      const histRes = await api("/api/dashboard/history");
+      if (!histRes.ok) {
+        historyList.textContent = histRes.json?.error || histRes.text || "Failed to load";
+      } else if (!histRes.json?.items?.length) {
+        historyList.textContent = "No redemptions yet.";
+      } else {
+        historyList.innerHTML = histRes.json.items.map(group => {
+          const items = (group.items || []).map(i => i.title).join(", ");
+          const date = group.redeemed_at ? new Date(group.redeemed_at).toLocaleString() : "";
+          return `
+            <div class="border border-gray-800 rounded-xl p-4 bg-black/30">
+              <div class="flex items-center justify-between">
+                <div class="text-white font-semibold">Session ${group.session_id}</div>
+                <div class="text-xs text-gray-500">${date}</div>
+              </div>
+              <div class="text-sm text-gray-400 mt-2">${items || "(no items)"}</div>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
     async function refresh() {
       const { ok, json } = await api("/api/auth/me");
       if (!ok || !json || !json.logged_in) {
-        authBox.style.display = "block";
-        dashBox.style.display = "none";
+        authBox.classList.remove("hidden");
+        dashBox.classList.add("hidden");
         return;
       }
-      authBox.style.display = "none";
-      dashBox.style.display = "block";
+      authBox.classList.add("hidden");
+      dashBox.classList.remove("hidden");
       document.getElementById("me").textContent = json.username || json.user_id;
+      await loadDashboard();
     }
 
     document.getElementById("login").onclick = async () => {
@@ -82,7 +176,7 @@
       const username = document.getElementById("username").value.trim().toLowerCase();
       const password = document.getElementById("pass").value;
       const { ok, json, text } = await api("/api/auth/register", { username, password });
-      setAuthMsg(ok ? "Registered. You can log in now." : (json?.details || json?.error || text));
+      setAuthMsg(ok ? "Registered. You can log in now." : (json?.error || text));
     };
 
     document.getElementById("logout").onclick = async () => {
@@ -91,10 +185,13 @@
     };
 
     document.getElementById("redeem").onclick = async () => {
-      setRedeemMsg("Redeeming...");
+      setRedeemStatus("Redeeming...");
+      setRedeemMsg("");
       const key = document.getElementById("key").value.trim();
       const { ok, json, text } = await api("/api/redeem", { key });
+      setRedeemStatus("");
       setRedeemMsg(ok ? "Redeemed." : (json?.error || text));
+      if (ok) await loadDashboard();
     };
 
     refresh();

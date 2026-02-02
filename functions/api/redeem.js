@@ -1,5 +1,12 @@
 import { getCookie, verifySession } from "./auth/_session.js";
 
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" }
+  });
+}
+
 function toHex(buffer) {
   return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
@@ -16,13 +23,13 @@ export async function onRequestPost({ request, env }) {
   const KEY_SECRET = env.KEY_SECRET;
 
   if (!SUPABASE_URL || !SRV || !KEY_SECRET) {
-    return new Response(JSON.stringify({ error: "Missing server env vars" }), { status: 500 });
+    return jsonResponse({ error: "Missing server env vars" }, 500);
   }
 
   const token = getCookie(request, "session");
   const payload = await verifySession(env, token);
   if (!payload?.uid) {
-    return new Response(JSON.stringify({ error: "Login required" }), { status: 401 });
+    return jsonResponse({ error: "Login required" }, 401);
   }
 
   let body = null;
@@ -34,7 +41,7 @@ export async function onRequestPost({ request, env }) {
 
   const raw = String(body?.key || "").trim();
   if (raw.length < 10) {
-    return new Response(JSON.stringify({ error: "Invalid key format" }), { status: 400 });
+    return jsonResponse({ error: "Invalid key format" }, 400);
   }
 
   const key_hash = await sha256Hex(`${KEY_SECRET}:${raw}`);
@@ -58,17 +65,17 @@ export async function onRequestPost({ request, env }) {
   );
 
   if (!res.ok) {
-    return new Response(JSON.stringify({ error: "Redeem failed", details: await res.text() }), { status: 500 });
+    return jsonResponse({ error: "Redeem failed", details: await res.text() }, 500);
   }
 
   const updated = await res.json();
   if (!updated.length) {
-    return new Response(JSON.stringify({ error: "Key invalid or already used" }), { status: 400 });
+    return jsonResponse({ error: "Key invalid or already used" }, 400);
   }
 
-  return new Response(JSON.stringify({
+  return jsonResponse({
     ok: true,
     product_id: updated[0].product_id,
     product_variant_id: updated[0].product_variant_id
-  }), { headers: { "content-type": "application/json" } });
+  });
 }

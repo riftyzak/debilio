@@ -33,13 +33,20 @@ function makeKey(prefix) {
   return prefix ? `${prefix}-${core}` : core;
 }
 
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" }
+  });
+}
+
 export async function onRequestPost({ request, env }) {
   const SUPABASE_URL = env.SUPABASE_URL;
   const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
   const KEY_SECRET = env.KEY_SECRET;
 
   if (!SUPABASE_URL || !SRV || !KEY_SECRET) {
-    return new Response(JSON.stringify({ error: "Missing server env vars" }), { status: 500 });
+    return jsonResponse({ error: "Missing server env vars" }, 500);
   }
 
   let body = null;
@@ -50,10 +57,36 @@ export async function onRequestPost({ request, env }) {
   }
 
   const session_id = String(body?.session_id || "no_session").trim() || "no_session";
+  const provider = String(body?.provider || "").trim().toLowerCase();
+  const charge_id = String(body?.charge_id || "").trim();
   const items = Array.isArray(body?.items) ? body.items : [];
 
   if (!items.length) {
-    return new Response(JSON.stringify({ error: "Missing items" }), { status: 400 });
+    return jsonResponse({ error: "Missing items" }, 400);
+  }
+
+  if (provider === "coinbase") {
+    const chargeKey = charge_id || session_id;
+    if (!chargeKey) {
+      return jsonResponse({ error: "Missing coinbase charge id" }, 400);
+    }
+    const statusRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/coinbase_charges?select=status&id=eq.${encodeURIComponent(chargeKey)}`,
+      {
+        headers: {
+          apikey: SRV,
+          Authorization: `Bearer ${SRV}`
+        }
+      }
+    );
+    if (!statusRes.ok) {
+      return jsonResponse({ error: "Failed to check payment status", details: await statusRes.text() }, 500);
+    }
+    const rows = await statusRes.json();
+    const status = rows && rows[0]?.status ? String(rows[0].status).toUpperCase() : "PENDING";
+    if (status !== "CONFIRMED") {
+      return jsonResponse({ error: "Payment not confirmed yet", status }, 409);
+    }
   }
 
   const productIds = [...new Set(items.map(it => it?.id).filter(Boolean).map(String))];
@@ -72,7 +105,7 @@ export async function onRequestPost({ request, env }) {
     );
 
     if (!res.ok) {
-      return new Response(JSON.stringify({ error: "Failed to load product prefixes", details: await res.text() }), { status: 500 });
+      return jsonResponse({ error: "Failed to load product prefixes", details: await res.text() }, 500);
     }
 
     const rows = await res.json();
@@ -122,10 +155,8 @@ export async function onRequestPost({ request, env }) {
   });
 
   if (!insertRes.ok) {
-    return new Response(JSON.stringify({ error: "Insert failed", details: await insertRes.text() }), { status: 500 });
+    return jsonResponse({ error: "Insert failed", details: await insertRes.text() }, 500);
   }
 
-  return new Response(JSON.stringify({ keys: issued }), {
-    headers: { "content-type": "application/json" }
-  });
+  return jsonResponse({ keys: issued });
 }

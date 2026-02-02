@@ -187,7 +187,7 @@
       <div class="section-title">Purchased items</div>
       <div id="orderItems" class="order-items"></div>
 
-      <a class="btn" href="/dashboard/"><i class="fas fa-key"></i> Go to dashboard to redeem</a>
+      <a class="btn" id="dashboardCta" href="/dashboard/"><i class="fas fa-key"></i> Go to dashboard to redeem</a>
       <a class="btn" href="/rosina-shop/"><i class="fas fa-arrow-left"></i> Back to shop</a>
       <div class="muted">
         If you paid with crypto, confirmation can take a moment depending on the network. If anything looks wrong, contact support.
@@ -217,7 +217,8 @@
     // Show ids if present
     const sp = new URLSearchParams(window.location.search);
     const sessionId = sp.get("session_id") || sp.get("charge_id") || sp.get("id") || "";
-    document.getElementById("provider").textContent = (sessionId && sessionId.startsWith("cs_")) ? "Stripe" : "Stripe / Coinbase";
+    const provider = sp.get("session_id") ? "stripe" : "coinbase";
+    document.getElementById("provider").textContent = provider === "stripe" ? "Stripe" : "Coinbase";
     document.getElementById("time").textContent = new Date().toLocaleString();
 
     function escapeHtml(str) {
@@ -257,12 +258,21 @@
         return;
       }
 
+      const timeBasedItems = order.items.filter(item => Number(item.duration_days || 0) > 0);
+      const hasTimeBased = timeBasedItems.length > 0;
+      const cta = document.getElementById("dashboardCta");
+      if (cta) cta.style.display = hasTimeBased ? "inline-flex" : "none";
+
       let issuedKeys = [];
       let issueError = "";
-      try {
+      let pendingNotice = "";
+
+      async function issueKeys() {
         const issued = await postJson("/api/issue-keys", {
           session_id: sessionId || "no_session",
-          items: order.items
+          items: timeBasedItems,
+          provider,
+          charge_id: provider === "coinbase" ? (sp.get("charge_id") || sp.get("id") || "") : ""
         });
         issuedKeys = Array.isArray(issued.keys) ? issued.keys : [];
         try {
@@ -274,28 +284,66 @@
             try { localStorage.removeItem("rosina_last_keys_v1"); } catch (_) {}
           }, 30 * 60 * 1000);
         } catch (_) {}
-      } catch (_) {
-        issueError = "Couldn't issue keys; try refresh.";
-        issuedKeys = [];
+      }
+
+      async function waitForCoinbaseConfirmation() {
+        const chargeId = sp.get("charge_id") || sp.get("id") || "";
+        if (!chargeId) {
+          pendingNotice = "Waiting for crypto confirmation. Please refresh in a moment.";
+          return;
+        }
+        let attempts = 0;
+        let delay = 3000;
+        while (attempts < 30) {
+          attempts += 1;
+          try {
+            const res = await fetch(`/api/payment-status?provider=coinbase&charge_id=${encodeURIComponent(chargeId)}`);
+            const data = await res.json();
+            if (data?.status === "CONFIRMED") return;
+          } catch (_) {
+          }
+          await new Promise(r => setTimeout(r, delay));
+          if (delay < 8000) delay += 1000;
+        }
+        pendingNotice = "Waiting for crypto confirmation. Please refresh in a moment.";
+      }
+
+      if (hasTimeBased) {
+        try {
+          if (provider === "coinbase") {
+            pendingNotice = "Waiting for crypto confirmation. This may take a minute...";
+            await waitForCoinbaseConfirmation();
+          }
+          if (!pendingNotice) {
+            await issueKeys();
+          }
+        } catch (_) {
+          issueError = "Couldn't issue keys; try refresh.";
+          issuedKeys = [];
+        }
       }
 
       const now = new Date();
       let keyIndex = 0;
-      const expectedTotal = order.items.reduce((sum, item) => sum + Number(item.qty || 1), 0);
+      const expectedTotal = timeBasedItems.reduce((sum, item) => sum + Number(item.qty || 1), 0);
       const itemsHtml = order.items.map(item => {
         const qty = Number(item.qty || 1);
-        const durationDays = item.duration_days ? Number(item.duration_days) : null;
-        const expiresAt = durationDays ? new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000) : null;
-        const itemKeys = issuedKeys.slice(keyIndex, keyIndex + qty);
-        keyIndex += qty;
-        const deliveryBoxes = itemKeys
-          .map(k => `<div class="delivery-box">Delivery: ${escapeHtml(k.key || k)}</div>`)
-          .join("");
+        const durationDays = Number(item.duration_days || 0);
+        const isTimeBased = Number.isFinite(durationDays) && durationDays > 0;
+        const expiresAt = isTimeBased ? new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000) : null;
+        const itemKeys = isTimeBased ? issuedKeys.slice(keyIndex, keyIndex + qty) : [];
+        if (isTimeBased) keyIndex += qty;
+        const deliveryBoxes = isTimeBased
+          ? itemKeys.map(k => `<div class="delivery-box">Delivery: ${escapeHtml(k.key || k)}</div>`).join("")
+          : "";
+        const metaLine = isTimeBased
+          ? `<div class="order-item-meta">Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>`
+          : "";
 
         return `
           <div class="order-item">
             <div class="order-item-title">${escapeHtml(item.title || "Product")} × ${qty}</div>
-            <div class="order-item-meta">${durationDays ? `Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}` : "No duration"}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>
+            ${metaLine}
             ${deliveryBoxes}
           </div>
         `;
@@ -306,6 +354,7 @@
         : "";
 
       target.innerHTML = `
+        ${pendingNotice ? `<div class="muted">${pendingNotice}</div>` : ""}
         ${issueError ? `<div class="muted">${issueError}</div>` : ""}
         ${itemsHtml}
         ${warningLine}
