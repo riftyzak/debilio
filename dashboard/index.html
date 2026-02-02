@@ -275,7 +275,8 @@
               <span id="redeemStatus" class="pill" style="display:none"></span>
             </div>
             <div style="margin-top: 12px;" class="grid">
-              <input id="key" placeholder="prefix-XXXXXXXXXXXXXXXXXXXXXXXX" class="field" />
+              <input id="key" placeholder="XXXXXXXXXXXXXXXXXXXXXXXX" class="field" />
+              <div class="muted" style="margin-top:-4px;">Prefix is optional.</div>
               <button id="redeem" type="button" class="btn btn-primary" style="width: 100%; padding: 12px 14px;">Redeem</button>
               <div id="redeemMsg" class="muted" style="min-height: 1.25rem;"></div>
             </div>
@@ -335,10 +336,11 @@
           const days = item.days_left;
           const badge = days <= 0 ? "Expired" : `${days} day${days === 1 ? "" : "s"} left`;
           const badgeClass = days <= 0 ? "badge badge-bad" : "badge badge-ok";
+          const thumbUrl = item.icon_url || item.image_url;
           return `
             <div class="item">
               <div class="thumb">
-                ${item.image_url ? `<img src="${item.image_url}" alt="">` : `<div class="muted" style="font-size:12px;">IMG</div>`}
+                ${thumbUrl ? `<img src="${thumbUrl}" alt="">` : `<div class="muted" style="font-size:12px;">IMG</div>`}
               </div>
               <div style="flex: 1; min-width: 0;">
                 <div class="strong" style="font-size: 15px;">${item.title}</div>
@@ -357,16 +359,19 @@
         historyList.textContent = "No redemptions yet.";
       } else {
         historyList.innerHTML = histRes.json.items.map(group => {
-          const items = (group.items || []).map(i => i.title).join(", ");
+          const titles = (group.items || []).map(i => i.title).filter(Boolean);
+          const title = titles.length
+            ? (titles.length === 1 ? titles[0] : `${titles[0]} +${titles.length - 1}`)
+            : "Order";
           const date = group.redeemed_at ? new Date(group.redeemed_at).toLocaleString() : "";
           return `
             <div class="item" style="align-items: flex-start;">
               <div style="flex: 1; min-width: 0;">
                 <div class="row" style="align-items: baseline;">
-                  <div class="strong">Session ${group.session_id}</div>
+                  <div class="strong">${title}</div>
                   <div class="muted" style="font-size: 12px;">${date}</div>
                 </div>
-                <div class="muted" style="margin-top: 6px;">${items || "(no items)"}</div>
+                <div class="muted" style="margin-top: 6px;">${titles.join(", ") || "(no items)"}</div>
               </div>
             </div>
           `;

@@ -769,6 +769,7 @@
 
     // Optional schema support flags (we auto-detect and degrade gracefully)
     let supportsKeyPrefix = false;
+    let supportsDashboardIcon = false;
     let supportsTimeBasedFlag = false;
     let supportsVariantsTable = true;
 
@@ -833,7 +834,18 @@
       updateKeyPrefixUI();
     }
 
+    function setDashboardIconSupport(isSupported) {
+      supportsDashboardIcon = isSupported;
 
+      const note = $("dashboardIconNote");
+      if (note) {
+        note.textContent = isSupported
+          ? "Optional. This icon is shown on the user dashboard for time-based products."
+          : "Optional. This icon is shown on the user dashboard for time-based products. (Not saved until products.dashboard_icon_url exists.)";
+      }
+
+      updateDashboardIconUI();
+    }
 
     function updateKeyPrefixUI() {
       const wrap = $("keyPrefixWrap");
@@ -845,6 +857,13 @@
 
       wrap.style.display = shouldShow ? "block" : "none";
       timeWrap.classList.toggle("span2", !shouldShow);
+    }
+
+    function updateDashboardIconUI() {
+      const wrap = $("dashboardIconWrap");
+      if (!wrap) return;
+      // Only relevant for time-based products
+      wrap.style.display = timeBasedEnabled ? "block" : "none";
     }
 
 
@@ -889,6 +908,7 @@
 
       updatePriceFieldUI();
       updateKeyPrefixUI();
+      updateDashboardIconUI();
       renderTimeVariants();
     }
 
@@ -1017,14 +1037,13 @@
     }
 
     function productSelectWithOptional() {
-      // Columns present in your current schema (per Supabase diagram):
-      // products: id, title, slug, price_eur, description, image_url, is_active, created_at,
-      //           auto_deliver, delivery_text, duration_days, key_prefix
-      return "id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,delivery_text,duration_days,key_prefix";
+      // Use select="*" so optional columns (e.g. products.key_prefix, products.dashboard_icon_url)
+      // won't break the admin if they're missing.
+      return "*";
     }
 
     function productSelectFallback() {
-      return "id,title,slug,price_eur,description,image_url,is_active,created_at,auto_deliver,delivery_text,duration_days,key_prefix";
+      return "*";
     }
 
 
@@ -1063,6 +1082,7 @@
 
       const runFallback = async () => {
         setKeyPrefixSupport(true);
+        setDashboardIconSupport(true);
         setTimeBasedFlagSupport(false);
         ({ data, error } = await sb
           .from("products")
@@ -1084,6 +1104,7 @@
         } else if (!error) {
           productsSchemaMode = "optional";
           setKeyPrefixSupport(true);
+          setDashboardIconSupport(true);
           setTimeBasedFlagSupport(false); // no products.time_based_enabled column in schema
         }
       }
@@ -1181,6 +1202,7 @@
 
       const runFallback = async () => {
         setKeyPrefixSupport(true);
+        setDashboardIconSupport(true);
         setTimeBasedFlagSupport(false);
         ({ data, error } = await sb
           .from("products")
@@ -1204,6 +1226,7 @@
         } else if (!error) {
           productsSchemaMode = "optional";
           setKeyPrefixSupport(true);
+          setDashboardIconSupport(true);
           setTimeBasedFlagSupport(false); // no products.time_based_enabled column in schema
         }
       }
@@ -1221,6 +1244,10 @@
       $("image_url").value = data.image_url || "";
       $("image_file").value = "";
       const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
+
+      $("dashboard_icon_url").value = data.dashboard_icon_url || "";
+      $("dashboard_icon_file").value = "";
+      const ifn = $("dashboardIconFileName"); if (ifn) ifn.textContent = "No file selected";
 
       if (supportsKeyPrefix) $("key_prefix").value = data.key_prefix || "";
       else $("key_prefix").value = "";
@@ -1242,6 +1269,7 @@
       slugManuallyEdited = !!existing && existing !== auto;
 
       renderPreview(data.image_url || "");
+      renderDashboardIconPreview(data.dashboard_icon_url || "");
       setStatus("Editing: " + (data.title || data.id), "ok");
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1258,6 +1286,9 @@
       $("image_url").value = "";
       $("image_file").value = "";
       const fn1 = $("imageFileName"); if (fn1) fn1.textContent = "No file selected";
+      $("dashboard_icon_url").value = "";
+      $("dashboard_icon_file").value = "";
+      const ifn1 = $("dashboardIconFileName"); if (ifn1) ifn1.textContent = "No file selected";
       $("key_prefix").value = "";
 
       timeVariants = [];
@@ -1265,6 +1296,7 @@
       setTimeBasedEnabledUI(false);
 
       renderPreview("");
+      renderDashboardIconPreview("");
 
       // New product => slug auto-follows title unless user edits slug
       slugManuallyEdited = false;
@@ -1277,6 +1309,15 @@
       $("preview").innerHTML = u
         ? `<img src="${u}" alt="preview">`
         : `<span class="muted">no image</span>`;
+    }
+
+    function renderDashboardIconPreview(url) {
+      const u = (url || "").trim();
+      const el = $("dashboardIconPreview");
+      if (!el) return;
+      el.innerHTML = u
+        ? `<img src="${u}" alt="icon preview">`
+        : `<span class="muted">no icon</span>`;
     }
 
     function openDeleteModal(id, title = "") {
@@ -1335,6 +1376,26 @@
       return pub?.publicUrl || null;
     }
 
+    async function uploadDashboardIconIfAny() {
+      const file = $("dashboard_icon_file").files?.[0];
+      if (!file) return null;
+
+      setStatus("Uploading dashboard icon…");
+
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const name = `${crypto.randomUUID()}.${ext}`;
+      const path = `products/icons/${name}`;
+
+      const { error: upErr } = await sb.storage
+        .from(BUCKET)
+        .upload(path, file, { upsert: false, contentType: file.type });
+
+      if (upErr) throw upErr;
+
+      const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
+      return pub?.publicUrl || null;
+    }
+
     async function saveProduct(e) {
       e.preventDefault();
 
@@ -1374,6 +1435,11 @@
         const uploadedUrl = await uploadImageIfAny();
         const image_url = uploadedUrl || ($("image_url").value.trim() || null);
 
+        // Optional dashboard-only icon for time-based products.
+        // Stored in products.dashboard_icon_url (if the column exists).
+        const uploadedIconUrl = await uploadDashboardIconIfAny();
+        const dashboard_icon_url = uploadedIconUrl || ($("dashboard_icon_url").value.trim() || null);
+
         const payload = {
           title,
           slug,
@@ -1381,7 +1447,8 @@
           is_active,
           description,
           image_url,
-          key_prefix
+          key_prefix,
+          dashboard_icon_url
         };
 
         setStatus("Saving…");
@@ -1405,6 +1472,7 @@
         if (error && isMissingColumnError(error)) {
           // Retry without optional columns
           setKeyPrefixSupport(false);
+          setDashboardIconSupport(false);
           setTimeBasedFlagSupport(false);
 
           const fallbackPayload = {
@@ -1580,6 +1648,7 @@
     window.addEventListener("DOMContentLoaded", async () => {
       initBgText();
       setKeyPrefixSupport(true);
+      setDashboardIconSupport(true);
       setTimeBasedFlagSupport(false); // no products.time_based_enabled column in schema
       setVariantsSupport(true);
 
@@ -1664,6 +1733,20 @@
         if (!file) return;
         const localUrl = URL.createObjectURL(file);
         renderPreview(localUrl);
+      });
+
+      // Dashboard icon (time-based products)
+      $("dashboard_icon_url").addEventListener("input", () => renderDashboardIconPreview($("dashboard_icon_url").value));
+      const iconUploadBtn = $("dashboardIconUploadBtn");
+      if (iconUploadBtn) iconUploadBtn.onclick = () => $("dashboard_icon_file").click();
+
+      $("dashboard_icon_file").addEventListener("change", () => {
+        const file = $("dashboard_icon_file").files?.[0];
+        const label = $("dashboardIconFileName");
+        if (label) label.textContent = file ? file.name : "No file selected";
+        if (!file) return;
+        const localUrl = URL.createObjectURL(file);
+        renderDashboardIconPreview(localUrl);
       });
 
       // Start in "new product" mode
@@ -1799,6 +1882,37 @@
               <div class="muted" id="keyPrefixNote" style="margin-top:6px;">Optional. If set to “xxx”, keys will start
                 with “xxx-”.</div>
 
+            </div>
+
+            <div id="dashboardIconWrap" style="display:none; margin-top:12px;">
+              <label>Dashboard icon (optional)</label>
+              <div class="muted" id="dashboardIconNote" style="margin-top:6px;">Optional. This icon is shown on the user dashboard for time-based products.</div>
+
+              <div class="grid2" style="margin-top:12px;">
+                <div>
+                  <label>Icon URL (optional)</label>
+                  <input id="dashboard_icon_url" type="text" placeholder="https://…" />
+                </div>
+                <div>
+                  <label>Upload icon</label>
+                  <div class="upload-row">
+                    <input id="dashboard_icon_file" type="file" accept="image/*" style="display:none" />
+                    <button id="dashboardIconUploadBtn" type="button" class="ghost upload-btn" aria-label="Upload dashboard icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" fill="none" stroke="currentColor" stroke-width="2"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span>Upload</span>
+                    </button>
+                    <span id="dashboardIconFileName" class="muted">No file selected</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <label>Icon preview</label>
+                <div id="dashboardIconPreview" class="preview"><span class="muted">no icon</span></div>
+              </div>
             </div>
           <div style="margin-top:12px;">
             <label>Description</label>
