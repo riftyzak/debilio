@@ -1,16 +1,29 @@
 function toHex(buffer) {
   return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
+
 async function sha256Hex(input) {
   const data = new TextEncoder().encode(input);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return toHex(hash);
 }
 
-function makeKey(prefix = "") {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const part = (n) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  const core = `${part(5)}-${part(5)}-${part(5)}-${part(5)}`;
+function base64UrlEncode(bytes) {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function normalizePrefix(prefix) {
+  let p = String(prefix || "").trim().toLowerCase();
+  p = p.replace(/-+$/g, "");
+  p = p.replace(/[^a-z0-9]/g, "");
+  return p;
+}
+
+function generateKey(prefix) {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  const core = base64UrlEncode(bytes);
   return prefix ? `${prefix}-${core}` : core;
 }
 
@@ -23,52 +36,65 @@ export async function onRequestPost({ request, env }) {
     return new Response(JSON.stringify({ error: "Missing server env vars" }), { status: 500 });
   }
 
-  const body = await request.json();
-  const session_id = String(body.session_id || "").trim(); // cs_... etc
-  const items = Array.isArray(body.items) ? body.items : [];
-
-  if (!session_id || !items.length) {
-    return new Response(JSON.stringify({ error: "Missing session_id or items" }), { status: 400 });
+  let body = null;
+  try {
+    body = await request.json();
+  } catch (_) {
+    body = null;
   }
 
-  // Build keys: one per qty per item (simple + “license-like”)
-  const issued = [];
+  const session_id = String(body?.session_id || "no_session").trim() || "no_session";
+  const items = Array.isArray(body?.items) ? body.items : [];
 
-  for (const it of items) {
-    const qty = Math.max(1, Number(it.qty || 1));
-    const product_id = it.id ? String(it.id) : null;
-    const product_variant_id = it.variant_id ? String(it.variant_id) : null;
+  if (!items.length) {
+    return new Response(JSON.stringify({ error: "Missing items" }), { status: 400 });
+  }
 
-    // Optional: if you ever add product key prefixes, pass it here
-    const prefix = ""; // keep empty for now
+  const productIds = [...new Set(items.map(it => it?.id).filter(Boolean).map(String))];
+  const prefixMap = new Map();
 
-    for (let i = 0; i < qty; i++) {
-      const key = makeKey(prefix);
-
-      // Hash includes KEY_SECRET so even if someone guesses format, they can’t precompute
-      const key_hash = await sha256Hex(`${KEY_SECRET}:${key}`);
-
-      // Insert hash only
-      const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/license_keys`, {
-        method: "POST",
+  if (productIds.length) {
+    const idsParam = productIds.map(encodeURIComponent).join(",");
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/products?select=id,key_prefix&id=in.(${idsParam})`,
+      {
         headers: {
           apikey: SRV,
-          Authorization: `Bearer ${SRV}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal"
-        },
-        body: JSON.stringify([{
-          key_hash,
-          status: "issued",
-          issued_for_session: session_id,
-          product_id,
-          product_variant_id
-        }]),
-      });
-
-      if (!insertRes.ok) {
-        return new Response(JSON.stringify({ error: "Insert failed", details: await insertRes.text() }), { status: 500 });
+          Authorization: `Bearer ${SRV}`
+        }
       }
+    );
+
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: "Failed to load product prefixes", details: await res.text() }), { status: 500 });
+    }
+
+    const rows = await res.json();
+    for (const row of rows) {
+      prefixMap.set(String(row.id), normalizePrefix(row.key_prefix));
+    }
+  }
+
+  const issued = [];
+  const inserts = [];
+
+  for (const it of items) {
+    const qty = Math.max(1, Number(it?.qty || 1));
+    const product_id = it?.id ? String(it.id) : null;
+    const product_variant_id = it?.variant_id ? String(it.variant_id) : null;
+    const prefix = product_id ? (prefixMap.get(product_id) || "") : "";
+
+    for (let i = 0; i < qty; i++) {
+      const key = generateKey(prefix);
+      const key_hash = await sha256Hex(`${KEY_SECRET}:${key}`);
+
+      inserts.push({
+        key_hash,
+        status: "issued",
+        issued_for_session: session_id,
+        product_id,
+        product_variant_id
+      });
 
       issued.push({
         key,
@@ -78,7 +104,22 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/license_keys`, {
+    method: "POST",
+    headers: {
+      apikey: SRV,
+      Authorization: `Bearer ${SRV}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(inserts)
+  });
+
+  if (!insertRes.ok) {
+    return new Response(JSON.stringify({ error: "Insert failed", details: await insertRes.text() }), { status: 500 });
+  }
+
   return new Response(JSON.stringify({ keys: issued }), {
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json" }
   });
 }

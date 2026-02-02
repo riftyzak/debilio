@@ -11,13 +11,13 @@
 
   <div id="authBox" style="max-width:520px;border:2px solid #333;border-radius:12px;padding:16px;background:rgba(20,20,20,.95);">
     <div style="margin-bottom:10px;color:#aaa;">Login or create account</div>
-    <input id="email" placeholder="email" style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
+    <input id="username" placeholder="username" style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
     <input id="pass" type="password" placeholder="password" style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
     <div style="display:flex;gap:10px;margin-top:10px;">
       <button id="login" style="padding:10px 14px;border:2px solid #333;border-radius:8px;background:#000;color:#fff;cursor:pointer;">Login</button>
       <button id="signup" style="padding:10px 14px;border:2px solid #333;border-radius:8px;background:#000;color:#fff;cursor:pointer;">Register</button>
     </div>
-    <div id="authMsg" style="margin-top:10px;color:#aaa;"></div>
+    <div id="authMsg" style="margin-top:10px;color:#aaa;white-space:pre-wrap;"></div>
   </div>
 
   <div id="dashBox" style="display:none;max-width:520px;margin-top:18px;border:2px solid #333;border-radius:12px;padding:16px;background:rgba(20,20,20,.95);">
@@ -29,19 +29,13 @@
     <hr style="border:0;border-top:1px solid #222;margin:14px 0;">
 
     <div style="margin-bottom:8px;color:#aaa;">Redeem a key</div>
-    <input id="key" placeholder="XXXXX-XXXXX-..." style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
+    <input id="key" placeholder="xxxxx-xxxxx-..." style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:2px solid #333;background:#000;color:#fff;">
     <button id="redeem" style="margin-top:10px;padding:10px 14px;border:2px solid #333;border-radius:8px;background:#000;color:#fff;cursor:pointer;">Redeem</button>
 
     <div id="redeemMsg" style="margin-top:10px;color:#aaa;white-space:pre-wrap;"></div>
   </div>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-    const SUPABASE_URL = "https://euqvwswzbowbxweufaet.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_Cbc3Z1lopGZdttsDkZO28w_C24B4hMT";
-    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+  <script>
     const authBox = document.getElementById("authBox");
     const dashBox = document.getElementById("dashBox");
     const authMsg = document.getElementById("authMsg");
@@ -50,81 +44,57 @@
     function setAuthMsg(t){ authMsg.textContent = t || ""; }
     function setRedeemMsg(t){ redeemMsg.textContent = t || ""; }
 
-    async function refresh() {
-      const { data } = await sb.auth.getSession();
-      const session = data.session;
+    async function api(path, body) {
+      const res = await fetch(path, {
+        method: body ? "POST" : "GET",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch { json = null; }
+      return { ok: res.ok, json, text };
+    }
 
-      if (!session) {
+    async function refresh() {
+      const { ok, json } = await api("/api/auth/me");
+      if (!ok || !json || !json.logged_in) {
         authBox.style.display = "block";
         dashBox.style.display = "none";
         return;
       }
-
       authBox.style.display = "none";
       dashBox.style.display = "block";
-      document.getElementById("me").textContent = session.user.email || session.user.id;
-
-      // auto-fill from URL hash: /dashboard/#key=XXXX
-      const h = new URLSearchParams(location.hash.replace(/^#/, ""));
-      const k = h.get("key");
-      if (k) document.getElementById("key").value = k;
+      document.getElementById("me").textContent = json.username || json.user_id;
     }
 
     document.getElementById("login").onclick = async () => {
       setAuthMsg("Logging in...");
-      const email = document.getElementById("email").value.trim();
-      const pass = document.getElementById("pass").value;
-      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-      setAuthMsg(error ? error.message : "OK");
+      const username = document.getElementById("username").value.trim().toLowerCase();
+      const password = document.getElementById("pass").value;
+      const { ok, json, text } = await api("/api/auth/login", { username, password });
+      setAuthMsg(ok ? "OK" : (json?.error || text));
       await refresh();
     };
 
     document.getElementById("signup").onclick = async () => {
       setAuthMsg("Creating account...");
-      const email = document.getElementById("email").value.trim();
-      const pass = document.getElementById("pass").value;
-
-      // If email confirmations are ON, user will be sent to /rosina-shop/auth.html
-      const { error } = await sb.auth.signUp({
-        email,
-        password: pass,
-        options: {
-          emailRedirectTo: `${location.origin}/rosina-shop/auth.html`
-        }
-      });
-
-      setAuthMsg(error ? error.message : "Check your email if confirmation is enabled, then come back.");
+      const username = document.getElementById("username").value.trim().toLowerCase();
+      const password = document.getElementById("pass").value;
+      const { ok, json, text } = await api("/api/auth/register", { username, password });
+      setAuthMsg(ok ? "Registered. You can log in now." : (json?.error || text));
     };
 
     document.getElementById("logout").onclick = async () => {
-      await sb.auth.signOut();
+      await api("/api/auth/logout", {});
       await refresh();
     };
 
     document.getElementById("redeem").onclick = async () => {
       setRedeemMsg("Redeeming...");
-      const { data } = await sb.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return setRedeemMsg("Please login first.");
-
       const key = document.getElementById("key").value.trim();
-
-      const res = await fetch("/api/redeem", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ key })
-      });
-
-      const txt = await res.text();
-      try {
-        const json = JSON.parse(txt);
-        setRedeemMsg(res.ok ? "Redeemed ✅" : (json.error || txt));
-      } catch {
-        setRedeemMsg(txt);
-      }
+      const { ok, json, text } = await api("/api/redeem", { key });
+      setRedeemMsg(ok ? "Redeemed." : (json?.error || text));
     };
 
     refresh();
