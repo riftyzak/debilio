@@ -28,6 +28,8 @@
     html::-webkit-scrollbar,
     body::-webkit-scrollbar { width: 0; height: 0; }
 
+    [hidden] { display: none !important; }
+
     .background-text {
       position: fixed;
       top: 0;
@@ -411,6 +413,7 @@
     const confirmWrap = document.getElementById("confirmWrap");
     const passInput = document.getElementById("pass");
     const confirmInput = document.getElementById("confirm");
+    const authWrap = document.querySelector(".auth-center") || authBox;
 
     let authMode = "login";
     let authBusy = false;
@@ -529,12 +532,16 @@
     async function refresh() {
       const { ok, json } = await api("/api/auth/me");
       if (!ok || !json || !json.logged_in) {
-        authBox.style.display = "block";
-        dashBox.style.display = "none";
+        authWrap.hidden = false;
+        authWrap.setAttribute("aria-hidden", "false");
+        dashBox.hidden = true;
+        dashBox.setAttribute("aria-hidden", "true");
         return;
       }
-      authBox.style.display = "none";
-      dashBox.style.display = "grid";
+      authWrap.hidden = true;
+      authWrap.setAttribute("aria-hidden", "true");
+      dashBox.hidden = false;
+      dashBox.setAttribute("aria-hidden", "false");
       document.getElementById("me").textContent = json.username || json.user_id;
       await loadDashboard();
     }
