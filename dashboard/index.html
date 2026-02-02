@@ -7,71 +7,290 @@
   <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/tailwind.css">
   <style>
-    body { font-family: 'Georama', sans-serif; }
+    /* Match Rosina Shop site styling */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Georama', sans-serif;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    html, body {
+      overflow: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE 10+ */
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar { width: 0; height: 0; }
+
+    .background-text {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 320%;
+      height: 320%;
+      font-size: 110px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.08);
+      line-height: 1.1;
+      letter-spacing: 8px;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+      animation: scroll-diagonal 50s linear infinite;
+      font-family: 'Courier New', monospace;
+    }
+    .background-text div { white-space: nowrap; }
+    .background-text div:nth-child(even) { padding-left: 150px; }
+    @keyframes scroll-diagonal {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(-33.333%, -33.333%, 0); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(20, 20, 20, 0.95);
+      border: 2px solid #333;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      z-index: 100;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .back-button:hover { border-color: #4a90e2; transform: translateX(-5px); }
+
+    .header {
+      text-align: center;
+      margin: 40px 0;
+    }
+
+    .title {
+      font-size: 46px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #fff, #4a90e2, #357abd, #fff);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradient-shift 3s ease infinite;
+    }
+    @keyframes gradient-shift {
+      0%, 100% { background-position: 0% center; }
+      50% { background-position: 100% center; }
+    }
+    .sub { color: #888; font-size: 16px; }
+
+    .card {
+      background: rgba(20, 20, 20, 0.95);
+      border: 2px solid #333;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .muted { color: #aaa; font-size: 13px; line-height: 1.4; }
+    .strong { color: #fff; font-weight: 700; }
+
+    .field {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .field:focus { border-color: #4a90e2; }
+
+    .btn {
+      border: 2px solid #333;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      font-family: 'Georama', sans-serif;
+    }
+    .btn:hover { border-color: #4a90e2; }
+    .btn-primary {
+      background: #4a90e2;
+      color: #000;
+      border-color: #4a90e2;
+      font-weight: 700;
+    }
+    .btn-primary:hover { filter: brightness(1.05); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .list {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #333;
+      color: #aaa;
+    }
+
+    .item {
+      border: 2px solid #333;
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(20,20,20,0.95);
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .badge {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid #333;
+      white-space: nowrap;
+    }
+    .badge-ok { color: #8fd3ff; border-color: rgba(74,144,226,0.6); background: rgba(74,144,226,0.15); }
+    .badge-bad { color: #ff9aa6; border-color: rgba(255,71,87,0.6); background: rgba(255,71,87,0.12); }
+
     .fade-up { animation: fadeUp 0.5s ease both; }
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .glow { box-shadow: 0 0 30px rgba(74,144,226,0.25); }
+
+    @media (min-width: 980px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 40px 14px 20px; }
+      .background-text { font-size: 72px; letter-spacing: 5px; }
+      .back-button { padding: 10px 16px; font-size: 13px; }
+      .title { font-size: 38px; }
+    }
   </style>
 </head>
-<body class="bg-black text-white min-h-screen">
-  <div class="fixed inset-0 pointer-events-none">
-    <div class="absolute -top-20 -left-20 w-[420px] h-[420px] bg-blue-500/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 right-0 w-[480px] h-[480px] bg-blue-400/10 rounded-full blur-3xl"></div>
-  </div>
+<body>
+  <div class="background-text" id="bgText"></div>
 
-  <div class="relative max-w-5xl mx-auto px-6 py-16">
-    <div class="mb-10">
-      <h1 class="text-4xl font-bold tracking-tight">Dashboard</h1>
-      <p class="text-gray-400 mt-2">Manage your keys and subscriptions.</p>
+  <div class="container">
+    <a href="/rosina-shop/" class="back-button">← Back to shop</a>
+
+    <div class="header">
+      <div class="title">Dashboard</div>
+      <div class="sub">Manage your keys and subscriptions.</div>
     </div>
 
-    <div id="authBox" class="fade-up max-w-xl border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
-      <div class="text-sm text-gray-400 mb-4">Login or create account</div>
-      <div class="grid gap-3">
-        <input id="username" placeholder="username" class="w-full rounded-lg bg-black/60 border border-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <input id="pass" type="password" placeholder="password" class="w-full rounded-lg bg-black/60 border border-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
-      <div class="flex gap-3 mt-4">
-        <button id="login" type="button" class="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 transition text-black font-semibold">Login</button>
-        <button id="signup" type="button" class="px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-400 transition">Register</button>
-      </div>
-      <div id="authMsg" class="text-sm text-gray-400 mt-3 min-h-[1.25rem]"></div>
-    </div>
-
-    <div id="dashBox" class="hidden space-y-8">
-      <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur flex items-center justify-between">
-        <div>
-          <div class="text-sm text-gray-400">Signed in as</div>
-          <div id="me" class="text-lg font-semibold"></div>
+    <div class="grid">
+      <div id="authBox" class="card fade-up" style="max-width: 720px; margin: 0 auto;">
+        <div class="muted" style="margin-bottom: 12px;">Login or create account</div>
+        <div class="grid" style="gap: 10px;">
+          <input id="username" placeholder="username" class="field" />
+          <input id="pass" type="password" placeholder="password" class="field" />
         </div>
-        <button id="logout" type="button" class="px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-400 transition">Logout</button>
+        <div class="row" style="margin-top: 12px; justify-content: flex-start;">
+          <button id="login" type="button" class="btn btn-primary">Login</button>
+          <button id="signup" type="button" class="btn">Register</button>
+        </div>
+        <div id="authMsg" class="muted" style="margin-top: 10px; min-height: 1.25rem;"></div>
       </div>
 
-      <div class="grid lg:grid-cols-2 gap-8">
-        <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">Redeem a key</h2>
-            <span id="redeemStatus" class="text-xs text-gray-400"></span>
+      <div id="dashBox" class="grid" style="display:none; gap: 18px;">
+        <div class="card fade-up row">
+          <div>
+            <div class="muted">Signed in as</div>
+            <div id="me" class="strong" style="font-size: 18px;"></div>
           </div>
-          <div class="mt-4 space-y-3">
-            <input id="key" placeholder="prefix-XXXXXXXXXXXXXXXXXXXXXXXX" class="w-full rounded-lg bg-black/60 border border-gray-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <button id="redeem" type="button" class="w-full px-4 py-3 rounded-lg bg-blue-500 hover:bg-blue-400 transition text-black font-semibold">Redeem</button>
-            <div id="redeemMsg" class="text-sm text-gray-400 min-h-[1.25rem]"></div>
+          <button id="logout" type="button" class="btn">Logout</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="card fade-up">
+            <div class="row" style="align-items: flex-start;">
+              <div>
+                <div class="strong" style="font-size: 20px;">Redeem a key</div>
+                <div class="muted" style="margin-top: 4px;">Use your key to activate a subscription.</div>
+              </div>
+              <span id="redeemStatus" class="pill" style="display:none"></span>
+            </div>
+            <div style="margin-top: 12px;" class="grid">
+              <input id="key" placeholder="prefix-XXXXXXXXXXXXXXXXXXXXXXXX" class="field" />
+              <button id="redeem" type="button" class="btn btn-primary" style="width: 100%; padding: 12px 14px;">Redeem</button>
+              <div id="redeemMsg" class="muted" style="min-height: 1.25rem;"></div>
+            </div>
+          </div>
+
+          <div class="card fade-up">
+            <div class="strong" style="font-size: 20px;">Active subscriptions</div>
+            <div id="subsList" class="list muted">Loading...</div>
           </div>
         </div>
 
-        <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
-          <h2 class="text-xl font-semibold">Active subscriptions</h2>
-          <div id="subsList" class="mt-4 space-y-3 text-sm text-gray-400">Loading...</div>
+        <div class="card fade-up">
+          <div class="strong" style="font-size: 20px;">Order history</div>
+          <div id="historyList" class="list muted">Loading...</div>
         </div>
-      </div>
-
-      <div class="fade-up border border-gray-800 rounded-2xl p-6 bg-white/5 backdrop-blur">
-        <h2 class="text-xl font-semibold">Order history</h2>
-        <div id="historyList" class="mt-4 space-y-4 text-sm text-gray-400">Loading...</div>
       </div>
     </div>
   </div>
@@ -87,7 +306,11 @@
 
     function setAuthMsg(t){ authMsg.textContent = t || ""; }
     function setRedeemMsg(t){ redeemMsg.textContent = t || ""; }
-    function setRedeemStatus(t){ redeemStatus.textContent = t || ""; }
+    function setRedeemStatus(t){
+      const v = t || "";
+      redeemStatus.textContent = v;
+      redeemStatus.style.display = v ? "inline-flex" : "none";
+    }
 
     async function api(path, body) {
       const res = await fetch(path, {
@@ -111,17 +334,17 @@
         subsList.innerHTML = subsRes.json.items.map(item => {
           const days = item.days_left;
           const badge = days <= 0 ? "Expired" : `${days} day${days === 1 ? "" : "s"} left`;
-          const badgeClass = days <= 0 ? "bg-red-500/20 text-red-300" : "bg-blue-500/20 text-blue-200";
+          const badgeClass = days <= 0 ? "badge badge-bad" : "badge badge-ok";
           return `
-            <div class="flex items-center gap-4 border border-gray-800 rounded-xl p-3 bg-black/30">
-              <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-900 border border-gray-800 flex items-center justify-center">
-                ${item.image_url ? `<img src="${item.image_url}" alt="" class="w-full h-full object-cover">` : `<div class="text-xs text-gray-500">IMG</div>`}
+            <div class="item">
+              <div class="thumb">
+                ${item.image_url ? `<img src="${item.image_url}" alt="">` : `<div class="muted" style="font-size:12px;">IMG</div>`}
               </div>
-              <div class="flex-1">
-                <div class="text-white font-semibold">${item.title}</div>
-                <div class="text-xs text-gray-400">Duration: ${item.duration_days} day${item.duration_days === 1 ? "" : "s"}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div class="strong" style="font-size: 15px;">${item.title}</div>
+                <div class="muted" style="margin-top: 2px; font-size: 12px;">Duration: ${item.duration_days} day${item.duration_days === 1 ? "" : "s"}</div>
               </div>
-              <div class="text-xs px-2 py-1 rounded-full ${badgeClass}">${badge}</div>
+              <div class="${badgeClass}">${badge}</div>
             </div>
           `;
         }).join("");
@@ -137,12 +360,14 @@
           const items = (group.items || []).map(i => i.title).join(", ");
           const date = group.redeemed_at ? new Date(group.redeemed_at).toLocaleString() : "";
           return `
-            <div class="border border-gray-800 rounded-xl p-4 bg-black/30">
-              <div class="flex items-center justify-between">
-                <div class="text-white font-semibold">Session ${group.session_id}</div>
-                <div class="text-xs text-gray-500">${date}</div>
+            <div class="item" style="align-items: flex-start;">
+              <div style="flex: 1; min-width: 0;">
+                <div class="row" style="align-items: baseline;">
+                  <div class="strong">Session ${group.session_id}</div>
+                  <div class="muted" style="font-size: 12px;">${date}</div>
+                </div>
+                <div class="muted" style="margin-top: 6px;">${items || "(no items)"}</div>
               </div>
-              <div class="text-sm text-gray-400 mt-2">${items || "(no items)"}</div>
             </div>
           `;
         }).join("");
@@ -152,12 +377,12 @@
     async function refresh() {
       const { ok, json } = await api("/api/auth/me");
       if (!ok || !json || !json.logged_in) {
-        authBox.classList.remove("hidden");
-        dashBox.classList.add("hidden");
+        authBox.style.display = "block";
+        dashBox.style.display = "none";
         return;
       }
-      authBox.classList.add("hidden");
-      dashBox.classList.remove("hidden");
+      authBox.style.display = "none";
+      dashBox.style.display = "grid";
       document.getElementById("me").textContent = json.username || json.user_id;
       await loadDashboard();
     }
@@ -195,6 +420,19 @@
     };
 
     refresh();
+
+    // =========================
+    // Background (match shop)
+    // =========================
+    const bgText = document.getElementById('bgText');
+    const text = 'I LOVE RADEK NEVARIL ';
+    let html = '';
+    for (let i = 0; i < 100; i++) {
+      let lineText = '';
+      for (let j = 0; j < 10; j++) lineText += text;
+      html += `<div>${lineText}</div>`;
+    }
+    bgText.innerHTML = html;
   </script>
 </body>
 </html>
