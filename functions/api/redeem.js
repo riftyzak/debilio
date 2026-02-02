@@ -1,4 +1,4 @@
-import { getCookie, verifySession } from "./auth/_session";
+import { getCookie, verifySession } from "./auth/_session.js";
 
 function toHex(buffer) {
   return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -32,7 +32,7 @@ export async function onRequestPost({ request, env }) {
     body = null;
   }
 
-  const raw = String(body?.key || "").trim().toUpperCase();
+  const raw = String(body?.key || "").trim();
   if (raw.length < 10) {
     return new Response(JSON.stringify({ error: "Invalid key format" }), { status: 400 });
   }

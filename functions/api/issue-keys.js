@@ -8,12 +8,6 @@ async function sha256Hex(input) {
   return toHex(hash);
 }
 
-function base64UrlEncode(bytes) {
-  let bin = "";
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
 function normalizePrefix(prefix) {
   let p = String(prefix || "").trim().toLowerCase();
   p = p.replace(/-+$/g, "");
@@ -21,9 +15,21 @@ function normalizePrefix(prefix) {
   return p;
 }
 
-function generateKey(prefix) {
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  const core = base64UrlEncode(bytes);
+function randomBase62(len) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const out = [];
+  while (out.length < len) {
+    const bytes = crypto.getRandomValues(new Uint8Array(len));
+    for (let i = 0; i < bytes.length && out.length < len; i++) {
+      const b = bytes[i];
+      if (b < 248) out.push(alphabet[b % 62]);
+    }
+  }
+  return out.join("");
+}
+
+function makeKey(prefix) {
+  const core = randomBase62(24);
   return prefix ? `${prefix}-${core}` : core;
 }
 
@@ -85,7 +91,7 @@ export async function onRequestPost({ request, env }) {
     const prefix = product_id ? (prefixMap.get(product_id) || "") : "";
 
     for (let i = 0; i < qty; i++) {
-      const key = generateKey(prefix);
+      const key = makeKey(prefix);
       const key_hash = await sha256Hex(`${KEY_SECRET}:${key}`);
 
       inserts.push({
