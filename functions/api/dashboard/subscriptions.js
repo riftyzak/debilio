@@ -56,8 +56,6 @@ export async function onRequestGet({ request, env }) {
 
   if (variantIds.length) {
     const idsParam = variantIds.map(encodeURIComponent).join(",");
-    // NOTE: Some schemas don't have `product_variants.price` (or use a different column name).
-    // The dashboard only needs duration_days, so keep the select minimal to avoid schema mismatch.
     const vRes = await fetch(`${SUPABASE_URL}/rest/v1/product_variants?select=id,product_id,duration_days&id=in.(${idsParam})`, {
       headers: { apikey: SRV, Authorization: `Bearer ${SRV}` }
     });
