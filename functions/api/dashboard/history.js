@@ -56,9 +56,8 @@ export async function onRequestGet({ request, env }) {
 
   if (variantIds.length) {
     const idsParam = variantIds.map(encodeURIComponent).join(",");
-    // NOTE: Some schemas don't have `product_variants.price` (or use a different column name).
-    // History view only needs duration_days, so keep the select minimal to avoid schema mismatch.
-    const vRes = await fetch(`${SUPABASE_URL}/rest/v1/product_variants?select=id,product_id,duration_days&id=in.(${idsParam})`, {
+    // Use price_eur if present (Rosina Shop uses price_eur).
+    const vRes = await fetch(`${SUPABASE_URL}/rest/v1/product_variants?select=id,product_id,duration_days,price_eur&id=in.(${idsParam})`, {
       headers: { apikey: SRV, Authorization: `Bearer ${SRV}` }
     });
     if (!vRes.ok) {
@@ -75,6 +74,7 @@ export async function onRequestGet({ request, env }) {
     const product = productMap.get(String(row.product_id)) || {};
     const variant = row.product_variant_id ? (variantMap.get(String(row.product_variant_id)) || {}) : {};
     const duration = Number(variant.duration_days || product.duration_days || 0);
+    const priceEur = (variant.price_eur ?? product.price_eur);
 
     if (!grouped.has(sessionId)) {
       grouped.set(sessionId, {
@@ -94,7 +94,8 @@ export async function onRequestGet({ request, env }) {
       product_variant_id: row.product_variant_id,
       title: product.title || "Product",
       image_url: product.image_url || "",
-      duration_days: duration
+      duration_days: duration,
+      price_eur: priceEur
     });
   }
 
