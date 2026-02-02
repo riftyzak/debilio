@@ -368,7 +368,7 @@
         </div>
 
         <div class="grid-2">
-          <div class="card fade-up">
+          <div class="card fade-up" style="display:flex; flex-direction:column;">
             <div class="row" style="align-items: flex-start;">
               <div>
                 <div class="strong" style="font-size: 20px;">Redeem a key</div>
@@ -376,9 +376,9 @@
               </div>
               <span id="redeemStatus" class="pill" style="display:none"></span>
             </div>
-            <div style="margin-top: 12px;" class="grid">
+            <div style="margin-top: 12px; flex: 1;" class="grid">
               <input id="key" placeholder="paste your key here" class="field" />
-              <button id="redeem" type="button" class="btn btn-primary" style="width: 100%; padding: 12px 14px;">Redeem</button>
+              <button id="redeem" type="button" class="btn btn-primary" style="width: 100%; padding: 12px 14px; margin-top: auto;">Redeem</button>
               <div id="redeemMsg" class="muted" style="min-height: 1.25rem;"></div>
             </div>
           </div>
