@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -39,7 +38,9 @@
     @keyframes scroll-diagonal { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-33.333%, -33.333%, 0); } }
     @keyframes gradient-shift { 0%,100% { background-position: 0% center; } 50% { background-position: 100% center; } }
 
-    .container { position: relative acknowledges; z-index: 1; max-width: 900px; margin: 0 auto; text-align: center; }
+    /* ✅ typo fixed here */
+    .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; text-align: center; }
+
     .title {
       font-size: 48px; font-weight: 700; margin-bottom: 10px;
       background: linear-gradient(90deg, #fff, #4a90e2, #357abd, #fff);
@@ -51,30 +52,19 @@
     .card { background: rgba(20, 20, 20, 0.95); border: 2px solid #333; border-radius: 14px; padding: 22px; text-align: left; }
     .section-title { margin-top: 18px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
     .order-items { margin-top: 10px; display: grid; gap: 12px; }
-    .order-item { border: 1px solid #222; border-radius: 10px; padding: 12px; background: rgba(0, 0, 0, 0.35); }
+    .order-item { border: 1px solid #222; border-radius: 10px; padding: 12px; background: rgba(0,0,0,0.35); }
     .order-item-title { font-weight: 700; margin-bottom: 6px; }
     .order-item-meta { color: #888; font-size: 12px; margin-bottom: 8px; }
-    .delivery-box { border: 1px dashed #333; border-radius: 10px; padding: 10px; color: #cfe1ff; background: rgba(74, 144, 226, 0.12); font-size: 13px; }
+    .delivery-box { border: 1px dashed #333; border-radius: 10px; padding: 10px; color: #cfe1ff; background: rgba(74,144,226,0.12); font-size: 13px; }
     .delivery-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
     .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .copy-btn {
-      border: 1px solid #333; background: rgba(0, 0, 0, 0.4); color: #fff;
-      border-radius: 8px; padding: 4px 6px; cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center;
-      transition: border-color 0.2s ease, background 0.2s ease;
-    }
+    .copy-btn { border: 1px solid #333; background: rgba(0,0,0,0.4); color: #fff; border-radius: 8px; padding: 4px 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: border-color .2s ease; }
     .copy-btn:hover { border-color: #4a90e2; }
     .copy-icon { width: 14px; height: 14px; }
-    .copy-btn.is-copied { border-color: rgba(70, 200, 140, 0.6); color: #7fe3b3; }
+    .copy-btn.is-copied { border-color: rgba(70,200,140,0.6); color: #7fe3b3; }
     .copy-check { width: 14px; height: 14px; display: none; }
     .copy-btn.is-copied .copy-icon { display: none; }
     .copy-btn.is-copied .copy-check { display: block; }
-
-    .toasts { position: fixed; top: 16px; right: 16px; z-index: 200; display: grid; gap: 8px; max-width: min(360px, calc(100vw - 32px)); }
-    .toast { padding: 10px 12px; border-radius: 10px; background: rgba(10, 10, 10, 0.9); border: 1px solid #333; color: #fff; font-size: 13px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); animation: toastIn 0.2s ease both; }
-    .toast-success { border-color: rgba(70, 200, 140, 0.4); }
-    .toast-error { border-color: rgba(255, 71, 87, 0.5); }
-    @keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
     .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222; flex-wrap: wrap; }
     .row:last-child { border-bottom: none; }
@@ -89,7 +79,7 @@
       transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center;
       gap: 10px; text-decoration: none;
     }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74,144,226,0.4); }
     .muted { margin-top: 12px; color: #888; font-size: 12px; line-height: 1.6; }
 
     @media (max-width: 480px) {
@@ -108,20 +98,15 @@
     <div class="sub">Sebastian Rosina personally thanks you for your order.</div>
 
     <div class="card">
-      <div class="row">
-        <div class="k">Provider</div>
-        <div class="v" id="provider">—</div>
-      </div>
-      <div class="row">
-        <div class="k">Time</div>
-        <div class="v" id="time">—</div>
-      </div>
+      <div class="row"><div class="k">Provider</div><div class="v" id="provider">—</div></div>
+      <div class="row"><div class="k">Time</div><div class="v" id="time">—</div></div>
 
       <div class="section-title">Purchased items</div>
       <div id="orderItems" class="order-items"></div>
 
       <a class="btn" id="dashboardCta" href="/dashboard/"><i class="fas fa-key"></i> Go to dashboard to redeem</a>
       <a class="btn" href="/rosina-shop/"><i class="fas fa-arrow-left"></i> Back to shop</a>
+
       <div class="muted">
         If you paid with crypto, confirmation can take a moment depending on the network. If anything looks wrong,
         contact support.
@@ -143,34 +128,26 @@
     const CART_KEY = "rosina_cart_v1";
     const PROMO_KEY = "rosina_promo_v1";
     const ORDER_KEY = "rosina_last_order_v1";
-    try { localStorage.removeItem(CART_KEY); } catch (_) { }
-    try { localStorage.removeItem(PROMO_KEY); } catch (_) { }
+    try { localStorage.removeItem(CART_KEY); } catch (_) {}
+    try { localStorage.removeItem(PROMO_KEY); } catch (_) {}
 
     const sp = new URLSearchParams(location.search);
-    // DEFENSIVE FIX: strip any accidental "?session_id=..." suffix
     const sessionId = (sp.get("session_id") || "").split("?")[0];
     const provider = sp.get("session_id") ? "stripe" : "coinbase";
+
     document.getElementById("provider").textContent = provider === "stripe" ? "Stripe" : "Coinbase";
     document.getElementById("time").textContent = new Date().toLocaleString();
 
     function escapeHtml(str) {
       return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
 
     async function postJson(url, body) {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const text = await res.text();
-      let json = null;
-      try { json = JSON.parse(text); } catch (_) { json = null; }
+      let json = null; try { json = JSON.parse(text); } catch (_) {}
       return { ok: res.ok, status: res.status, json, text };
     }
 
@@ -183,20 +160,13 @@
         if (!raw) return [];
         const data = JSON.parse(raw);
         if (!data?.ts || !Array.isArray(data?.keys)) return [];
-        if (Date.now() - data.ts > KEY_TTL) {
-          localStorage.removeItem(KEY_STORE);
-          return [];
-        }
+        if (Date.now() - data.ts > KEY_TTL) { localStorage.removeItem(KEY_STORE); return []; }
         return data.keys;
-      } catch (_) {
-        return [];
-      }
+      } catch (_) { return []; }
     }
 
     function storeKeys(keys) {
-      try {
-        localStorage.setItem(KEY_STORE, JSON.stringify({ ts: Date.now(), keys }));
-      } catch (_) { }
+      try { localStorage.setItem(KEY_STORE, JSON.stringify({ ts: Date.now(), keys })); } catch (_) {}
     }
 
     async function renderOrderItems() {
@@ -204,11 +174,7 @@
       if (!target) return;
 
       let order = null;
-      try {
-        order = JSON.parse(localStorage.getItem(ORDER_KEY) || "null");
-      } catch (_) {
-        order = null;
-      }
+      try { order = JSON.parse(localStorage.getItem(ORDER_KEY) || "null"); } catch (_) {}
 
       if (!order || !Array.isArray(order.items) || !order.items.length) {
         target.innerHTML = `<div class="muted">We couldn't find your order items yet. Please check your email or contact support.</div>`;
@@ -217,6 +183,7 @@
 
       const timeBasedItems = order.items.filter(item => Number(item.duration_days || 0) > 0);
       const hasTimeBased = timeBasedItems.length > 0;
+
       const cta = document.getElementById("dashboardCta");
       if (cta) cta.style.display = hasTimeBased ? "inline-flex" : "none";
 
@@ -224,6 +191,7 @@
       let issueError = "";
       let infoLine = "";
       let emailLine = "";
+
       const buyerEmail = (localStorage.getItem("rosina_buyer_email_v1") || "").trim();
       const chargeId = sp.get("charge_id") || sp.get("id") || "";
 
@@ -244,7 +212,6 @@
             issuedKeys = Array.isArray(res.json?.keys) ? res.json.keys : [];
             if (issuedKeys.length) storeKeys(issuedKeys);
 
-            // FIX: Only claim "emailed" if the backend confirms it.
             if (res.json?.email_sent === true && res.json?.buyer_email) {
               emailLine = `We emailed your keys to ${escapeHtml(res.json.buyer_email)}.`;
             } else if (res.json?.email_sent === false) {
@@ -269,34 +236,36 @@
       const now = new Date();
       let keyIndex = 0;
       const expectedTotal = timeBasedItems.reduce((sum, item) => sum + Number(item.qty || 1), 0);
+
       const itemsHtml = order.items.map(item => {
         const qty = Number(item.qty || 1);
         const durationDays = Number(item.duration_days || 0);
         const isTimeBased = Number.isFinite(durationDays) && durationDays > 0;
         const expiresAt = isTimeBased ? new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000) : null;
+
         const itemKeys = isTimeBased ? issuedKeys.slice(keyIndex, keyIndex + qty) : [];
         if (isTimeBased) keyIndex += qty;
 
         const deliveryBoxes = isTimeBased
           ? itemKeys.map(k => {
-            const keyText = escapeHtml(k.key || k);
-            return `
-              <div class="delivery-box">
-                <div class="delivery-row">
-                  <span class="delivery-key">Delivery: ${keyText}</span>
-                  <button class="copy-btn" data-copy="${keyText}" aria-label="Copy license">
-                    <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                      <rect x="3" y="3" width="13" height="13" rx="2"></rect>
-                    </svg>
-                    <svg class="copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M20 6L9 17l-5-5"></path>
-                    </svg>
-                  </button>
+              const keyText = escapeHtml(k.key || k);
+              return `
+                <div class="delivery-box">
+                  <div class="delivery-row">
+                    <span class="delivery-key">Delivery: ${keyText}</span>
+                    <button class="copy-btn" data-copy="${keyText}" aria-label="Copy license">
+                      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                        <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+                      </svg>
+                      <svg class="copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5"></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            `;
-          }).join("")
+              `;
+            }).join("")
           : "";
 
         const metaLine = isTimeBased
@@ -327,24 +296,8 @@
 
     (async () => {
       await renderOrderItems();
-      try { localStorage.removeItem(ORDER_KEY); } catch (_) { }
+      try { localStorage.removeItem(ORDER_KEY); } catch (_) {}
     })();
-
-    const toasts = document.createElement("div");
-    toasts.className = "toasts";
-    document.body.appendChild(toasts);
-
-    function showToast(message, type = "success", duration = 2200) {
-      const el = document.createElement("div");
-      el.className = `toast toast-${type}`;
-      el.textContent = message;
-      toasts.appendChild(el);
-      setTimeout(() => {
-        el.style.opacity = "0";
-        el.style.transform = "translateY(-6px)";
-        setTimeout(() => el.remove(), 180);
-      }, duration);
-    }
 
     document.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-copy]");
@@ -354,12 +307,8 @@
         await navigator.clipboard.writeText(value);
         btn.classList.add("is-copied");
         setTimeout(() => btn.classList.remove("is-copied"), 1400);
-        showToast("Copied", "success");
-      } catch (_) {
-        showToast("Copy failed", "error");
-      }
+      } catch (_) {}
     });
   </script>
 </body>
-
 </html>

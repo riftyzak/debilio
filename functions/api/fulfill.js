@@ -3,12 +3,12 @@ const encoder = new TextEncoder();
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" }
+    headers: { "content-type": "application/json" },
   });
 }
 
 function toHex(buffer) {
-  return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function sha256Hex(input) {
@@ -103,16 +103,15 @@ async function resendEmail(env, toEmail, keys) {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         from,
         to: toEmail,
         subject: "Your license keys",
         html,
-        // Optional: set a reply-to you actually read
-        reply_to: env.REPLY_TO || undefined
-      })
+        reply_to: env.REPLY_TO || undefined,
+      }),
     });
     text = await res.text();
   } catch (e) {
@@ -120,23 +119,55 @@ async function resendEmail(env, toEmail, keys) {
     return { ok: false, error: `Resend fetch failed: ${String(e?.message || e)}` };
   }
 
-  // This will show up in Cloudflare logs
   console.log("RESEND status:", res.status, "body:", text.slice(0, 600));
 
   if (!res.ok) return { ok: false, error: text || `Resend error (status ${res.status})` };
   return { ok: true };
 }
 
+// ✅ FIX: cart can be either {items:[...]} OR an array ([{id,qty,variant_id}])
+function extractCartItems(orderRow, orderInput) {
+  const raw = orderRow?.cart ?? orderInput ?? null;
+
+  let items = [];
+  let promo = null;
+
+  if (Array.isArray(raw)) {
+    items = raw;
+  } else if (raw && Array.isArray(raw.items)) {
+    items = raw.items;
+    promo = raw.promo_code ?? raw.promoCode ?? null;
+  } else if (orderInput && Array.isArray(orderInput.items)) {
+    items = orderInput.items;
+    promo = orderInput.promo_code ?? orderInput.promoCode ?? null;
+  }
+
+  // normalize shape
+  items = items
+    .map((it) => ({
+      id: it?.id ? String(it.id) : "",
+      qty: Math.max(1, Number(it?.qty || 1)),
+      variant_id: it?.variant_id ? String(it.variant_id) : null,
+      duration_days: it?.duration_days != null ? Number(it.duration_days) : null,
+      title: it?.title ? String(it.title) : null,
+    }))
+    .filter((it) => it.id);
+
+  return { items, promo_code: promo };
+}
+
 export async function onRequestPost({ request, env }) {
   const SUPABASE_URL = env.SUPABASE_URL;
   const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
   const KEY_SECRET = env.KEY_SECRET;
-  const RESEND_API_KEY = env.RESEND_API_KEY;
-  const EMAIL_FROM = env.EMAIL_FROM;
   const STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
   const DELIVERY_ENC_KEY_B64 = env.DELIVERY_ENC_KEY_B64;
 
-  if (!SUPABASE_URL || !SRV || !KEY_SECRET || !RESEND_API_KEY || !EMAIL_FROM || !STRIPE_SECRET_KEY || !DELIVERY_ENC_KEY_B64) {
+  // Resend vars still required, but we’ll report accurate errors instead of pretending
+  const RESEND_API_KEY = env.RESEND_API_KEY;
+  const EMAIL_FROM = env.EMAIL_FROM;
+
+  if (!SUPABASE_URL || !SRV || !KEY_SECRET || !STRIPE_SECRET_KEY || !DELIVERY_ENC_KEY_B64) {
     return jsonResponse({ error: "Missing server env vars" }, 500);
   }
 
@@ -159,52 +190,56 @@ export async function onRequestPost({ request, env }) {
   }
 
   const encKey = await importAesKey(DELIVERY_ENC_KEY_B64);
-  const isWebhook = request.headers.get("X-Webhook") === "1";
 
   const orderRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/checkout_orders?select=*&provider_session_id=eq.${encodeURIComponent(provider_session_id)}&limit=1`,
-    { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } }
+    `${SUPABASE_URL}/rest/v1/checkout_orders?select=*&provider_session_id=eq.${encodeURIComponent(
+      provider_session_id,
+    )}&limit=1`,
+    { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
   );
 
   if (!orderRes.ok) {
-    return jsonResponse({ error: "Failed to load order acknowledged", details: await orderRes.text() }, 500);
+    return jsonResponse({ error: "Failed to load order", details: await orderRes.text() }, 500);
   }
 
   const orderRows = await orderRes.json();
   let order = orderRows[0] || null;
 
   if (!order) {
-    if (isWebhook) {
-      return jsonResponse({ error: "Order record missing; checkout must store checkout_orders" }, 500);
-    }
-    const items = Array.isArray(order_input?.items) ? order_input.items : [];
-    if (!buyer_email_input || !items.length) {
+    // If we truly don't have an order row, create a minimal one for non-webhook usage
+    const itemsFallback = Array.isArray(order_input?.items) ? order_input.items : [];
+    if (!buyer_email_input || !itemsFallback.length) {
       return jsonResponse({ error: "Order data missing" }, 400);
     }
+
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders`, {
       method: "POST",
       headers: {
         apikey: SRV,
         Authorization: `Bearer ${SRV}`,
         "Content-Type": "application/json",
-        Prefer: "return=representation"
+        Prefer: "return=representation",
       },
-      body: JSON.stringify([{
-        provider,
-        provider_session_id,
-        buyer_email: buyer_email_input,
-        cart: { items, promo_code: order_input?.promo_code || null },
-        status: "created"
-      }])
+      body: JSON.stringify([
+        {
+          provider,
+          provider_session_id,
+          buyer_email: buyer_email_input,
+          cart: { items: itemsFallback, promo_code: order_input?.promo_code || null },
+          status: "created",
+        },
+      ]),
     });
+
     if (!insertRes.ok) {
       return jsonResponse({ error: "Failed to create order", details: await insertRes.text() }, 500);
     }
+
     const inserted = await insertRes.json();
     order = inserted[0];
   }
 
-  // If keys already exist in checkout_orders, return them and (optionally) send email if not emailed.
+  // If keys already exist, return them (and try email if not emailed)
   if (order?.keys_encrypted) {
     const payload = await decryptKeys(encKey, order.keys_encrypted);
     const keys = Array.isArray(payload?.keys) ? payload.keys : [];
@@ -214,51 +249,59 @@ export async function onRequestPost({ request, env }) {
     const buyerEmail = order.buyer_email || buyer_email_input || "";
 
     if (!emailSent && buyerEmail && keys.length) {
-      const emailRes = await resendEmail(env, buyerEmail, keys.map(k => k.key || k));
+      const emailRes = await resendEmail(env, buyerEmail, keys.map((k) => k.key || k));
       emailSent = emailRes.ok;
       emailError = emailRes.ok ? "" : (emailRes.error || "Unknown resend error");
 
       if (emailSent) {
-        await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
-          method: "PATCH",
-          headers: {
-            apikey: SRV,
-            Authorization: `Bearer ${SRV}`,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal"
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`,
+          {
+            method: "PATCH",
+            headers: {
+              apikey: SRV,
+              Authorization: `Bearer ${SRV}`,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify({
+              emailed_at: new Date().toISOString(),
+              status: "emailed",
+            }),
           },
-          body: JSON.stringify({
-            emailed_at: new Date().toISOString(),
-            status: "emailed"
-          })
-        });
+        );
       }
     }
 
     return jsonResponse({
       ok: true,
       keys,
+      buyer_email: buyerEmail,
       email_sent: emailSent,
       email_error: emailError || undefined,
-      buyer_email: buyerEmail
     });
   }
 
+  // --- payment verification ---
   let buyerEmail = order?.buyer_email || buyer_email_input || "";
   let stripeSession = null;
   let coinbaseCharge = null;
 
   if (provider === "stripe") {
-    const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(provider_session_id)}`, {
-      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` }
-    });
+    const stripeRes = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(provider_session_id)}`,
+      { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
+    );
     if (!stripeRes.ok) {
       return jsonResponse({ error: "Stripe verification failed", details: await stripeRes.text() }, 500);
     }
     const session = await stripeRes.json();
     const paid = session.payment_status === "paid" || session.status === "complete";
     if (!paid) {
-      return jsonResponse({ error: "Payment not confirmed", status: session.payment_status || session.status || "pending" }, 409);
+      return jsonResponse(
+        { error: "Payment not confirmed", status: session.payment_status || session.status || "pending" },
+        409,
+      );
     }
     buyerEmail = buyerEmail || session?.customer_details?.email || session?.customer_email || "";
     stripeSession = {
@@ -267,12 +310,13 @@ export async function onRequestPost({ request, env }) {
       status: session.status || null,
       amount_total: session.amount_total || null,
       currency: session.currency || null,
-      customer_email: session.customer_details?.email || session.customer_email || null
+      customer_email: session.customer_details?.email || session.customer_email || null,
     };
   } else {
-    const chargeRes = await fetch(`${SUPABASE_URL}/rest/v1/coinbase_charges?select=status,raw&id=eq.${encodeURIComponent(provider_session_id)}`, {
-      headers: { apikey: SRV, Authorization: `Bearer ${SRV}` }
-    });
+    const chargeRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/coinbase_charges?select=status,raw&id=eq.${encodeURIComponent(provider_session_id)}`,
+      { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
+    );
     if (!chargeRes.ok) {
       return jsonResponse({ error: "Failed to load charge status", details: await chargeRes.text() }, 500);
     }
@@ -284,65 +328,88 @@ export async function onRequestPost({ request, env }) {
     coinbaseCharge = rows[0]?.raw || null;
   }
 
-  if (!buyerEmail) {
-    return jsonResponse({ error: "Buyer email missing" }, 400);
+  if (!buyerEmail) return jsonResponse({ error: "Buyer email missing" }, 400);
+
+  // ✅ FIX: handle minimal cart + enrich duration_days from product_variants
+  const { items: cartItems } = extractCartItems(order, order_input);
+
+  const variantIds = [...new Set(cartItems.map((it) => it.variant_id).filter(Boolean))];
+  const variantDuration = new Map();
+
+  if (variantIds.length) {
+    const quoted = variantIds.map((id) => `"${id.replaceAll('"', '\\"')}"`).join(",");
+    const vRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/product_variants?select=id,duration_days&` + `id=in.(${quoted})`,
+      { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
+    );
+    if (!vRes.ok) {
+      return jsonResponse({ error: "Failed to load variants", details: await vRes.text() }, 500);
+    }
+    const rows = await vRes.json();
+    for (const v of rows) {
+      variantDuration.set(String(v.id), Number(v.duration_days || 0));
+    }
   }
 
-  const cart = order?.cart || order_input || {};
-  const items = Array.isArray(cart.items) ? cart.items : [];
-  const timeItems = items.filter(item => Number(item?.duration_days || 0) > 0);
+  const enriched = cartItems.map((it) => {
+    const d =
+      it.duration_days != null
+        ? Number(it.duration_days)
+        : it.variant_id
+          ? Number(variantDuration.get(it.variant_id) || 0)
+          : 0;
+    return { ...it, duration_days: Number.isFinite(d) ? d : 0 };
+  });
+
+  const timeItems = enriched.filter((it) => Number(it.duration_days || 0) > 0);
 
   if (!timeItems.length) {
     await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
       method: "PATCH",
-      headers: {
-        apikey: SRV,
-        Authorization: `Bearer ${SRV}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal"
-      },
+      headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify({
         buyer_email: buyerEmail,
         status: "fulfilled",
         fulfilled_at: new Date().toISOString(),
         keys_count: 0,
         stripe_session: stripeSession || order?.stripe_session || null,
-        coinbase_charge: coinbaseCharge || order?.coinbase_charge || null
-      })
+        coinbase_charge: coinbaseCharge || order?.coinbase_charge || null,
+      }),
     });
 
     return jsonResponse({
       ok: true,
       keys: [],
+      buyer_email: buyerEmail,
       email_sent: false,
-      buyer_email: buyerEmail
+      email_error: "No time-based items detected (duration_days missing or 0)",
     });
   }
 
-  const productIds = [...new Set(timeItems.map(it => it?.id).filter(Boolean).map(String))];
+  // prefixes
+  const productIds = [...new Set(timeItems.map((it) => it.id))];
   const prefixMap = new Map();
 
   if (productIds.length) {
-    const idsParam = productIds.map(encodeURIComponent).join(",");
-    const res = await fetch(
+    const idsParam = productIds.map((x) => `"${x.replaceAll('"', '\\"')}"`).join(",");
+    const pRes = await fetch(
       `${SUPABASE_URL}/rest/v1/products?select=id,key_prefix&id=in.(${idsParam})`,
-      { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } }
+      { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
     );
-    if (!res.ok) {
-      return jsonResponse({ error: "Failed to load product prefixes", details: await res.text() }, 500);
-    }
-    const rows = await res.json();
+    if (!pRes.ok) return jsonResponse({ error: "Failed to load product prefixes", details: await pRes.text() }, 500);
+    const rows = await pRes.json();
     for (const row of rows) prefixMap.set(String(row.id), normalizePrefix(row.key_prefix));
   }
 
+  // issue keys
   const issued = [];
   const inserts = [];
 
   for (const it of timeItems) {
-    const qty = Math.max(1, Number(it?.qty || 1));
-    const product_id = it?.id ? String(it.id) : null;
-    const product_variant_id = it?.variant_id ? String(it.variant_id) : null;
-    const prefix = product_id ? (prefixMap.get(product_id) || "") : "";
+    const qty = Math.max(1, Number(it.qty || 1));
+    const product_id = it.id;
+    const product_variant_id = it.variant_id || null;
+    const prefix = prefixMap.get(product_id) || "";
 
     for (let i = 0; i < qty; i++) {
       const key = makeKey(prefix);
@@ -352,7 +419,7 @@ export async function onRequestPost({ request, env }) {
         status: "issued",
         issued_for_session: provider_session_id,
         product_id,
-        product_variant_id
+        product_variant_id,
       });
       issued.push({ key, product_id, product_variant_id });
     }
@@ -364,9 +431,9 @@ export async function onRequestPost({ request, env }) {
       apikey: SRV,
       Authorization: `Bearer ${SRV}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal"
+      Prefer: "return=minimal",
     },
-    body: JSON.stringify(inserts)
+    body: JSON.stringify(inserts),
   });
 
   if (!insertRes.ok) {
@@ -381,7 +448,7 @@ export async function onRequestPost({ request, env }) {
       apikey: SRV,
       Authorization: `Bearer ${SRV}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal"
+      Prefer: "return=minimal",
     },
     body: JSON.stringify({
       buyer_email: buyerEmail,
@@ -390,16 +457,16 @@ export async function onRequestPost({ request, env }) {
       keys_count: issued.length,
       fulfilled_at: new Date().toISOString(),
       stripe_session: stripeSession || order?.stripe_session || null,
-      coinbase_charge: coinbaseCharge || order?.coinbase_charge || null
-    })
+      coinbase_charge: coinbaseCharge || order?.coinbase_charge || null,
+    }),
   });
 
-  // Try emailing now; report status accurately
+  // email (report accurately)
   let emailSent = false;
   let emailError = "";
 
   if (issued.length) {
-    const emailRes = await resendEmail(env, buyerEmail, issued.map(k => k.key || k));
+    const emailRes = await resendEmail(env, buyerEmail, issued.map((k) => k.key || k));
     emailSent = emailRes.ok;
     emailError = emailRes.ok ? "" : (emailRes.error || "Unknown resend error");
 
@@ -410,12 +477,12 @@ export async function onRequestPost({ request, env }) {
           apikey: SRV,
           Authorization: `Bearer ${SRV}`,
           "Content-Type": "application/json",
-          Prefer: "return=minimal"
+          Prefer: "return=minimal",
         },
         body: JSON.stringify({
           emailed_at: new Date().toISOString(),
-          status: "emailed"
-        })
+          status: "emailed",
+        }),
       });
     }
   }
@@ -423,8 +490,8 @@ export async function onRequestPost({ request, env }) {
   return jsonResponse({
     ok: true,
     keys: issued,
+    buyer_email: buyerEmail,
     email_sent: emailSent,
     email_error: emailError || undefined,
-    buyer_email: buyerEmail
   });
 }
