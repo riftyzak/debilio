@@ -248,6 +248,7 @@
       position: relative;
       display: flex;
       justify-content: center;
+      width: 100%;
     }
     .auth-overlay {
       position: absolute;
@@ -302,8 +303,17 @@
       .grid-2 { grid-template-columns: 1fr 1fr; }
     }
 
+    .auth-center {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
     @media (min-width: 900px) {
-      .auth-center { min-height: 50vh; display: flex; align-items: center; }
+      .auth-center {
+        min-height: 60vh;
+        align-items: center;
+      }
     }
 
     @media (max-width: 600px) {
