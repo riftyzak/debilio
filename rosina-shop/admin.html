@@ -1245,7 +1245,8 @@
       $("image_file").value = "";
       const fn = $("imageFileName"); if (fn) fn.textContent = "No file selected";
 
-      $("dashboard_icon_url").value = data.dashboard_icon_url || "";
+      // Back-compat: if older schema used a different column name, still populate the field.
+      $("dashboard_icon_url").value = data.dashboard_icon_url || data.icon_url || data.icon || "";
       $("dashboard_icon_file").value = "";
       const ifn = $("dashboardIconFileName"); if (ifn) ifn.textContent = "No file selected";
 
@@ -1269,7 +1270,7 @@
       slugManuallyEdited = !!existing && existing !== auto;
 
       renderPreview(data.image_url || "");
-      renderDashboardIconPreview(data.dashboard_icon_url || "");
+      renderDashboardIconPreview(data.dashboard_icon_url || data.icon_url || data.icon || "");
       setStatus("Editing: " + (data.title || data.id), "ok");
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
