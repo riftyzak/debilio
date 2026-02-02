@@ -1,4 +1,4 @@
-import { clearSessionCookie } from "./_session";
+import { clearSessionCookie } from "./_session.js";
 
 export async function onRequestPost() {
   return new Response(JSON.stringify({ ok: true }), {

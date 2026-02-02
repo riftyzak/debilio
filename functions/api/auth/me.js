@@ -1,4 +1,4 @@
-import { getCookie, verifySession } from "./_session";
+import { getCookie, verifySession } from "./_session.js";
 
 export async function onRequestGet({ request, env }) {
   const token = getCookie(request, "session");
