@@ -94,6 +94,8 @@ export async function onRequestGet({ request, env }) {
       product_variant_id: row.product_variant_id,
       title: product.title || "Product",
       image_url: product.image_url || "",
+      // Prefer a dedicated dashboard icon if available; fall back gracefully.
+      icon_url: product.dashboard_icon_url || product.icon_url || product.image_url || "",
       duration_days: duration,
       price_eur: priceEur
     });
