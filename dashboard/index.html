@@ -201,7 +201,14 @@
       justify-content: center;
       flex-shrink: 0;
     }
-    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      -webkit-user-drag: none;
+      user-drag: none;
+      user-select: none;
+    }
 
     .badge {
       font-size: 12px;
@@ -325,6 +332,18 @@
       return { ok: res.ok, json, text };
     }
 
+    function moneyEUR(v) {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "";
+      return `€${n.toFixed(2)}`;
+    }
+
+    function moneyEUR(v) {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "";
+      return `€${n.toFixed(2)}`;
+    }
+
     async function loadDashboard() {
       const subsRes = await api("/api/dashboard/subscriptions");
       if (!subsRes.ok) {
@@ -340,7 +359,7 @@
           return `
             <div class="item">
               <div class="thumb">
-                ${thumbUrl ? `<img src="${thumbUrl}" alt="">` : `<div class="muted" style="font-size:12px;">IMG</div>`}
+                ${thumbUrl ? `<img src="${thumbUrl}" alt="" draggable="false">` : `<div class="muted" style="font-size:12px;">IMG</div>`}
               </div>
               <div style="flex: 1; min-width: 0;">
                 <div class="strong" style="font-size: 15px;">${item.title}</div>
@@ -363,6 +382,13 @@
           const title = titles.length
             ? (titles.length === 1 ? titles[0] : `${titles[0]} +${titles.length - 1}`)
             : "Order";
+          const items = (group.items || []);
+          const hasPrice = items.some(it => {
+            const n = Number(it?.price_eur);
+            return Number.isFinite(n);
+          });
+          const total = items.reduce((sum, it) => sum + (Number(it.price_eur) || 0), 0);
+          const priceLine = hasPrice ? moneyEUR(total) : "";
           const date = group.redeemed_at ? new Date(group.redeemed_at).toLocaleString() : "";
           return `
             <div class="item" style="align-items: flex-start;">
@@ -371,7 +397,7 @@
                   <div class="strong">${title}</div>
                   <div class="muted" style="font-size: 12px;">${date}</div>
                 </div>
-                <div class="muted" style="margin-top: 6px;">${titles.join(", ") || "(no items)"}</div>
+                <div class="muted" style="margin-top: 6px;">${priceLine || ""}</div>
               </div>
             </div>
           `;
