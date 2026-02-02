@@ -82,7 +82,7 @@
       const username = document.getElementById("username").value.trim().toLowerCase();
       const password = document.getElementById("pass").value;
       const { ok, json, text } = await api("/api/auth/register", { username, password });
-      setAuthMsg(ok ? "Registered. You can log in now." : (json?.error || text));
+      setAuthMsg(ok ? "Registered. You can log in now." : (json?.details || json?.error || text));
     };
 
     document.getElementById("logout").onclick = async () => {
