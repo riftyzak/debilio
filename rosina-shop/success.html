@@ -189,14 +189,11 @@
 
       let issuedKeys = [];
       let issueError = "";
-      let infoLine = "";
-      let emailLine = "";
 
       const buyerEmail = (localStorage.getItem("rosina_buyer_email_v1") || "").trim();
       const chargeId = sp.get("charge_id") || sp.get("id") || "";
 
       if (hasTimeBased) {
-        infoLine = "Issuing keys and sending email...";
         try {
           const payload = {
             provider,
@@ -212,14 +209,8 @@
             issuedKeys = Array.isArray(res.json?.keys) ? res.json.keys : [];
             if (issuedKeys.length) storeKeys(issuedKeys);
 
-            if (res.json?.email_sent === true && res.json?.buyer_email) {
-              emailLine = `We emailed your keys to ${escapeHtml(res.json.buyer_email)}.`;
-            } else if (res.json?.email_sent === false) {
-              const reason = res.json?.email_error ? ` (${escapeHtml(res.json.email_error)})` : "";
-              emailLine = `Email was not sent${reason}`;
-            }
           } else if (res.status === 409) {
-            infoLine = "Waiting for crypto confirmation. Refresh in a moment.";
+            issueError = "Waiting for crypto confirmation. Refresh in a moment.";
           } else {
             issueError = "Couldn't issue keys. Please check your email.";
           }
@@ -286,9 +277,7 @@
         : "";
 
       target.innerHTML = `
-        ${infoLine ? `<div class="muted">${infoLine}</div>` : ""}
         ${issueError ? `<div class="muted">${issueError}</div>` : ""}
-        ${emailLine ? `<div class="muted">${emailLine}</div>` : ""}
         ${itemsHtml}
         ${warningLine}
       `;
