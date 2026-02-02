@@ -283,6 +283,17 @@
       margin-bottom: 6px;
     }
 
+    .auth-alert {
+      display: none;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,71,87,0.5);
+      background: rgba(255,71,87,0.08);
+      color: #ffd2d6;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
     .delivery-row {
       margin-top: 8px;
       display: flex;
@@ -369,6 +380,8 @@
               <button id="tabRegister" type="button" class="tab-btn" role="tab" aria-selected="false">Create account</button>
             </div>
 
+            <div id="authAlert" class="auth-alert" role="alert" aria-live="polite"></div>
+
             <form id="authForm" class="grid" style="gap: 12px; margin-top: 16px;">
               <div>
                 <div class="label">Username</div>
@@ -436,6 +449,7 @@
     const tabLogin = document.getElementById("tabLogin");
     const tabRegister = document.getElementById("tabRegister");
     const confirmWrap = document.getElementById("confirmWrap");
+    const authAlert = document.getElementById("authAlert");
     const passInput = document.getElementById("pass");
     const confirmInput = document.getElementById("confirm");
     const authWrap = document.querySelector(".auth-center") || authBox;
@@ -474,6 +488,18 @@
       passInput.setAttribute("autocomplete", authMode === "login" ? "current-password" : "new-password");
       authSubmit.textContent = authMode === "login" ? "Sign in" : "Create account";
       if (authMode === "login") confirmInput.value = "";
+      clearAuthError();
+    }
+
+    function setAuthError(message, focusAlert = false) {
+      authAlert.textContent = message;
+      authAlert.style.display = "block";
+      if (focusAlert) authAlert.focus();
+    }
+
+    function clearAuthError() {
+      authAlert.textContent = "";
+      authAlert.style.display = "none";
     }
 
     async function api(path, body) {
@@ -600,28 +626,29 @@
 
     async function handleAuthSubmit() {
       if (authBusy) return;
+      clearAuthError();
       const username = document.getElementById("username").value.trim().toLowerCase();
       const password = passInput.value;
 
       if (authMode === "register") {
         const confirm = confirmInput.value;
         if (password !== confirm) {
-          showToast("Passwords do not match", { type: "error" });
+          setAuthError("Passwords do not match.", true);
           return;
         }
       }
 
       setAuthBusy(true);
-      showToast(authMode === "login" ? "Signing in" : "Creating account", { type: "info", duration: 1600 });
 
       if (authMode === "login") {
         const { ok, json, text } = await api("/api/auth/login", { username, password });
         setAuthBusy(false);
         if (ok) {
           showToast("Signed in", { type: "success" });
+          clearAuthError();
           await refresh();
         } else {
-          showToast(json?.error || text || "Sign in failed", { type: "error" });
+          setAuthError(json?.error || text || "Sign in failed.", true);
         }
         return;
       }
@@ -630,19 +657,22 @@
       setAuthBusy(false);
       if (ok) {
         showToast("Account created. Please sign in.", { type: "success" });
+        clearAuthError();
         authMode = "login";
         renderAuth();
       } else {
-        showToast(json?.error || text || "Create account failed", { type: "error" });
+        setAuthError(json?.error || text || "Create account failed.", true);
       }
     }
 
     tabLogin.addEventListener("click", () => {
       authMode = "login";
+      clearAuthError();
       renderAuth();
     });
     tabRegister.addEventListener("click", () => {
       authMode = "register";
+      clearAuthError();
       renderAuth();
     });
 
