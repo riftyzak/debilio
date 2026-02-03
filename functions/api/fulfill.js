@@ -92,7 +92,7 @@ async function resendEmail(env, toEmail, keys) {
     <div style="font-family:Arial,sans-serif;font-size:14px;color:#111;">
       <p>Your license keys:</p>
       <pre style="background:#f6f6f6;border:1px solid #ddd;padding:12px;border-radius:6px;">${keys.join("\n")}</pre>
-      <p>If you need help, reply to this email.</p>
+      <p>If you need help, contact +420 775 257 643</p>
     </div>
   `;
 
@@ -110,7 +110,7 @@ async function resendEmail(env, toEmail, keys) {
         to: toEmail,
         subject: "Your license keys",
         html,
-        reply_to: env.REPLY_TO || undefined,
+        // reply_to: env.REPLY_TO || undefined,
       }),
     });
     text = await res.text();
@@ -125,7 +125,6 @@ async function resendEmail(env, toEmail, keys) {
   return { ok: true };
 }
 
-// ✅ FIX: cart can be either {items:[...]} OR an array ([{id,qty,variant_id}])
 function extractCartItems(orderRow, orderInput) {
   const raw = orderRow?.cart ?? orderInput ?? null;
 
