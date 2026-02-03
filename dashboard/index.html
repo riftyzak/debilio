@@ -229,8 +229,9 @@
 
     .redeem-btn {
       position: relative;
-      display: inline-grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       min-height: 44px;
       transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
       overflow: hidden;
@@ -241,8 +242,13 @@
     }
 
     .redeem-btn > span {
-      grid-area: 1 / 1;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: opacity 0.15s ease, transform 0.15s ease;
+      pointer-events: none;
     }
 
     .redeem-btn .btn__label {
