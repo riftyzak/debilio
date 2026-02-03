@@ -84,6 +84,16 @@
       margin: 0 auto;
     }
 
+
+    #key.field {
+      width: 640px;
+      /* pick your desired locked width */
+      max-width: 100%;
+      /* still fits on smaller screens */
+      box-sizing: border-box;
+      display: block;
+    }
+
     .back-button {
       position: fixed;
       top: 20px;
@@ -496,8 +506,10 @@
       /* or: break-all; if you want aggressive breaking */
     }
 
-    .item { min-width: 0; }
-    
+    .item {
+      min-width: 0;
+    }
+
     .recent-card {
       display: flex;
       align-items: center;
@@ -555,7 +567,8 @@
       .grid-2 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-      .grid-2 > * {
+
+      .grid-2>* {
         min-width: 0;
       }
     }
