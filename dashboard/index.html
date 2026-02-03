@@ -349,6 +349,33 @@
       gap: 18px;
     }
 
+    .redeem-card {
+      padding: 18px;
+    }
+
+    .redeem-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .redeem-row .field {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .redeem-row .redeem-btn {
+      flex: 0 0 200px;
+      width: 200px;
+      height: 56px;
+    }
+
+    #key {
+      height: 56px;
+    }
+
     .list {
       margin-top: 12px;
       display: grid;
@@ -363,6 +390,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      min-width: 0;
     }
 
     .thumb {
@@ -503,8 +531,6 @@
       word-break: break-word;
       /* or: break-all; if you want aggressive breaking */
     }
-
-    .item { min-width: 0; }
     
     .recent-card {
       display: flex;
@@ -562,10 +588,9 @@
     @media (min-width: 980px) {
       .grid-2 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
       }
-      .grid-2 > * {
-        min-width: 0;
-      }
+      .grid-2 > * { min-width: 0; }
     }
 
     @media (min-width: 900px) {
@@ -598,6 +623,20 @@
 
       .auth-card {
         padding: 20px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .redeem-row {
+        flex-wrap: wrap;
+      }
+      .redeem-row .field,
+      .redeem-row .redeem-btn {
+        width: 100%;
+        flex: 1 1 100%;
       }
     }
   </style>
@@ -656,38 +695,38 @@
           <button id="logout" type="button" class="btn">Logout</button>
         </div>
 
-        <div class="grid-2">
-          <div class="card fade-up" style="display:flex; flex-direction:column;">
-            <div class="row" style="align-items: flex-start;">
-              <div>
-                <div class="strong" style="font-size: 20px;">Redeem a key</div>
-              </div>
-            </div>
-            <div style="margin-top: 12px; flex: 1;" class="grid">
-              <input id="key" placeholder="paste your key here" class="field" />
-              <button id="redeem" type="button" class="btn btn-primary redeem-btn"
-                style="width: 100%; padding: 12px 14px; margin-top: auto;" aria-busy="false">
-                <span class="redeem-label">Redeem</span>
-                <span class="redeem-icon" aria-hidden="true">
-                  <span class="redeem-spinner"></span>
-                  <svg class="redeem-check" viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M3.5 8.5l3 3 6-6"></path>
-                  </svg>
-                </span>
-                <span class="sr-only redeem-live" aria-live="polite">Redeem</span>
-              </button>
+        <div class="card fade-up redeem-card">
+          <div class="row" style="align-items: flex-start;">
+            <div>
+              <div class="strong" style="font-size: 20px;">Redeem a key</div>
             </div>
           </div>
+          <div class="redeem-row" style="margin-top: 12px;">
+            <input id="key" placeholder="paste your key here" class="field" />
+            <button id="redeem" type="button" class="btn btn-primary redeem-btn"
+              style="padding: 12px 14px;" aria-busy="false">
+              <span class="redeem-label">Redeem</span>
+              <span class="redeem-icon" aria-hidden="true">
+                <span class="redeem-spinner"></span>
+                <svg class="redeem-check" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M3.5 8.5l3 3 6-6"></path>
+                </svg>
+              </span>
+              <span class="sr-only redeem-live" aria-live="polite">Redeem</span>
+            </button>
+          </div>
+        </div>
 
+        <div class="grid-2">
           <div class="card fade-up">
             <div class="strong" style="font-size: 20px;">Active subscriptions</div>
             <div id="subsList" class="list muted"></div>
           </div>
-        </div>
 
-        <div class="card fade-up">
-          <div class="strong" style="font-size: 20px;">Order history</div>
-          <div id="historyList" class="list muted"></div>
+          <div class="card fade-up">
+            <div class="strong" style="font-size: 20px;">Order history</div>
+            <div id="historyList" class="list muted"></div>
+          </div>
         </div>
       </div>
     </div>
