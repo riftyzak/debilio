@@ -92,7 +92,7 @@ async function resendEmail(env, toEmail, keys) {
     <div style="font-family:Arial,sans-serif;font-size:14px;color:#111;">
       <p>Your license keys:</p>
       <pre style="background:#f6f6f6;border:1px solid #ddd;padding:12px;border-radius:6px;">${keys.join("\n")}</pre>
-      <p>If you need help, contact +420 775 257 643</p>
+      <p>If you need help, contact +420 605 502 234</p>
     </div>
   `;
 
