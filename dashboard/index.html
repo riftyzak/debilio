@@ -228,113 +228,95 @@
     }
 
     .redeem-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      position: relative;
+      display: inline-grid;
+      place-items: center;
       min-height: 44px;
       transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      overflow: hidden;
     }
 
     .redeem-btn:disabled {
       opacity: 0.7;
     }
 
-    .redeem-label {
-      display: inline-block;
-      min-width: 9ch;
-      text-align: center;
+    .redeem-btn > span {
+      grid-area: 1 / 1;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .redeem-btn .btn__label {
       white-space: nowrap;
     }
 
-    .redeem-icon {
-      position: relative;
-      width: 16px;
-      height: 16px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .redeem-spinner,
-    .redeem-check {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.15s ease;
-    }
-
-    .redeem-spinner {
+    .redeem-btn .btn__spinner {
+      width: 18px;
+      height: 18px;
       border: 2px solid rgba(0, 0, 0, 0.25);
       border-top-color: rgba(0, 0, 0, 0.85);
       border-radius: 999px;
       animation: redeemSpin 0.75s linear infinite;
+      opacity: 0;
+      transform: scale(0.9);
     }
 
-    .redeem-check {
-      stroke: #0b3a1f;
-      stroke-width: 2.4;
-      fill: none;
-      stroke-linecap: round;
-      stroke-linejoin: round;
+    .redeem-btn .btn__check {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      position: relative;
+      opacity: 0;
       transform: scale(0.85);
-      transform-origin: center;
     }
 
-    .redeem--loading .redeem-spinner {
+    .redeem-btn .btn__check::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 12px;
+      height: 6px;
+      border-left: 2.4px solid #0b3a1f;
+      border-bottom: 2.4px solid #0b3a1f;
+      transform: rotate(-45deg);
+    }
+
+    .redeem-btn[data-state="idle"] .btn__label {
       opacity: 1;
+      transform: scale(1);
     }
 
-    .redeem--success {
-      background: #2fbf71;
-      border-color: #2fbf71;
-      color: #031c10;
+    .redeem-btn[data-state="idle"] .btn__spinner,
+    .redeem-btn[data-state="idle"] .btn__check {
+      opacity: 0;
+      transform: scale(0.9);
     }
 
-    .redeem--success .redeem-check {
+    .redeem-btn[data-state="loading"] .btn__label,
+    .redeem-btn[data-state="success"] .btn__label {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+
+    .redeem-btn[data-state="loading"] .btn__spinner {
       opacity: 1;
+      transform: scale(1);
+    }
+
+    .redeem-btn[data-state="success"] .btn__spinner {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+
+    .redeem-btn[data-state="success"] .btn__check {
+      opacity: 1;
+      transform: scale(1);
     }
 
     @keyframes redeemSpin {
       to {
         transform: rotate(360deg);
       }
-    }
-
-    @keyframes redeemPop {
-      0% {
-        transform: scale(0.7);
-        opacity: 0;
-      }
-
-      70% {
-        transform: scale(1.05);
-        opacity: 1;
-      }
-
-      100% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    @media (prefers-reduced-motion: no-preference) {
-      .redeem--success .redeem-check {
-        animation: redeemPop 0.25s ease both;
-      }
-    }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
     }
 
     .grid {
@@ -710,16 +692,11 @@
           </div>
           <div class="redeem-row" style="margin-top: 12px;">
             <input id="key" placeholder="paste your key here" class="field" />
-            <button id="redeem" type="button" class="btn btn-primary redeem-btn"
-              style="padding: 12px 14px;" aria-busy="false">
-              <span class="redeem-label">Redeem</span>
-              <span class="redeem-icon" aria-hidden="true">
-                <span class="redeem-spinner"></span>
-                <svg class="redeem-check" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M3.5 8.5l3 3 6-6"></path>
-                </svg>
-              </span>
-              <span class="sr-only redeem-live" aria-live="polite">Redeem</span>
+            <button id="redeem" type="button" class="btn btn-primary redeem-btn" data-state="idle"
+              style="padding: 12px 14px;">
+              <span class="btn__label">Redeem</span>
+              <span class="btn__spinner" aria-hidden="true"></span>
+              <span class="btn__check" aria-hidden="true"></span>
             </button>
           </div>
         </div>
@@ -758,9 +735,6 @@
     const toasts = document.getElementById("toasts");
     const redeemInput = document.getElementById("key");
     const redeemBtn = document.getElementById("redeem");
-    const redeemLabel = redeemBtn.querySelector(".redeem-label");
-    const redeemLive = redeemBtn.querySelector(".redeem-live");
-
     let authMode = "login";
     let authBusy = false;
     let redeemState = "idle";
@@ -810,16 +784,10 @@
       authAlert.style.display = "none";
     }
 
-    function updateRedeemLabel(text) {
-      redeemLabel.textContent = text;
-      redeemLive.textContent = text;
-    }
-
     function setRedeemState(next) {
       if (redeemState === next) return;
       redeemState = next;
-      redeemBtn.classList.toggle("redeem--loading", next === "loading");
-      redeemBtn.classList.toggle("redeem--success", next === "success");
+      redeemBtn.dataset.state = next;
       if (redeemSuccessTimeout) {
         clearTimeout(redeemSuccessTimeout);
         redeemSuccessTimeout = null;
@@ -827,24 +795,18 @@
 
       if (next === "idle") {
         redeemBtn.disabled = false;
-        redeemBtn.setAttribute("aria-busy", "false");
-        updateRedeemLabel("Redeem");
         return;
       }
 
       if (next === "loading") {
         redeemBtn.disabled = true;
-        redeemBtn.setAttribute("aria-busy", "true");
-        updateRedeemLabel("Redeeming");
         return;
       }
 
       redeemBtn.disabled = true;
-      redeemBtn.setAttribute("aria-busy", "false");
-      updateRedeemLabel("Redeemed");
       redeemSuccessTimeout = setTimeout(() => {
         setRedeemState("idle");
-      }, 1820);
+      }, 900);
     }
 
     async function api(path, body) {
