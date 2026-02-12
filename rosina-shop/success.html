@@ -3,16 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Success • Rosina Shop</title>
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+  />
+  <title>Success - Rosina Shop</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/styles/tailwind.css">
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Georama', sans-serif;
+      font-family: "Georama", sans-serif;
       background: #000;
       color: #fff;
       min-height: 100vh;
@@ -24,47 +30,50 @@
     html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; }
 
     .background-text {
-      position: fixed; top: 0; left: 0;
-      width: 320%; height: 320%;
-      font-size: 120px; font-weight: bold;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 320%;
+      height: 320%;
+      font-size: 120px;
+      font-weight: bold;
       color: rgba(255, 255, 255, 0.08);
-      line-height: 1.1; letter-spacing: 8px;
-      overflow: hidden; z-index: 0; pointer-events: none;
+      line-height: 1.1;
+      letter-spacing: 8px;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
       animation: scroll-diagonal 50s linear infinite;
-      font-family: 'Courier New', monospace;
+      font-family: "Courier New", monospace;
     }
     .background-text div { white-space: nowrap; }
     .background-text div:nth-child(even) { padding-left: 150px; }
     @keyframes scroll-diagonal { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-33.333%, -33.333%, 0); } }
     @keyframes gradient-shift { 0%,100% { background-position: 0% center; } 50% { background-position: 100% center; } }
 
-    /* ✅ typo fixed here */
     .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; text-align: center; }
-
     .title {
-      font-size: 48px; font-weight: 700; margin-bottom: 10px;
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 10px;
       background: linear-gradient(90deg, #fff, #4a90e2, #357abd, #fff);
       background-size: 200% auto;
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; animation: gradient-shift 3s ease infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradient-shift 3s ease infinite;
     }
     .sub { color: #888; margin-bottom: 26px; }
     .card { background: rgba(20, 20, 20, 0.95); border: 2px solid #333; border-radius: 14px; padding: 22px; text-align: left; }
     .section-title { margin-top: 18px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
     .order-items { margin-top: 10px; display: grid; gap: 12px; }
-    .order-item { border: 1px solid #222; border-radius: 10px; padding: 12px; background: rgba(0,0,0,0.35); }
-    .order-item-title { font-weight: 700; margin-bottom: 6px; }
-    .order-item-meta { color: #888; font-size: 12px; margin-bottom: 8px; }
     .delivery-box { border: 1px dashed #333; border-radius: 10px; padding: 10px; color: #cfe1ff; background: rgba(74,144,226,0.12); font-size: 13px; }
     .delivery-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
-    .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .copy-btn { border: 1px solid #333; background: rgba(0,0,0,0.4); color: #fff; border-radius: 8px; padding: 4px 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: border-color .2s ease; }
+    .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "Courier New", monospace; }
+    .copy-btn { border: 1px solid #333; background: rgba(0,0,0,0.4); color: #fff; border-radius: 8px; padding: 4px 8px; cursor: pointer; transition: border-color .2s ease; }
     .copy-btn:hover { border-color: #4a90e2; }
-    .copy-icon { width: 14px; height: 14px; }
     .copy-btn.is-copied { border-color: rgba(70,200,140,0.6); color: #7fe3b3; }
-    .copy-check { width: 14px; height: 14px; display: none; }
-    .copy-btn.is-copied .copy-icon { display: none; }
-    .copy-btn.is-copied .copy-check { display: block; }
+    .muted { color: #888; font-size: 12px; }
 
     .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222; flex-wrap: wrap; }
     .row:last-child { border-bottom: none; }
@@ -72,15 +81,24 @@
     .v { font-weight: 700; word-break: break-all; }
 
     .btn {
-      margin-top: 18px; width: 100%;
+      margin-top: 18px;
+      width: 100%;
       background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-      border: none; color: #fff; padding: 14px; border-radius: 10px;
-      font-size: 15px; font-weight: 700; cursor: pointer;
-      transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center;
-      gap: 10px; text-decoration: none;
+      border: none;
+      color: #fff;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
     }
     .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74,144,226,0.4); }
-    .muted { color: #888; font-size: 12px;}
 
     @media (max-width: 480px) {
       body { padding: 80px 14px 20px; }
@@ -95,209 +113,24 @@
 
   <div class="container">
     <div class="title">Order successful</div>
-    <div class="sub">Sebastian Rosina personally thanks you for your order.</div>
+    <div class="sub">Use the secure claim token from your email to view keys.</div>
 
     <div class="card">
-      <div class="row"><div class="k">Provider</div><div class="v" id="provider">—</div></div>
-      <div class="row"><div class="k">Time</div><div class="v" id="time">—</div></div>
+      <div class="row"><div class="k">Access</div><div class="v" id="provider">Claim Token</div></div>
+      <div class="row"><div class="k">Time</div><div class="v" id="time">-</div></div>
 
-      <div class="section-title">Purchased items</div>
+      <div class="section-title">License keys</div>
       <div id="orderItems" class="order-items"></div>
 
-      <a class="btn" id="dashboardCta" href="/dashboard/"><i class="fas fa-key"></i> Go to dashboard to redeem</a>
-      <a class="btn" href="/rosina-shop/"><i class="fas fa-arrow-left"></i> Back to shop</a>
+      <a class="btn" id="dashboardCta" href="/dashboard/">Go to dashboard to redeem</a>
+      <a class="btn" href="/rosina-shop/">Back to shop</a>
 
       <div class="muted">
-        If you paid with crypto, confirmation can take a moment depending on the network. If anything looks wrong,
-        contact support.
+        Claim tokens are single-use and expire quickly. If the token expires, use the latest email link.
       </div>
     </div>
   </div>
 
-  <script>
-    const bgText = document.getElementById('bgText');
-    const text = 'I LOVE RADEK NEVARIL ';
-    let html = '';
-    for (let i = 0; i < 80; i++) {
-      let lineText = '';
-      for (let j = 0; j < 8; j++) lineText += text;
-      html += `<div>${lineText}</div>`;
-    }
-    bgText.innerHTML = html;
-
-    const CART_KEY = "rosina_cart_v1";
-    const PROMO_KEY = "rosina_promo_v1";
-    const ORDER_KEY = "rosina_last_order_v1";
-    try { localStorage.removeItem(CART_KEY); } catch (_) {}
-    try { localStorage.removeItem(PROMO_KEY); } catch (_) {}
-
-    const sp = new URLSearchParams(location.search);
-    const sessionId = (sp.get("session_id") || "").split("?")[0];
-    const provider = sp.get("session_id") ? "stripe" : "coinbase";
-
-    document.getElementById("provider").textContent = provider === "stripe" ? "Stripe" : "Coinbase";
-    document.getElementById("time").textContent = new Date().toLocaleString();
-
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-    }
-
-    async function postJson(url, body) {
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const text = await res.text();
-      let json = null; try { json = JSON.parse(text); } catch (_) {}
-      return { ok: res.ok, status: res.status, json, text };
-    }
-
-    const KEY_STORE = "rosina_last_keys_v1";
-    const KEY_TTL = 7 * 24 * 60 * 60 * 1000;
-
-    function readStoredKeys() {
-      try {
-        const raw = localStorage.getItem(KEY_STORE);
-        if (!raw) return [];
-        const data = JSON.parse(raw);
-        if (!data?.ts || !Array.isArray(data?.keys)) return [];
-        if (Date.now() - data.ts > KEY_TTL) { localStorage.removeItem(KEY_STORE); return []; }
-        return data.keys;
-      } catch (_) { return []; }
-    }
-
-    function storeKeys(keys) {
-      try { localStorage.setItem(KEY_STORE, JSON.stringify({ ts: Date.now(), keys })); } catch (_) {}
-    }
-
-    async function renderOrderItems() {
-      const target = document.getElementById("orderItems");
-      if (!target) return;
-
-      let order = null;
-      try { order = JSON.parse(localStorage.getItem(ORDER_KEY) || "null"); } catch (_) {}
-
-      if (!order || !Array.isArray(order.items) || !order.items.length) {
-        target.innerHTML = `<div class="muted">We couldn't find your order items yet. Please check your email or contact support.</div>`;
-        return;
-      }
-
-      const timeBasedItems = order.items.filter(item => Number(item.duration_days || 0) > 0);
-      const hasTimeBased = timeBasedItems.length > 0;
-
-      const cta = document.getElementById("dashboardCta");
-      if (cta) cta.style.display = hasTimeBased ? "inline-flex" : "none";
-
-      let issuedKeys = [];
-      let issueError = "";
-
-      const buyerEmail = (localStorage.getItem("rosina_buyer_email_v1") || "").trim();
-      const chargeId = sp.get("charge_id") || sp.get("id") || "";
-
-      if (hasTimeBased) {
-        try {
-          const payload = {
-            provider,
-            session_id: provider === "stripe" ? sessionId : undefined,
-            charge_id: provider === "coinbase" ? chargeId : undefined,
-            buyer_email: buyerEmail || undefined,
-            order
-          };
-
-          const res = await postJson("/api/fulfill", payload);
-
-          if (res.ok) {
-            issuedKeys = Array.isArray(res.json?.keys) ? res.json.keys : [];
-            if (issuedKeys.length) storeKeys(issuedKeys);
-
-          } else if (res.status === 409) {
-            issueError = "Waiting for crypto confirmation. Refresh in a moment.";
-          } else {
-            issueError = "Couldn't issue keys. Please check your email.";
-          }
-        } catch (_) {
-          issueError = "Couldn't issue keys. Please check your email.";
-        }
-      }
-
-      if (!issuedKeys.length) {
-        const cached = readStoredKeys();
-        if (cached.length) issuedKeys = cached;
-      }
-
-      const now = new Date();
-      let keyIndex = 0;
-      const expectedTotal = timeBasedItems.reduce((sum, item) => sum + Number(item.qty || 1), 0);
-
-      const itemsHtml = order.items.map(item => {
-        const qty = Number(item.qty || 1);
-        const durationDays = Number(item.duration_days || 0);
-        const isTimeBased = Number.isFinite(durationDays) && durationDays > 0;
-        const expiresAt = isTimeBased ? new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000) : null;
-
-        const itemKeys = isTimeBased ? issuedKeys.slice(keyIndex, keyIndex + qty) : [];
-        if (isTimeBased) keyIndex += qty;
-
-        const deliveryBoxes = isTimeBased
-          ? itemKeys.map(k => {
-              const keyText = escapeHtml(k.key || k);
-              return `
-                <div class="delivery-box">
-                  <div class="delivery-row">
-                    <span class="delivery-key">Delivery: ${keyText}</span>
-                    <button class="copy-btn" data-copy="${keyText}" aria-label="Copy license">
-                      <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                        <rect x="3" y="3" width="13" height="13" rx="2"></rect>
-                      </svg>
-                      <svg class="copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 6L9 17l-5-5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join("")
-          : "";
-
-        const metaLine = isTimeBased
-          ? `<div class="order-item-meta">Duration: ${durationDays} day${durationDays === 1 ? "" : "s"}${expiresAt ? ` • Expires: ${expiresAt.toLocaleString()}` : ""}</div>`
-          : "";
-
-        return `
-          <div class="order-item">
-            <div class="order-item-title">${escapeHtml(item.title || "Product")} × ${qty}</div>
-            ${metaLine}
-            ${deliveryBoxes}
-          </div>
-        `;
-      }).join("");
-
-      const warningLine = expectedTotal && issuedKeys.length !== expectedTotal
-        ? `<div class="muted">Warning: expected ${expectedTotal} key${expectedTotal === 1 ? "" : "s"}, received ${issuedKeys.length}.</div>`
-        : "";
-
-      target.innerHTML = `
-        ${issueError ? `<div class="muted">${issueError}</div>` : ""}
-        ${itemsHtml}
-        ${warningLine}
-      `;
-    }
-
-    (async () => {
-      await renderOrderItems();
-      try { localStorage.removeItem(ORDER_KEY); } catch (_) {}
-    })();
-
-    document.addEventListener("click", async (e) => {
-      const btn = e.target.closest("[data-copy]");
-      if (!btn) return;
-      const value = btn.getAttribute("data-copy") || "";
-      try {
-        await navigator.clipboard.writeText(value);
-        btn.classList.add("is-copied");
-        setTimeout(() => btn.classList.remove("is-copied"), 1400);
-      } catch (_) {}
-    });
-  </script>
+  <script src="/assets/js/success.js" defer></script>
 </body>
 </html>

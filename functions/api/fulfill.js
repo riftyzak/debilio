@@ -1,20 +1,9 @@
-const encoder = new TextEncoder();
+import { getNoStoreHeaders, jsonNoStore } from "./_lib/security.js";
 
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}
+const encoder = new TextEncoder();
 
 function toHex(buffer) {
   return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function sha256Hex(input) {
-  const data = encoder.encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return toHex(hash);
 }
 
 function base64ToBytes(b64) {
@@ -28,6 +17,16 @@ function bytesToBase64(bytes) {
   let bin = "";
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
   return btoa(bin);
+}
+
+function bytesToBase64Url(bytes) {
+  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function sha256Hex(input) {
+  const data = encoder.encode(input);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return toHex(hash);
 }
 
 async function importAesKey(b64) {
@@ -80,18 +79,44 @@ function makeKey(prefix) {
   return prefix ? `${prefix}-${core}` : core;
 }
 
-async function resendEmail(env, toEmail, keys) {
+function makeClaimToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return `claim_${bytesToBase64Url(bytes)}`;
+}
+
+function supabaseHeaders(serviceRoleKey, extra = {}) {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    ...extra,
+  };
+}
+
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+async function resendEmail(env, toEmail, keyValues, claimUrl) {
   const apiKey = env.RESEND_API_KEY;
   const from = env.EMAIL_FROM;
-
   if (!apiKey || !from) {
-    return { ok: false, error: "Missing RESEND_API_KEY or EMAIL_FROM in Cloudflare env" };
+    return { ok: false, error: "Email config missing" };
   }
+
+  const safeClaimUrl = String(claimUrl || "").trim();
+  const claimLine = safeClaimUrl
+    ? `<p>View your keys online: <a href="${safeClaimUrl}">${safeClaimUrl}</a></p>`
+    : "";
 
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;color:#111;">
       <p>Your license keys:</p>
-      <pre style="background:#f6f6f6;border:1px solid #ddd;padding:12px;border-radius:6px;">${keys.join("\n")}</pre>
+      <pre style="background:#f6f6f6;border:1px solid #ddd;padding:12px;border-radius:6px;">${keyValues.join("\n")}</pre>
+      ${claimLine}
       <p>If you need help, contact +420 605 502 234</p>
     </div>
   `;
@@ -110,64 +135,186 @@ async function resendEmail(env, toEmail, keys) {
         to: toEmail,
         subject: "Your license keys",
         html,
-        // reply_to: env.REPLY_TO || undefined,
       }),
     });
     text = await res.text();
   } catch (e) {
-    console.log("RESEND fetch failed:", String(e?.message || e));
-    return { ok: false, error: `Resend fetch failed: ${String(e?.message || e)}` };
+    console.error("Resend fetch failed", String(e?.message || e));
+    return { ok: false, error: "Email provider request failed" };
   }
 
-  console.log("RESEND status:", res.status, "body:", text.slice(0, 600));
+  if (!res.ok) {
+    console.error("Resend error", { status: res.status, body: text });
+    return { ok: false, error: `Email provider error (${res.status})` };
+  }
 
-  if (!res.ok) return { ok: false, error: text || `Resend error (status ${res.status})` };
   return { ok: true };
 }
 
-function extractCartItems(orderRow, orderInput) {
-  const raw = orderRow?.cart ?? orderInput ?? null;
+function extractCartItems(orderRow) {
+  const raw = orderRow?.cart ?? null;
 
   let items = [];
-  let promo = null;
-
   if (Array.isArray(raw)) {
     items = raw;
   } else if (raw && Array.isArray(raw.items)) {
     items = raw.items;
-    promo = raw.promo_code ?? raw.promoCode ?? null;
-  } else if (orderInput && Array.isArray(orderInput.items)) {
-    items = orderInput.items;
-    promo = orderInput.promo_code ?? orderInput.promoCode ?? null;
   }
 
-  // normalize shape
-  items = items
+  return items
     .map((it) => ({
       id: it?.id ? String(it.id) : "",
       qty: Math.max(1, Number(it?.qty || 1)),
       variant_id: it?.variant_id ? String(it.variant_id) : null,
       duration_days: it?.duration_days != null ? Number(it.duration_days) : null,
-      title: it?.title ? String(it.title) : null,
     }))
     .filter((it) => it.id);
+}
 
-  return { items, promo_code: promo };
+function parseCartCandidate(raw) {
+  let decoded = raw;
+  if (typeof raw === "string") {
+    try {
+      decoded = JSON.parse(raw);
+    } catch (_) {
+      decoded = null;
+    }
+  }
+
+  if (Array.isArray(decoded)) return decoded;
+  if (decoded && Array.isArray(decoded.items)) return decoded.items;
+  return [];
+}
+
+function extractCartItemsFromStripeSession(session) {
+  const meta = session?.metadata || {};
+  const candidates = [
+    meta.cart,
+    meta.items,
+    meta.order,
+    meta.cart_json,
+    meta.items_json,
+    meta.order_json,
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = parseCartCandidate(candidate);
+    if (!parsed.length) continue;
+
+    const normalized = parsed
+      .map((it) => ({
+        id: it?.id ? String(it.id) : "",
+        qty: Math.max(1, Number(it?.qty || 1)),
+        variant_id: it?.variant_id ? String(it.variant_id) : null,
+        duration_days: it?.duration_days != null ? Number(it.duration_days) : null,
+      }))
+      .filter((it) => it.id);
+
+    if (normalized.length) return normalized;
+  }
+
+  return [];
+}
+
+async function patchOrderBySession(SUPABASE_URL, SRV, providerSessionId, patchBody) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(providerSessionId)}`,
+    {
+      method: "PATCH",
+      headers: supabaseHeaders(SRV, {
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      }),
+      body: JSON.stringify(patchBody),
+    },
+  );
+  if (!res.ok) {
+    console.error("Order patch failed", { status: res.status, body: await res.text() });
+  }
+}
+
+async function ensureClaimToken(SUPABASE_URL, SRV, provider, providerSessionId, orderId) {
+  const nowIso = new Date().toISOString();
+  const existingRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/claim_tokens?select=token&provider=eq.${encodeURIComponent(
+      provider,
+    )}&session_id=eq.${encodeURIComponent(providerSessionId)}&used_at=is.null&expires_at=gt.${encodeURIComponent(
+      nowIso,
+    )}&order=created_at.desc&limit=1`,
+    { headers: supabaseHeaders(SRV) },
+  );
+
+  if (existingRes.ok) {
+    const rows = await safeJson(existingRes);
+    if (Array.isArray(rows) && rows[0]?.token) {
+      return String(rows[0].token);
+    }
+  } else {
+    console.error("Claim token lookup failed", { status: existingRes.status, body: await existingRes.text() });
+  }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const token = makeClaimToken();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    const payload = [{
+      token,
+      provider,
+      session_id: providerSessionId,
+      order_id: orderId || null,
+      expires_at: expiresAt,
+    }];
+
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/claim_tokens`, {
+      method: "POST",
+      headers: supabaseHeaders(SRV, {
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify(payload),
+    });
+
+    if (insertRes.ok) {
+      const inserted = await safeJson(insertRes);
+      if (Array.isArray(inserted) && inserted[0]?.token) {
+        return String(inserted[0].token);
+      }
+    } else {
+      console.error("Claim token insert failed", { status: insertRes.status, body: await insertRes.text() });
+    }
+  }
+
+  throw new Error("Unable to create claim token");
+}
+
+function claimUrlFromRequest(request, claimToken) {
+  const origin = new URL(request.url).origin;
+  return `${origin}/rosina-shop/success.html?claim=${encodeURIComponent(claimToken)}`;
+}
+
+function unauthorizedResponse() {
+  return jsonNoStore({ error: "unauthorized" }, 401, getNoStoreHeaders());
 }
 
 export async function onRequestPost({ request, env }) {
+  const internalSecret = env.FULFILL_INTERNAL_SECRET;
+  const providedSecret = request.headers.get("X-Fulfill-Secret") || "";
+
+  if (!internalSecret) {
+    return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+  }
+
+  if (!providedSecret || providedSecret !== internalSecret) {
+    return unauthorizedResponse();
+  }
+
   const SUPABASE_URL = env.SUPABASE_URL;
   const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
   const KEY_SECRET = env.KEY_SECRET;
-  const STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
   const DELIVERY_ENC_KEY_B64 = env.DELIVERY_ENC_KEY_B64;
 
-  // Resend vars still required, but we’ll report accurate errors instead of pretending
-  const RESEND_API_KEY = env.RESEND_API_KEY;
-  const EMAIL_FROM = env.EMAIL_FROM;
-
-  if (!SUPABASE_URL || !SRV || !KEY_SECRET || !STRIPE_SECRET_KEY || !DELIVERY_ENC_KEY_B64) {
-    return jsonResponse({ error: "Missing server env vars" }, 500);
+  if (!SUPABASE_URL || !SRV || !KEY_SECRET || !DELIVERY_ENC_KEY_B64) {
+    return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
   }
 
   let body = null;
@@ -180,317 +327,312 @@ export async function onRequestPost({ request, env }) {
   const provider = String(body?.provider || "").trim().toLowerCase();
   const session_id = String(body?.session_id || "").trim();
   const charge_id = String(body?.charge_id || "").trim();
-  const provider_session_id = provider === "stripe" ? session_id : charge_id;
-  const buyer_email_input = String(body?.buyer_email || "").trim();
-  const order_input = body?.order || null;
+  const providerSessionId = provider === "stripe" ? session_id : charge_id;
 
-  if (!provider || !provider_session_id || (provider !== "stripe" && provider !== "coinbase")) {
-    return jsonResponse({ error: "Missing provider session id" }, 400);
+  if (!provider || !providerSessionId || (provider !== "stripe" && provider !== "coinbase")) {
+    return jsonNoStore({ error: "Missing provider session id" }, 400, getNoStoreHeaders());
   }
 
   const encKey = await importAesKey(DELIVERY_ENC_KEY_B64);
 
   const orderRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/checkout_orders?select=*&provider_session_id=eq.${encodeURIComponent(
-      provider_session_id,
-    )}&limit=1`,
-    { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
+    `${SUPABASE_URL}/rest/v1/checkout_orders?select=*&provider=eq.${encodeURIComponent(
+      provider,
+    )}&provider_session_id=eq.${encodeURIComponent(providerSessionId)}&limit=1`,
+    { headers: supabaseHeaders(SRV) },
   );
 
   if (!orderRes.ok) {
-    return jsonResponse({ error: "Failed to load order", details: await orderRes.text() }, 500);
+    console.error("Order lookup failed", { status: orderRes.status, body: await orderRes.text() });
+    return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
   }
 
-  const orderRows = await orderRes.json();
-  let order = orderRows[0] || null;
+  const orderRows = await safeJson(orderRes);
+  let order = Array.isArray(orderRows) ? orderRows[0] : null;
 
-  if (!order) {
-    // If we truly don't have an order row, create a minimal one for non-webhook usage
-    const itemsFallback = Array.isArray(order_input?.items) ? order_input.items : [];
-    if (!buyer_email_input || !itemsFallback.length) {
-      return jsonResponse({ error: "Order data missing" }, 400);
-    }
+  let buyerEmail = String(order?.buyer_email || "").trim();
+  let stripeSessionRaw = null;
 
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders`, {
-      method: "POST",
-      headers: {
-        apikey: SRV,
-        Authorization: `Bearer ${SRV}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify([
-        {
-          provider,
-          provider_session_id,
-          buyer_email: buyer_email_input,
-          cart: { items: itemsFallback, promo_code: order_input?.promo_code || null },
-          status: "created",
-        },
-      ]),
-    });
-
-    if (!insertRes.ok) {
-      return jsonResponse({ error: "Failed to create order", details: await insertRes.text() }, 500);
-    }
-
-    const inserted = await insertRes.json();
-    order = inserted[0];
-  }
-
-  // If keys already exist, return them (and try email if not emailed)
   if (order?.keys_encrypted) {
-    const payload = await decryptKeys(encKey, order.keys_encrypted);
-    const keys = Array.isArray(payload?.keys) ? payload.keys : [];
+    let keysPayload = null;
+    try {
+      keysPayload = await decryptKeys(encKey, order.keys_encrypted);
+    } catch (err) {
+      console.error("Decrypt keys failed", err);
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    }
+
+    const keys = Array.isArray(keysPayload?.keys) ? keysPayload.keys : [];
+    const claimToken = await ensureClaimToken(SUPABASE_URL, SRV, provider, providerSessionId, order.id || null);
+    const claimUrl = claimUrlFromRequest(request, claimToken);
 
     let emailSent = Boolean(order.emailed_at);
     let emailError = "";
-    const buyerEmail = order.buyer_email || buyer_email_input || "";
-
-    if (!emailSent && buyerEmail && keys.length) {
-      const emailRes = await resendEmail(env, buyerEmail, keys.map((k) => k.key || k));
+    if (!emailSent && buyerEmail && keys.length > 0) {
+      const emailRes = await resendEmail(env, buyerEmail, keys.map((k) => String(k.key || k)), claimUrl);
       emailSent = emailRes.ok;
-      emailError = emailRes.ok ? "" : (emailRes.error || "Unknown resend error");
-
+      emailError = emailRes.ok ? "" : (emailRes.error || "Email failed");
       if (emailSent) {
-        await fetch(
-          `${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`,
-          {
-            method: "PATCH",
-            headers: {
-              apikey: SRV,
-              Authorization: `Bearer ${SRV}`,
-              "Content-Type": "application/json",
-              Prefer: "return=minimal",
-            },
-            body: JSON.stringify({
-              emailed_at: new Date().toISOString(),
-              status: "emailed",
-            }),
-          },
-        );
+        await patchOrderBySession(SUPABASE_URL, SRV, providerSessionId, {
+          emailed_at: new Date().toISOString(),
+          status: "emailed",
+        });
       }
     }
 
-    return jsonResponse({
-      ok: true,
-      keys,
-      buyer_email: buyerEmail,
-      email_sent: emailSent,
-      email_error: emailError || undefined,
-    });
+    return jsonNoStore(
+      {
+        ok: true,
+        buyer_email: buyerEmail || null,
+        email_sent: emailSent,
+        key_count: keys.length,
+        claim_token: claimToken,
+        email_error: emailError || undefined,
+      },
+      200,
+      getNoStoreHeaders(),
+    );
   }
 
-  // --- payment verification ---
-  let buyerEmail = order?.buyer_email || buyer_email_input || "";
   let stripeSession = null;
   let coinbaseCharge = null;
 
   if (provider === "stripe") {
+    const STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
+    if (!STRIPE_SECRET_KEY) {
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    }
+
     const stripeRes = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(provider_session_id)}`,
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(providerSessionId)}`,
       { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
     );
     if (!stripeRes.ok) {
-      return jsonResponse({ error: "Stripe verification failed", details: await stripeRes.text() }, 500);
+      console.error("Stripe session verification failed", { status: stripeRes.status, body: await stripeRes.text() });
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
     }
-    const session = await stripeRes.json();
-    const paid = session.payment_status === "paid" || session.status === "complete";
+
+    const session = await safeJson(stripeRes);
+    stripeSessionRaw = session || null;
+    const paid = session?.payment_status === "paid" || session?.status === "complete";
     if (!paid) {
-      return jsonResponse(
-        { error: "Payment not confirmed", status: session.payment_status || session.status || "pending" },
-        409,
-      );
+      return jsonNoStore({ error: "Payment not confirmed" }, 409, getNoStoreHeaders());
     }
-    buyerEmail = buyerEmail || session?.customer_details?.email || session?.customer_email || "";
+
+    buyerEmail = buyerEmail || String(session?.customer_details?.email || session?.customer_email || "").trim();
     stripeSession = {
-      id: session.id,
-      payment_status: session.payment_status || null,
-      status: session.status || null,
-      amount_total: session.amount_total || null,
-      currency: session.currency || null,
-      customer_email: session.customer_details?.email || session.customer_email || null,
+      id: session?.id || null,
+      payment_status: session?.payment_status || null,
+      status: session?.status || null,
+      amount_total: session?.amount_total || null,
+      currency: session?.currency || null,
+      customer_email: session?.customer_details?.email || session?.customer_email || null,
     };
   } else {
     const chargeRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coinbase_charges?select=status,raw&id=eq.${encodeURIComponent(provider_session_id)}`,
-      { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
+      `${SUPABASE_URL}/rest/v1/coinbase_charges?select=status,raw&id=eq.${encodeURIComponent(providerSessionId)}&limit=1`,
+      { headers: supabaseHeaders(SRV) },
     );
     if (!chargeRes.ok) {
-      return jsonResponse({ error: "Failed to load charge status", details: await chargeRes.text() }, 500);
+      console.error("Coinbase charge lookup failed", { status: chargeRes.status, body: await chargeRes.text() });
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
     }
-    const rows = await chargeRes.json();
+
+    const rows = await safeJson(chargeRes);
     const status = rows && rows[0]?.status ? String(rows[0].status).toUpperCase() : "PENDING";
     if (status !== "CONFIRMED") {
-      return jsonResponse({ error: "Payment not confirmed", status }, 409);
+      return jsonNoStore({ error: "Payment not confirmed" }, 409, getNoStoreHeaders());
     }
     coinbaseCharge = rows[0]?.raw || null;
   }
 
-  if (!buyerEmail) return jsonResponse({ error: "Buyer email missing" }, 400);
+  if (!buyerEmail) {
+    return jsonNoStore({ error: "Buyer email missing" }, 400, getNoStoreHeaders());
+  }
 
-  // ✅ FIX: handle minimal cart + enrich duration_days from product_variants
-  const { items: cartItems } = extractCartItems(order, order_input);
+  if (!order) {
+    const inferredCartItems = provider === "stripe"
+      ? extractCartItemsFromStripeSession(stripeSessionRaw)
+      : [];
+
+    const createPayload = [{
+      provider,
+      provider_session_id: providerSessionId,
+      buyer_email: buyerEmail,
+      cart: { items: inferredCartItems, promo_code: null },
+      status: "created",
+      stripe_session: stripeSession || null,
+      coinbase_charge: coinbaseCharge || null,
+    }];
+
+    const createOrderRes = await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders`, {
+      method: "POST",
+      headers: supabaseHeaders(SRV, {
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify(createPayload),
+    });
+
+    if (!createOrderRes.ok) {
+      console.error("Order create failed", { status: createOrderRes.status, body: await createOrderRes.text() });
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    }
+
+    const created = await safeJson(createOrderRes);
+    order = Array.isArray(created) ? created[0] : null;
+    if (!order) {
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    }
+  }
+
+  const cartItems = extractCartItems(order);
 
   const variantIds = [...new Set(cartItems.map((it) => it.variant_id).filter(Boolean))];
   const variantDuration = new Map();
 
   if (variantIds.length) {
-    const quoted = variantIds.map((id) => `"${id.replaceAll('"', '\\"')}"`).join(",");
-    const vRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/product_variants?select=id,duration_days&` + `id=in.(${quoted})`,
-      { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
+    const idsParam = variantIds.map((id) => `"${id.replaceAll("\"", "\\\"")}"`).join(",");
+    const variantsRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/product_variants?select=id,duration_days&id=in.(${idsParam})`,
+      { headers: supabaseHeaders(SRV) },
     );
-    if (!vRes.ok) {
-      return jsonResponse({ error: "Failed to load variants", details: await vRes.text() }, 500);
+
+    if (!variantsRes.ok) {
+      console.error("Variant lookup failed", { status: variantsRes.status, body: await variantsRes.text() });
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
     }
-    const rows = await vRes.json();
-    for (const v of rows) {
+
+    const variants = await safeJson(variantsRes);
+    for (const v of variants || []) {
       variantDuration.set(String(v.id), Number(v.duration_days || 0));
     }
   }
 
-  const enriched = cartItems.map((it) => {
-    const d =
-      it.duration_days != null
-        ? Number(it.duration_days)
-        : it.variant_id
-          ? Number(variantDuration.get(it.variant_id) || 0)
-          : 0;
-    return { ...it, duration_days: Number.isFinite(d) ? d : 0 };
+  const enrichedItems = cartItems.map((it) => {
+    const duration = it.duration_days != null
+      ? Number(it.duration_days)
+      : (it.variant_id ? Number(variantDuration.get(it.variant_id) || 0) : 0);
+    return { ...it, duration_days: Number.isFinite(duration) ? duration : 0 };
   });
 
-  const timeItems = enriched.filter((it) => Number(it.duration_days || 0) > 0);
+  const timeItems = enrichedItems.filter((it) => Number(it.duration_days || 0) > 0);
 
   if (!timeItems.length) {
-    await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
-      method: "PATCH",
-      headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({
-        buyer_email: buyerEmail,
-        status: "fulfilled",
-        fulfilled_at: new Date().toISOString(),
-        keys_count: 0,
-        stripe_session: stripeSession || order?.stripe_session || null,
-        coinbase_charge: coinbaseCharge || order?.coinbase_charge || null,
-      }),
+    await patchOrderBySession(SUPABASE_URL, SRV, providerSessionId, {
+      buyer_email: buyerEmail,
+      status: "fulfilled",
+      fulfilled_at: new Date().toISOString(),
+      keys_count: 0,
+      stripe_session: stripeSession || order?.stripe_session || null,
+      coinbase_charge: coinbaseCharge || order?.coinbase_charge || null,
     });
 
-    return jsonResponse({
-      ok: true,
-      keys: [],
-      buyer_email: buyerEmail,
-      email_sent: false,
-      email_error: "No time-based items detected (duration_days missing or 0)",
-    });
+    return jsonNoStore(
+      { ok: true, buyer_email: buyerEmail, email_sent: false, key_count: 0, claim_token: null },
+      200,
+      getNoStoreHeaders(),
+    );
   }
 
-  // prefixes
   const productIds = [...new Set(timeItems.map((it) => it.id))];
   const prefixMap = new Map();
 
   if (productIds.length) {
-    const idsParam = productIds.map((x) => `"${x.replaceAll('"', '\\"')}"`).join(",");
-    const pRes = await fetch(
+    const idsParam = productIds.map((id) => `"${id.replaceAll("\"", "\\\"")}"`).join(",");
+    const productsRes = await fetch(
       `${SUPABASE_URL}/rest/v1/products?select=id,key_prefix&id=in.(${idsParam})`,
-      { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` } },
+      { headers: supabaseHeaders(SRV) },
     );
-    if (!pRes.ok) return jsonResponse({ error: "Failed to load product prefixes", details: await pRes.text() }, 500);
-    const rows = await pRes.json();
-    for (const row of rows) prefixMap.set(String(row.id), normalizePrefix(row.key_prefix));
+    if (!productsRes.ok) {
+      console.error("Product prefix lookup failed", { status: productsRes.status, body: await productsRes.text() });
+      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    }
+    const products = await safeJson(productsRes);
+    for (const p of products || []) {
+      prefixMap.set(String(p.id), normalizePrefix(p.key_prefix));
+    }
   }
 
-  // issue keys
   const issued = [];
   const inserts = [];
 
-  for (const it of timeItems) {
-    const qty = Math.max(1, Number(it.qty || 1));
-    const product_id = it.id;
-    const product_variant_id = it.variant_id || null;
+  for (const item of timeItems) {
+    const qty = Math.max(1, Number(item.qty || 1));
+    const product_id = item.id;
+    const product_variant_id = item.variant_id || null;
     const prefix = prefixMap.get(product_id) || "";
 
     for (let i = 0; i < qty; i++) {
       const key = makeKey(prefix);
       const key_hash = await sha256Hex(`${KEY_SECRET}:${key}`);
+
       inserts.push({
         key_hash,
         status: "issued",
-        issued_for_session: provider_session_id,
+        issued_for_session: providerSessionId,
         product_id,
         product_variant_id,
       });
+
       issued.push({ key, product_id, product_variant_id });
     }
   }
 
   const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/license_keys`, {
     method: "POST",
-    headers: {
-      apikey: SRV,
-      Authorization: `Bearer ${SRV}`,
+    headers: supabaseHeaders(SRV, {
       "Content-Type": "application/json",
       Prefer: "return=minimal",
-    },
+    }),
     body: JSON.stringify(inserts),
   });
 
   if (!insertRes.ok) {
-    return jsonResponse({ error: "Insert failed", details: await insertRes.text() }, 500);
+    console.error("License insert failed", { status: insertRes.status, body: await insertRes.text() });
+    return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
   }
 
   const encrypted = await encryptKeys(encKey, { keys: issued });
 
-  await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
-    method: "PATCH",
-    headers: {
-      apikey: SRV,
-      Authorization: `Bearer ${SRV}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      buyer_email: buyerEmail,
-      status: "fulfilled",
-      keys_encrypted: encrypted,
-      keys_count: issued.length,
-      fulfilled_at: new Date().toISOString(),
-      stripe_session: stripeSession || order?.stripe_session || null,
-      coinbase_charge: coinbaseCharge || order?.coinbase_charge || null,
-    }),
+  await patchOrderBySession(SUPABASE_URL, SRV, providerSessionId, {
+    buyer_email: buyerEmail,
+    status: "fulfilled",
+    keys_encrypted: encrypted,
+    keys_count: issued.length,
+    fulfilled_at: new Date().toISOString(),
+    stripe_session: stripeSession || order?.stripe_session || null,
+    coinbase_charge: coinbaseCharge || order?.coinbase_charge || null,
   });
 
-  // email (report accurately)
+  const claimToken = await ensureClaimToken(SUPABASE_URL, SRV, provider, providerSessionId, order.id || null);
+  const claimUrl = claimUrlFromRequest(request, claimToken);
+
   let emailSent = false;
   let emailError = "";
-
-  if (issued.length) {
-    const emailRes = await resendEmail(env, buyerEmail, issued.map((k) => k.key || k));
+  if (issued.length > 0) {
+    const emailRes = await resendEmail(env, buyerEmail, issued.map((k) => String(k.key || "")), claimUrl);
     emailSent = emailRes.ok;
-    emailError = emailRes.ok ? "" : (emailRes.error || "Unknown resend error");
+    emailError = emailRes.ok ? "" : (emailRes.error || "Email failed");
 
     if (emailSent) {
-      await fetch(`${SUPABASE_URL}/rest/v1/checkout_orders?provider_session_id=eq.${encodeURIComponent(provider_session_id)}`, {
-        method: "PATCH",
-        headers: {
-          apikey: SRV,
-          Authorization: `Bearer ${SRV}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify({
-          emailed_at: new Date().toISOString(),
-          status: "emailed",
-        }),
+      await patchOrderBySession(SUPABASE_URL, SRV, providerSessionId, {
+        emailed_at: new Date().toISOString(),
+        status: "emailed",
       });
     }
   }
 
-  return jsonResponse({
-    ok: true,
-    keys: issued,
-    buyer_email: buyerEmail,
-    email_sent: emailSent,
-    email_error: emailError || undefined,
-  });
+  return jsonNoStore(
+    {
+      ok: true,
+      buyer_email: buyerEmail,
+      email_sent: emailSent,
+      email_error: emailError || undefined,
+      key_count: issued.length,
+      claim_token: claimToken,
+    },
+    200,
+    getNoStoreHeaders(),
+  );
 }

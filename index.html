@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
     <title>I LOVE RADEK NEVARIL</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
     <link rel="stylesheet" href="/styles/tailwind.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+    <script src="/assets/vendor/vanilla-tilt.min.js" defer></script>
     <style>
         * {
             margin: 0;
@@ -295,7 +296,7 @@
     <div class="container">
         <div class="profile-card" data-tilt-disable="true">
             <div class="profile-header">
-                <div class="avatar" onclick="window.location.href='/rajnoha'">SR</div>
+                <div class="avatar" id="avatarLink">SR</div>
                 <div class="username">sebastian rosina</div>
                 <div class="status">commits taxfraud</div>
             </div>
@@ -317,33 +318,6 @@
         </div>
     </div>
 
-    <script>
-        const bgText = document.getElementById('bgText');
-        const text = 'I LOVE RADEK NEVARIL ';
-        let html = '';
-        
-        const isMobile = window.innerWidth < 768;
-        const rows = isMobile ? 50 : 100;
-        const cols = isMobile ? 5 : 10;
-        
-        for (let i = 0; i < rows; i++) {
-            let lineText = '';
-            for (let j = 0; j < cols; j++) {
-                lineText += text;
-            }
-            html += `<div>${lineText}</div>`;
-        }
-        
-        bgText.innerHTML = html;
-        
-        if (window.innerWidth >= 768) {
-            VanillaTilt.init(document.querySelector(".profile-card"), {
-                max: 10,
-                speed: 400,
-                glare: true,
-                "max-glare": 0.05,
-            });
-        }
-    </script>
+    <script src="/assets/js/home.js" defer></script>
 </body>
 </html>

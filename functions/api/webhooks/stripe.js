@@ -1,14 +1,10 @@
-const encoder = new TextEncoder();
+import { jsonNoStore } from "../_lib/security.js";
 
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" }
-  });
-}
+const encoder = new TextEncoder();
+const STRIPE_TOLERANCE_SECONDS = 300;
 
 function hexToBytes(hex) {
-  if (hex.length % 2) return new Uint8Array();
+  if (!hex || hex.length % 2) return new Uint8Array();
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) {
     out[i] = parseInt(hex.substr(i * 2, 2), 16);
@@ -29,64 +25,178 @@ async function hmacHex(secret, message) {
     encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
   const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
-  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function parseSignatureHeader(sigHeader) {
+  const parsed = { t: null, v1: [] };
+  for (const part of String(sigHeader || "").split(",")) {
+    const [kRaw, ...vParts] = part.split("=");
+    if (!kRaw || !vParts.length) continue;
+    const k = kRaw.trim();
+    const v = vParts.join("=").trim();
+    if (k === "t") parsed.t = v;
+    if (k === "v1") parsed.v1.push(v);
+  }
+  return parsed;
+}
+
+function supabaseHeaders(serviceRoleKey, extra = {}) {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    ...extra,
+  };
+}
+
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+async function insertProcessingEvent(SUPABASE_URL, SRV, eventId, eventType) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/processed_events?on_conflict=event_id`, {
+    method: "POST",
+    headers: supabaseHeaders(SRV, {
+      "Content-Type": "application/json",
+      Prefer: "resolution=ignore-duplicates,return=representation",
+    }),
+    body: JSON.stringify([{
+      event_id: eventId,
+      provider: "stripe",
+      event_type: eventType,
+    }]),
+  });
+
+  if (!res.ok) {
+    console.error("Processed event insert failed", { status: res.status, body: await res.text() });
+    return { ok: false, duplicate: false };
+  }
+
+  const rows = await safeJson(res);
+  const inserted = Array.isArray(rows) ? rows.length : 0;
+  if (!inserted) return { ok: true, duplicate: true };
+  return { ok: true, duplicate: false };
+}
+
+async function deleteProcessingEvent(SUPABASE_URL, SRV, eventId) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/processed_events?event_id=eq.${encodeURIComponent(eventId)}`,
+    {
+      method: "DELETE",
+      headers: supabaseHeaders(SRV, { Prefer: "return=minimal" }),
+    },
+  );
+  if (!res.ok) {
+    console.error("Processed event delete failed", { status: res.status, body: await res.text(), eventId });
+  }
+}
+
+function shouldHandleType(type) {
+  return type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded";
+}
+
+function isPaidCheckoutSession(session) {
+  if (!session || typeof session !== "object") return false;
+  return session.payment_status === "paid" || session.status === "complete";
 }
 
 export async function onRequestPost({ request, env }) {
   const WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
-  if (!WEBHOOK_SECRET) return jsonResponse({ error: "Missing server env vars" }, 500);
+  const SUPABASE_URL = env.SUPABASE_URL;
+  const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
+  const FULFILL_INTERNAL_SECRET = env.FULFILL_INTERNAL_SECRET;
+
+  if (!WEBHOOK_SECRET || !SUPABASE_URL || !SRV || !FULFILL_INTERNAL_SECRET) {
+    return jsonNoStore({ error: "Server error" }, 500);
+  }
 
   const sigHeader = request.headers.get("Stripe-Signature") || "";
   const rawBody = await request.text();
+  const parsedSig = parseSignatureHeader(sigHeader);
 
-  const parts = sigHeader.split(",").reduce((acc, part) => {
-    const [k, v] = part.split("=");
-    if (k && v) acc[k.trim()] = v.trim();
-    return acc;
-  }, {});
-
-  const t = parts.t;
-  const v1s = Object.entries(parts).filter(([k]) => k === "v1").map(([, v]) => v);
-
-  if (!t || !v1s.length) {
-    return jsonResponse({ error: "Invalid signature header" }, 400);
+  if (!parsedSig.t || !parsedSig.v1.length) {
+    return jsonNoStore({ error: "Invalid signature" }, 400);
   }
 
-  const expected = await hmacHex(WEBHOOK_SECRET, `${t}.${rawBody}`);
+  const timestamp = Number(parsedSig.t);
+  if (!Number.isFinite(timestamp)) {
+    return jsonNoStore({ error: "Invalid signature" }, 400);
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - timestamp) > STRIPE_TOLERANCE_SECONDS) {
+    return jsonNoStore({ error: "Invalid signature" }, 400);
+  }
+
+  const expected = await hmacHex(WEBHOOK_SECRET, `${parsedSig.t}.${rawBody}`);
   const expectedBytes = hexToBytes(expected);
-  const match = v1s.some(sig => timingSafeEqual(hexToBytes(sig), expectedBytes));
-  if (!match) {
-    return jsonResponse({ error: "Invalid signature" }, 400);
+  const valid = parsedSig.v1.some((sig) => timingSafeEqual(hexToBytes(sig), expectedBytes));
+  if (!valid) {
+    return jsonNoStore({ error: "Invalid signature" }, 400);
   }
 
   let event = null;
   try {
     event = JSON.parse(rawBody);
   } catch (err) {
-    return jsonResponse({ error: "Invalid JSON", details: String(err?.message || err) }, 400);
+    console.error("Stripe webhook JSON parse error", err);
+    return jsonNoStore({ error: "Invalid payload" }, 400);
   }
 
-  const type = String(event?.type || "");
-  if (type !== "checkout.session.completed" && type !== "checkout.session.async_payment_succeeded") {
-    return jsonResponse({ ok: true });
+  const eventId = String(event?.id || "").trim();
+  const eventType = String(event?.type || "").trim();
+  if (!eventId) {
+    return jsonNoStore({ error: "Invalid payload" }, 400);
+  }
+
+  if (!shouldHandleType(eventType)) {
+    return jsonNoStore({ ok: true }, 200);
   }
 
   const session = event?.data?.object;
   const sessionId = session?.id ? String(session.id) : "";
-  if (!sessionId) return jsonResponse({ error: "Missing session id" }, 400);
+  if (!sessionId) {
+    return jsonNoStore({ error: "Invalid payload" }, 400);
+  }
+
+  if (!isPaidCheckoutSession(session)) {
+    return jsonNoStore({ ok: true, skipped: "not_paid" }, 200);
+  }
+
+  const processState = await insertProcessingEvent(SUPABASE_URL, SRV, eventId, eventType);
+  if (!processState.ok) {
+    return jsonNoStore({ error: "Server error" }, 500);
+  }
+  if (processState.duplicate) {
+    return jsonNoStore({ ok: true, duplicate: true }, 200);
+  }
 
   const origin = new URL(request.url).origin;
   const fulfillRes = await fetch(`${origin}/api/fulfill`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Webhook": "1" },
-    body: JSON.stringify({ provider: "stripe", session_id: sessionId })
+    headers: {
+      "Content-Type": "application/json",
+      "X-Fulfill-Secret": FULFILL_INTERNAL_SECRET,
+    },
+    body: JSON.stringify({
+      provider: "stripe",
+      session_id: sessionId,
+    }),
   });
 
-  let fulfillBody = null;
-  try { fulfillBody = await fulfillRes.json(); } catch (_) { fulfillBody = null; }
+  if (!fulfillRes.ok) {
+    const body = await fulfillRes.text();
+    console.error("Stripe webhook fulfill failed", { status: fulfillRes.status, body, sessionId, eventId });
+    await deleteProcessingEvent(SUPABASE_URL, SRV, eventId);
+    return jsonNoStore({ error: "Server error" }, 500);
+  }
 
-  return jsonResponse({ ok: true, fulfill_status: fulfillRes.status, fulfill: fulfillBody || null });
+  return jsonNoStore({ ok: true }, 200);
 }

@@ -1,3 +1,5 @@
+import { checkRateLimit, jsonNoStore, rateLimitResponse } from "../_lib/security.js";
+
 function bytesToBase64(bytes) {
   let bin = "";
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
@@ -20,22 +22,20 @@ async function pbkdf2Hash(password, saltBytes) {
   return new Uint8Array(bits);
 }
 
-function jsonResponse(body, status = 200, extraHeaders) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", ...(extraHeaders || {}) }
-  });
-}
-
 export async function onRequestGet() {
-  return jsonResponse({ error: "Method Not Allowed" }, 405);
+  return jsonNoStore({ error: "Method Not Allowed" }, 405);
 }
 
 export async function onRequestPost({ request, env }) {
+  const rate = checkRateLimit(request, "auth_register", 10, 60 * 1000);
+  if (!rate.allowed) {
+    return rateLimitResponse(rate.resetAt);
+  }
+
   const SUPABASE_URL = env.SUPABASE_URL;
   const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SRV) {
-    return jsonResponse({ error: "Missing server env vars" }, 500);
+    return jsonNoStore({ error: "Server error" }, 500);
   }
 
   try {
@@ -51,10 +51,10 @@ export async function onRequestPost({ request, env }) {
     const password = String(body?.password || "");
 
     if (username.length < 3) {
-      return jsonResponse({ error: "Username must be at least 3 characters" }, 400);
+      return jsonNoStore({ error: "Username must be at least 3 characters" }, 400);
     }
     if (password.length < 6) {
-      return jsonResponse({ error: "Password must be at least 6 characters" }, 400);
+      return jsonNoStore({ error: "Password must be at least 6 characters" }, 400);
     }
 
     const saltBytes = crypto.getRandomValues(new Uint8Array(16));
@@ -78,11 +78,13 @@ export async function onRequestPost({ request, env }) {
     });
 
     if (!res.ok) {
-      return jsonResponse({ error: "Register failed", details: await res.text() }, 400);
+      console.error("Register insert failed", { status: res.status, body: await res.text() });
+      return jsonNoStore({ error: "Register failed" }, 400);
     }
 
-    return jsonResponse({ ok: true });
+    return jsonNoStore({ ok: true });
   } catch (err) {
-    return jsonResponse({ error: "Internal error", details: String(err?.message || err) }, 500);
+    console.error("Register exception", err);
+    return jsonNoStore({ error: "Internal error" }, 500);
   }
 }

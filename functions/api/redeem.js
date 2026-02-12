@@ -1,11 +1,5 @@
 import { getCookie, verifySession } from "./auth/_session.js";
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" }
-  });
-}
+import { checkRateLimit, jsonNoStore, rateLimitResponse } from "./_lib/security.js";
 
 function toHex(buffer) {
   return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -18,18 +12,23 @@ async function sha256Hex(input) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const rate = checkRateLimit(request, "redeem", 10, 60 * 1000);
+  if (!rate.allowed) {
+    return rateLimitResponse(rate.resetAt);
+  }
+
   const SUPABASE_URL = env.SUPABASE_URL;
   const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
   const KEY_SECRET = env.KEY_SECRET;
 
   if (!SUPABASE_URL || !SRV || !KEY_SECRET) {
-    return jsonResponse({ error: "Missing server env vars" }, 500);
+    return jsonNoStore({ error: "Server error" }, 500);
   }
 
   const token = getCookie(request, "session");
   const payload = await verifySession(env, token);
   if (!payload?.uid) {
-    return jsonResponse({ error: "Login required" }, 401);
+    return jsonNoStore({ error: "Login required" }, 401);
   }
 
   let body = null;
@@ -41,7 +40,7 @@ export async function onRequestPost({ request, env }) {
 
   const raw = String(body?.key || "").trim();
   if (raw.length < 10) {
-    return jsonResponse({ error: "Invalid key format" }, 400);
+    return jsonNoStore({ error: "Invalid key format" }, 400);
   }
 
   const key_hash = await sha256Hex(`${KEY_SECRET}:${raw}`);
@@ -65,15 +64,16 @@ export async function onRequestPost({ request, env }) {
   );
 
   if (!res.ok) {
-    return jsonResponse({ error: "Redeem failed", details: await res.text() }, 500);
+    console.error("Redeem patch failed", { status: res.status, body: await res.text() });
+    return jsonNoStore({ error: "Redeem failed" }, 500);
   }
 
   const updated = await res.json();
   if (!updated.length) {
-    return jsonResponse({ error: "Key invalid or already used" }, 400);
+    return jsonNoStore({ error: "Key invalid or already used" }, 400);
   }
 
-  return jsonResponse({
+  return jsonNoStore({
     ok: true,
     product_id: updated[0].product_id,
     product_variant_id: updated[0].product_variant_id

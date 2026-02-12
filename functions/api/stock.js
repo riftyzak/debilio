@@ -66,9 +66,10 @@ export async function onRequestGet({ request, env }) {
     });
 
     if (!variantsRes.ok) {
+      const details = await variantsRes.text();
+      console.error("Stock variants fetch failed", { status: variantsRes.status, body: details });
       return new Response(JSON.stringify({
         error: "Failed to fetch variants",
-        details: await variantsRes.text(),
       }), {
         status: 500,
         headers: { "content-type": "application/json" },
@@ -112,7 +113,8 @@ export async function onRequestGet({ request, env }) {
     });
 
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
+    console.error("Stock endpoint error", e);
+    return new Response(JSON.stringify({ error: "Server error" }), {
       status: 500,
       headers: { "content-type": "application/json" },
     });

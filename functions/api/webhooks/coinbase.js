@@ -17,7 +17,12 @@ async function hmacHex(secret, message) {
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" }
+    headers: {
+      "content-type": "application/json",
+      "Cache-Control": "no-store",
+      Pragma: "no-cache",
+      Expires: "0",
+    }
   });
 }
 
@@ -39,9 +44,10 @@ export async function onRequestPost({ request, env }) {
   const SUPABASE_URL = env.SUPABASE_URL;
   const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
   const WEBHOOK_SECRET = env.COINBASE_WEBHOOK_SECRET;
+  const FULFILL_INTERNAL_SECRET = env.FULFILL_INTERNAL_SECRET;
 
-  if (!SUPABASE_URL || !SRV || !WEBHOOK_SECRET) {
-    return jsonResponse({ error: "Missing server env vars" }, 500);
+  if (!SUPABASE_URL || !SRV || !WEBHOOK_SECRET || !FULFILL_INTERNAL_SECRET) {
+    return jsonResponse({ error: "Server error" }, 500);
   }
 
   const signature = request.headers.get("X-CC-Webhook-Signature") || "";
@@ -55,7 +61,8 @@ export async function onRequestPost({ request, env }) {
   try {
     event = JSON.parse(rawBody);
   } catch (err) {
-    return jsonResponse({ error: "Invalid JSON", details: String(err?.message || err) }, 400);
+    console.error("Coinbase webhook invalid JSON", err);
+    return jsonResponse({ error: "Invalid JSON" }, 400);
   }
 
   const chargeId = event?.data?.id ? String(event.data.id) : "";
@@ -83,7 +90,8 @@ export async function onRequestPost({ request, env }) {
   });
 
   if (!res.ok) {
-    return jsonResponse({ error: "Failed to store charge", details: await res.text() }, 500);
+    console.error("Coinbase webhook store failed", { status: res.status, body: await res.text() });
+    return jsonResponse({ error: "Server error" }, 500);
   }
 
   let fulfillStatus = null;
@@ -91,7 +99,10 @@ export async function onRequestPost({ request, env }) {
     const origin = new URL(request.url).origin;
     const fulfillRes = await fetch(`${origin}/api/fulfill`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Webhook": "1" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Fulfill-Secret": FULFILL_INTERNAL_SECRET,
+      },
       body: JSON.stringify({ provider: "coinbase", charge_id: chargeId })
     });
     fulfillStatus = fulfillRes.status;

@@ -1,23 +1,17 @@
 import { getCookie, verifySession } from "../auth/_session.js";
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" }
-  });
-}
+import { jsonNoStore } from "../_lib/security.js";
 
 export async function onRequestGet({ request, env }) {
   const token = getCookie(request, "session");
   const payload = await verifySession(env, token);
   if (!payload?.uid) {
-    return jsonResponse({ error: "Login required" }, 401);
+    return jsonNoStore({ error: "Login required" }, 401);
   }
 
   const SUPABASE_URL = env.SUPABASE_URL;
   const SRV = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SRV) {
-    return jsonResponse({ error: "Missing server env vars" }, 500);
+    return jsonNoStore({ error: "Server error" }, 500);
   }
 
   const res = await fetch(
@@ -31,7 +25,8 @@ export async function onRequestGet({ request, env }) {
   );
 
   if (!res.ok) {
-    return jsonResponse({ error: "Failed to load history", details: await res.text() }, 500);
+    console.error("History load failed", { status: res.status, body: await res.text() });
+    return jsonNoStore({ error: "Server error" }, 500);
   }
 
   const rows = await res.json();
@@ -48,7 +43,8 @@ export async function onRequestGet({ request, env }) {
       headers: { apikey: SRV, Authorization: `Bearer ${SRV}` }
     });
     if (!pRes.ok) {
-      return jsonResponse({ error: "Failed to load products", details: await pRes.text() }, 500);
+      console.error("History products load failed", { status: pRes.status, body: await pRes.text() });
+      return jsonNoStore({ error: "Server error" }, 500);
     }
     const products = await pRes.json();
     for (const p of products) productMap.set(String(p.id), p);
@@ -61,7 +57,8 @@ export async function onRequestGet({ request, env }) {
       headers: { apikey: SRV, Authorization: `Bearer ${SRV}` }
     });
     if (!vRes.ok) {
-      return jsonResponse({ error: "Failed to load variants", details: await vRes.text() }, 500);
+      console.error("History variants load failed", { status: vRes.status, body: await vRes.text() });
+      return jsonNoStore({ error: "Server error" }, 500);
     }
     const variants = await vRes.json();
     for (const v of variants) variantMap.set(String(v.id), v);
@@ -102,5 +99,5 @@ export async function onRequestGet({ request, env }) {
   }
 
   const items = Array.from(grouped.values());
-  return jsonResponse({ items });
+  return jsonNoStore({ items });
 }
