@@ -1,2 +1,5 @@
 agents.md
 node_modules/
+supabase/functions/create-coinbase-charge/index.ts
+supabase/functions/README.md
+supabase/functions/create-stripe-session/index.ts

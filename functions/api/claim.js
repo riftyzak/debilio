@@ -42,6 +42,10 @@ function invalidClaimResponse(status = 404) {
   return jsonNoStore({ error: "Invalid or expired claim token" }, status, getNoStoreHeaders());
 }
 
+function pendingClaimResponse() {
+  return jsonNoStore({ error: "Keys are being prepared" }, 409, getNoStoreHeaders());
+}
+
 export async function onRequestPost({ request, env }) {
   const rate = checkRateLimit(request, "claim", 30, 60 * 1000);
   if (!rate.allowed) {
@@ -110,9 +114,14 @@ export async function onRequestPost({ request, env }) {
 
   const orderRows = await safeJson(orderRes);
   const order = Array.isArray(orderRows) ? orderRows[0] : null;
-  if (!order?.keys_encrypted) {
-    console.error("Claim order missing keys", { order_id: claimRow.order_id, session_id: claimRow.session_id });
-    return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+  if (!order) {
+    // Webhook/order creation may still be in flight right after redirect.
+    return pendingClaimResponse();
+  }
+
+  if (!order.keys_encrypted) {
+    // Claim is valid but fulfillment hasn't stored encrypted keys yet.
+    return pendingClaimResponse();
   }
 
   const consumeRes = await fetch(

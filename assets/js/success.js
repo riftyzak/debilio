@@ -110,6 +110,8 @@ async function run() {
     if (!response.ok) {
       if (response.status === 400 || response.status === 404) {
         renderMuted("Invalid or expired claim token.");
+      } else if (response.status === 409) {
+        renderMuted("Keys are being prepared. Please refresh in a few seconds.");
       } else if (response.status === 429) {
         renderMuted("Too many attempts. Please retry in a minute.");
       } else {
