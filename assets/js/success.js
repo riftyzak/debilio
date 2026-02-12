@@ -95,6 +95,16 @@ function normalizeFallbackItems(keys) {
   }));
 }
 
+function splitTitleAndQty(value) {
+  const raw = String(value || "Purchased item").trim();
+  const match = raw.match(/^(.*)\s+(\d+)$/);
+  if (!match) return { title: raw, qty: null };
+  const title = String(match[1] || "").trim();
+  const qty = Number(match[2]);
+  if (!title || !Number.isFinite(qty) || qty <= 0) return { title: raw, qty: null };
+  return { title, qty };
+}
+
 function renderPurchasedItems(payload) {
   if (!orderItems) return;
   orderItems.replaceChildren();
@@ -115,10 +125,28 @@ function renderPurchasedItems(payload) {
     const box = document.createElement("div");
     box.className = "delivery-box";
 
+    const parsed = splitTitleAndQty(row?.product_title || row?.product_id || "Purchased item");
+    const titleRow = document.createElement("div");
+    titleRow.className = "item-title-row";
+
     const title = document.createElement("div");
     title.className = "item-name";
-    title.textContent = String(row?.product_title || row?.product_id || "Purchased item");
-    box.appendChild(title);
+    title.textContent = parsed.title;
+    titleRow.appendChild(title);
+
+    if (parsed.qty != null) {
+      const qtyBadge = document.createElement("span");
+      qtyBadge.className = "item-qty";
+
+      const qtyIcon = document.createElement("i");
+      qtyIcon.className = "fas fa-layer-group";
+      qtyIcon.setAttribute("aria-hidden", "true");
+      qtyBadge.appendChild(qtyIcon);
+      qtyBadge.appendChild(document.createTextNode(`x${parsed.qty}`));
+      titleRow.appendChild(qtyBadge);
+    }
+
+    box.appendChild(titleRow);
 
     const line = document.createElement("div");
     line.className = "delivery-row";
@@ -148,14 +176,12 @@ function renderPurchasedItems(payload) {
 
     const duration = Number(row?.duration_days);
     const expiryText = formatExpiry(row?.expires_at);
-    if ((Number.isFinite(duration) && duration > 0) || expiryText || row?.product_id || row?.product_variant_id) {
+    if ((Number.isFinite(duration) && duration > 0) || expiryText) {
       const meta = document.createElement("div");
       meta.className = "item-meta";
       const parts = [];
       if (Number.isFinite(duration) && duration > 0) parts.push(`Duration: ${duration} days`);
       if (expiryText) parts.push(`Expires: ${expiryText}`);
-      if (row?.product_id) parts.push(`Product ID: ${row.product_id}`);
-      if (row?.product_variant_id) parts.push(`Variant ID: ${row.product_variant_id}`);
       meta.textContent = parts.join(" | ");
       box.appendChild(meta);
     }

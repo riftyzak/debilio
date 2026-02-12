@@ -12,7 +12,7 @@
   />
   <title>Success - Rosina Shop</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/styles/tailwind.css">
 
@@ -70,8 +70,22 @@
     .order-items { margin-top: 10px; display: grid; gap: 12px; }
     .delivery-box { border: 1px dashed #333; border-radius: 10px; padding: 10px; color: #cfe1ff; background: rgba(74,144,226,0.12); font-size: 13px; }
     .delivery-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+    .item-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
     .item-name { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-    .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "JetBrains Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 0.2px; }
+    .item-qty {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(74,144,226,0.45);
+      background: rgba(74,144,226,0.2);
+      color: #d8e8ff;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "Georama", sans-serif; font-size: 12px; letter-spacing: 0.2px; }
     .item-meta { color: #b8cceb; font-size: 12px; margin-top: 6px; }
     .copy-btn { border: 1px solid #333; background: rgba(0,0,0,0.4); color: #fff; border-radius: 8px; padding: 4px 8px; cursor: pointer; transition: border-color .2s ease; display: inline-flex; align-items: center; gap: 6px; }
     .copy-btn:hover { border-color: #4a90e2; }
