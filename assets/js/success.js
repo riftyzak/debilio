@@ -46,7 +46,7 @@ function setProvider(value) {
   providerEl.textContent = normalizeProviderName(value);
 }
 
-function renderCopyButton(button, copied) {
+function renderCopyButton(button, copied, label = "Copy all") {
   if (!button) return;
   button.innerHTML = copied
     ? `
@@ -55,7 +55,7 @@ function renderCopyButton(button, copied) {
     `
     : `
       <i class="far fa-copy copy-icon" aria-hidden="true"></i>
-      <span>Copy</span>
+      <span>${label}</span>
     `;
 }
 
@@ -89,20 +89,67 @@ function normalizeFallbackItems(keys) {
     product_id: row?.product_id ? String(row.product_id) : null,
     product_variant_id: row?.product_variant_id ? String(row.product_variant_id) : null,
     product_title: row?.product_id ? `Product ${String(row.product_id)}` : "Purchased item",
+    quantity: 1,
     key: row?.key ? String(row.key) : "",
     duration_days: null,
     expires_at: null,
   }));
 }
 
-function splitTitleAndQty(value) {
-  const raw = String(value || "Purchased item").trim();
-  const match = raw.match(/^(.*)\s+(\d+)$/);
-  if (!match) return { title: raw, qty: null };
-  const title = String(match[1] || "").trim();
-  const qty = Number(match[2]);
-  if (!title || !Number.isFinite(qty) || qty <= 0) return { title: raw, qty: null };
-  return { title, qty };
+function normalizeQuantity(value) {
+  const qty = Number(value);
+  if (!Number.isFinite(qty) || qty <= 0) return 1;
+  return Math.max(1, Math.floor(qty));
+}
+
+function normalizeDuration(value) {
+  const duration = Number(value);
+  if (!Number.isFinite(duration) || duration <= 0) return null;
+  return duration;
+}
+
+function groupPurchasedItems(items) {
+  const groups = new Map();
+
+  for (const row of items) {
+    const title = String(row?.product_title || row?.product_id || "Purchased item").trim();
+    const productId = row?.product_id ? String(row.product_id) : "";
+    const variantId = row?.product_variant_id ? String(row.product_variant_id) : "";
+    const durationDays = normalizeDuration(row?.duration_days);
+    const expiresAt = row?.expires_at ? String(row.expires_at) : "";
+    const key = String(row?.key || "").trim();
+    const quantity = normalizeQuantity(row?.quantity);
+
+    const groupKey = [title, productId, variantId, String(durationDays || ""), expiresAt].join("|");
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = {
+        title,
+        quantity: 0,
+        duration_days: durationDays,
+        expires_at: expiresAt || null,
+        keys: [],
+      };
+      groups.set(groupKey, group);
+    }
+
+    group.quantity += quantity;
+
+    if (Array.isArray(row?.keys)) {
+      for (const k of row.keys) {
+        const normalized = String(k || "").trim();
+        if (normalized) group.keys.push(normalized);
+      }
+    } else if (key) {
+      group.keys.push(key);
+    }
+  }
+
+  for (const group of groups.values()) {
+    group.keys = [...new Set(group.keys)];
+  }
+
+  return [...groups.values()];
 }
 
 function renderPurchasedItems(payload) {
@@ -112,8 +159,9 @@ function renderPurchasedItems(payload) {
   const apiItems = Array.isArray(payload?.items) ? payload.items : [];
   const fallbackItems = normalizeFallbackItems(payload?.keys || []);
   const items = apiItems.length ? apiItems : fallbackItems;
+  const groupedItems = groupPurchasedItems(items);
 
-  if (!items.length) {
+  if (!groupedItems.length) {
     renderMuted("No purchased items were found for this claim token.");
     if (dashboardCta) dashboardCta.style.display = "none";
     return;
@@ -121,49 +169,51 @@ function renderPurchasedItems(payload) {
 
   if (dashboardCta) dashboardCta.style.display = "inline-flex";
 
-  for (const row of items) {
+  for (const row of groupedItems) {
     const box = document.createElement("div");
     box.className = "delivery-box";
 
-    const parsed = splitTitleAndQty(row?.product_title || row?.product_id || "Purchased item");
     const titleRow = document.createElement("div");
     titleRow.className = "item-title-row";
 
     const title = document.createElement("div");
     title.className = "item-name";
-    title.textContent = parsed.title;
+    title.textContent = String(row?.title || "Purchased item");
     titleRow.appendChild(title);
 
-    if (parsed.qty != null) {
-      const qtyBadge = document.createElement("span");
-      qtyBadge.className = "item-qty";
-
-      const qtyIcon = document.createElement("i");
-      qtyIcon.className = "fas fa-layer-group";
-      qtyIcon.setAttribute("aria-hidden", "true");
-      qtyBadge.appendChild(qtyIcon);
-      qtyBadge.appendChild(document.createTextNode(`x${parsed.qty}`));
-      titleRow.appendChild(qtyBadge);
-    }
+    const qtyBadge = document.createElement("span");
+    qtyBadge.className = "item-qty";
+    const qtyIcon = document.createElement("i");
+    qtyIcon.className = "fas fa-layer-group";
+    qtyIcon.setAttribute("aria-hidden", "true");
+    qtyBadge.appendChild(qtyIcon);
+    qtyBadge.appendChild(document.createTextNode(`x${normalizeQuantity(row?.quantity)}`));
+    titleRow.appendChild(qtyBadge);
 
     box.appendChild(titleRow);
 
     const line = document.createElement("div");
-    line.className = "delivery-row";
+    line.className = "delivery-row delivery-row-top";
 
-    const keyValue = String(row?.key || "");
-    if (keyValue) {
-      const keyEl = document.createElement("span");
-      keyEl.className = "delivery-key";
-      keyEl.textContent = `Delivery: ${keyValue}`;
+    const keys = Array.isArray(row?.keys) ? row.keys : [];
+    if (keys.length > 0) {
+      const stack = document.createElement("div");
+      stack.className = "key-stack";
+      for (const keyValue of keys) {
+        const keyEl = document.createElement("div");
+        keyEl.className = "delivery-key";
+        keyEl.textContent = `Delivery: ${String(keyValue || "")}`;
+        stack.appendChild(keyEl);
+      }
 
       const button = document.createElement("button");
       button.className = "copy-btn";
       button.type = "button";
-      button.setAttribute("data-copy", keyValue);
-      renderCopyButton(button, false);
+      button.setAttribute("data-copy", keys.join("\n"));
+      button.setAttribute("data-copy-label", "Copy all");
+      renderCopyButton(button, false, "Copy all");
 
-      line.appendChild(keyEl);
+      line.appendChild(stack);
       line.appendChild(button);
     } else {
       const noKey = document.createElement("span");
@@ -174,7 +224,7 @@ function renderPurchasedItems(payload) {
 
     box.appendChild(line);
 
-    const duration = Number(row?.duration_days);
+    const duration = normalizeDuration(row?.duration_days);
     const expiryText = formatExpiry(row?.expires_at);
     if ((Number.isFinite(duration) && duration > 0) || expiryText) {
       const meta = document.createElement("div");
@@ -200,7 +250,7 @@ async function run() {
   const pendingRetryDelayMs = (attempt) => Math.min(10000, 1500 + attempt * 700);
 
   if (!claim) {
-    renderMuted("Missing claim token. Use the secure link sent by email.");
+    renderMuted("Missing claim token.");
     return;
   }
 
@@ -250,14 +300,15 @@ document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-copy]");
   if (!button) return;
   const value = String(button.getAttribute("data-copy") || "");
+  const label = String(button.getAttribute("data-copy-label") || "Copy all");
   if (!value) return;
   try {
     await navigator.clipboard.writeText(value);
     button.classList.add("is-copied");
-    renderCopyButton(button, true);
+    renderCopyButton(button, true, label);
     setTimeout(() => {
       button.classList.remove("is-copied");
-      renderCopyButton(button, false);
+      renderCopyButton(button, false, label);
     }, 1200);
   } catch (_) {}
 });

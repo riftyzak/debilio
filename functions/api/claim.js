@@ -186,7 +186,8 @@ async function buildPurchasedItems(SUPABASE_URL, SRV, order, normalizedKeys) {
       out.push({
         product_id: item.id,
         product_variant_id: item.variant_id || null,
-        product_title: `${baseTitle} ${nextIndex}`,
+        product_title: baseTitle,
+        quantity: 1,
         key: key || null,
         duration_days: durationDays,
         expires_at: durationDays ? addDaysIso(issuedAtIso, durationDays) : null,
@@ -212,7 +213,8 @@ async function buildPurchasedItems(SUPABASE_URL, SRV, order, normalizedKeys) {
     out.push({
       product_id: productId,
       product_variant_id: variantId,
-      product_title: `${baseTitle} ${nextIndex}`,
+      product_title: baseTitle,
+      quantity: 1,
       key: keyRow.key,
       duration_days: durationDays,
       expires_at: durationDays ? addDaysIso(issuedAtIso, durationDays) : null,

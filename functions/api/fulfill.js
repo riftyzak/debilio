@@ -100,23 +100,17 @@ async function safeJson(res) {
   }
 }
 
-async function resendEmail(env, toEmail, keyValues, claimUrl) {
+async function resendEmail(env, toEmail, keyValues) {
   const apiKey = env.RESEND_API_KEY;
   const from = env.EMAIL_FROM;
   if (!apiKey || !from) {
     return { ok: false, error: "Email config missing" };
   }
 
-  const safeClaimUrl = String(claimUrl || "").trim();
-  const claimLine = safeClaimUrl
-    ? `<p>View your keys online: <a href="${safeClaimUrl}">${safeClaimUrl}</a></p>`
-    : "";
-
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;color:#111;">
       <p>Your license keys:</p>
       <pre style="background:#f6f6f6;border:1px solid #ddd;padding:12px;border-radius:6px;">${keyValues.join("\n")}</pre>
-      ${claimLine}
       <p>If you need help, contact +420 605 502 234</p>
     </div>
   `;
@@ -370,12 +364,11 @@ export async function onRequestPost({ request, env }) {
 
     const keys = Array.isArray(keysPayload?.keys) ? keysPayload.keys : [];
     const claimToken = await ensureClaimToken(SUPABASE_URL, SRV, provider, providerSessionId, order.id || null);
-    const claimUrl = claimUrlFromRequest(request, claimToken);
 
     let emailSent = Boolean(order.emailed_at);
     let emailError = "";
     if (!emailSent && buyerEmail && keys.length > 0) {
-      const emailRes = await resendEmail(env, buyerEmail, keys.map((k) => String(k.key || k)), claimUrl);
+      const emailRes = await resendEmail(env, buyerEmail, keys.map((k) => String(k.key || k)));
       emailSent = emailRes.ok;
       emailError = emailRes.ok ? "" : (emailRes.error || "Email failed");
       if (emailSent) {
@@ -617,12 +610,11 @@ export async function onRequestPost({ request, env }) {
   });
 
   const claimToken = await ensureClaimToken(SUPABASE_URL, SRV, provider, providerSessionId, order.id || null);
-  const claimUrl = claimUrlFromRequest(request, claimToken);
 
   let emailSent = false;
   let emailError = "";
   if (issued.length > 0) {
-    const emailRes = await resendEmail(env, buyerEmail, issued.map((k) => String(k.key || "")), claimUrl);
+    const emailRes = await resendEmail(env, buyerEmail, issued.map((k) => String(k.key || "")));
     emailSent = emailRes.ok;
     emailError = emailRes.ok ? "" : (emailRes.error || "Email failed");
 

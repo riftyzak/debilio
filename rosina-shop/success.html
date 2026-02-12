@@ -70,6 +70,7 @@
     .order-items { margin-top: 10px; display: grid; gap: 12px; }
     .delivery-box { border: 1px dashed #333; border-radius: 10px; padding: 10px; color: #cfe1ff; background: rgba(74,144,226,0.12); font-size: 13px; }
     .delivery-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+    .delivery-row-top { align-items: flex-start; }
     .item-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
     .item-name { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
     .item-qty {
@@ -86,6 +87,7 @@
       white-space: nowrap;
     }
     .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "Georama", sans-serif; font-size: 12px; letter-spacing: 0.2px; }
+    .key-stack { display: grid; gap: 6px; min-width: 0; }
     .item-meta { color: #b8cceb; font-size: 12px; margin-top: 6px; }
     .copy-btn { border: 1px solid #333; background: rgba(0,0,0,0.4); color: #fff; border-radius: 8px; padding: 4px 8px; cursor: pointer; transition: border-color .2s ease; display: inline-flex; align-items: center; gap: 6px; }
     .copy-btn:hover { border-color: #4a90e2; }
@@ -151,7 +153,7 @@
       </a>
 
       <div class="muted">
-        Claim tokens are single-use and expire quickly. If the token expires, use the latest email link.
+        Claim tokens are single-use and expire quickly.
       </div>
     </div>
   </div>
