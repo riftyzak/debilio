@@ -309,9 +309,13 @@
             background: none;
             border: none;
             color: #888;
-            font-size: 28px;
+            width: 36px;
+            height: 36px;
             cursor: pointer;
             transition: color 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .close-cart:hover {
@@ -527,7 +531,11 @@
         <div class="cart-content">
             <div class="cart-header">
                 <h2 class="cart-title">Your Cart</h2>
-                <button class="close-cart" onclick="toggleCart()">×</button>
+                <button class="close-cart" onclick="toggleCart()" aria-label="Close cart">
+                    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                    </svg>
+                </button>
             </div>
 
             <div id="cartItems"></div>

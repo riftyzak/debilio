@@ -53,17 +53,182 @@ function isFulfilledWithoutKeys(order) {
   return (status === "fulfilled" || status === "emailed") && keysCount === 0;
 }
 
+function parseCartItems(rawCart) {
+  const source = Array.isArray(rawCart)
+    ? rawCart
+    : (rawCart && Array.isArray(rawCart.items) ? rawCart.items : []);
+
+  return source.map((item) => ({
+    id: item?.id ? String(item.id) : "",
+    qty: Math.max(1, Number(item?.qty || 1)),
+    variant_id: item?.variant_id ? String(item.variant_id) : null,
+    duration_days: Number.isFinite(Number(item?.duration_days)) ? Number(item.duration_days) : null,
+  })).filter((item) => item.id);
+}
+
+function uniqueStrings(values) {
+  return [...new Set(values.map((v) => String(v || "").trim()).filter(Boolean))];
+}
+
+function quotedIdList(ids) {
+  return ids.map((id) => `"${id.replaceAll("\"", "\\\"")}"`).join(",");
+}
+
+async function fetchProductsByIds(SUPABASE_URL, SRV, ids) {
+  if (!ids.length) return new Map();
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/products?select=id,title&id=in.(${quotedIdList(ids)})`,
+    { headers: supabaseHeaders(SRV) },
+  );
+  if (!res.ok) {
+    console.error("Claim product lookup failed", { status: res.status, body: await res.text() });
+    return new Map();
+  }
+  const rows = await safeJson(res);
+  const map = new Map();
+  for (const row of rows || []) {
+    map.set(String(row.id), row);
+  }
+  return map;
+}
+
+async function fetchVariantsByIds(SUPABASE_URL, SRV, ids) {
+  if (!ids.length) return new Map();
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/product_variants?select=id,product_id,duration_days&id=in.(${quotedIdList(ids)})`,
+    { headers: supabaseHeaders(SRV) },
+  );
+  if (!res.ok) {
+    console.error("Claim variant lookup failed", { status: res.status, body: await res.text() });
+    return new Map();
+  }
+  const rows = await safeJson(res);
+  const map = new Map();
+  for (const row of rows || []) {
+    map.set(String(row.id), row);
+  }
+  return map;
+}
+
+function addDaysIso(baseIso, durationDays) {
+  if (!Number.isFinite(durationDays) || durationDays <= 0) return null;
+  const base = new Date(baseIso);
+  if (Number.isNaN(base.getTime())) return null;
+  base.setUTCDate(base.getUTCDate() + Number(durationDays));
+  return base.toISOString();
+}
+
+function pickKeyForItem(normalizedKeys, usedKeySet, productId, variantId) {
+  const exact = normalizedKeys.find((item) =>
+    !usedKeySet.has(item.key) &&
+    item.product_id === productId &&
+    (item.product_variant_id || null) === (variantId || null)
+  );
+  if (exact) {
+    usedKeySet.add(exact.key);
+    return exact.key;
+  }
+
+  const byProduct = normalizedKeys.find((item) =>
+    !usedKeySet.has(item.key) &&
+    item.product_id === productId
+  );
+  if (byProduct) {
+    usedKeySet.add(byProduct.key);
+    return byProduct.key;
+  }
+
+  return null;
+}
+
+async function buildPurchasedItems(SUPABASE_URL, SRV, order, normalizedKeys) {
+  const cartItems = parseCartItems(order?.cart);
+  const keyRows = Array.isArray(normalizedKeys) ? normalizedKeys : [];
+  const productIds = uniqueStrings([
+    ...cartItems.map((item) => item.id),
+    ...keyRows.map((row) => row.product_id),
+  ]);
+  const variantIds = uniqueStrings([
+    ...cartItems.map((item) => item.variant_id),
+    ...keyRows.map((row) => row.product_variant_id),
+  ]);
+
+  const [productMap, variantMap] = await Promise.all([
+    fetchProductsByIds(SUPABASE_URL, SRV, productIds),
+    fetchVariantsByIds(SUPABASE_URL, SRV, variantIds),
+  ]);
+
+  const issuedAtIso = String(order?.fulfilled_at || order?.created_at || new Date().toISOString());
+  const usedKeys = new Set();
+  const labelCounter = new Map();
+  const out = [];
+
+  for (const item of cartItems) {
+    const qty = Math.max(1, Number(item.qty || 1));
+    for (let i = 0; i < qty; i++) {
+      const product = productMap.get(item.id);
+      const variant = item.variant_id ? variantMap.get(item.variant_id) : null;
+      const rawDuration = item.duration_days != null
+        ? Number(item.duration_days)
+        : Number(variant?.duration_days);
+      const durationDays = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : null;
+      const key = pickKeyForItem(keyRows, usedKeys, item.id, item.variant_id);
+
+      const labelKey = `${item.id}:${item.variant_id || ""}`;
+      const nextIndex = (labelCounter.get(labelKey) || 0) + 1;
+      labelCounter.set(labelKey, nextIndex);
+
+      const baseTitle = String(product?.title || `Product ${item.id}`);
+      out.push({
+        product_id: item.id,
+        product_variant_id: item.variant_id || null,
+        product_title: `${baseTitle} ${nextIndex}`,
+        key: key || null,
+        duration_days: durationDays,
+        expires_at: durationDays ? addDaysIso(issuedAtIso, durationDays) : null,
+      });
+    }
+  }
+
+  for (const keyRow of keyRows) {
+    if (!keyRow?.key || usedKeys.has(keyRow.key)) continue;
+    usedKeys.add(keyRow.key);
+
+    const productId = keyRow.product_id || null;
+    const variantId = keyRow.product_variant_id || null;
+    const product = productId ? productMap.get(productId) : null;
+    const variant = variantId ? variantMap.get(variantId) : null;
+    const rawDuration = Number(variant?.duration_days);
+    const durationDays = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : null;
+    const labelKey = `${productId || "product"}:${variantId || ""}`;
+    const nextIndex = (labelCounter.get(labelKey) || 0) + 1;
+    labelCounter.set(labelKey, nextIndex);
+    const baseTitle = String(product?.title || productId || "Purchased item");
+
+    out.push({
+      product_id: productId,
+      product_variant_id: variantId,
+      product_title: `${baseTitle} ${nextIndex}`,
+      key: keyRow.key,
+      duration_days: durationDays,
+      expires_at: durationDays ? addDaysIso(issuedAtIso, durationDays) : null,
+    });
+  }
+
+  return out;
+}
+
 async function fetchOrderForClaim(SUPABASE_URL, SRV, claimRow) {
   let orderRes;
   if (claimRow.order_id) {
     orderRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted,status,keys_count&` +
+      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted,status,keys_count,cart,created_at,fulfilled_at&` +
       `id=eq.${encodeURIComponent(String(claimRow.order_id))}&limit=1`,
       { headers: supabaseHeaders(SRV) },
     );
   } else {
     orderRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted,status,keys_count&` +
+      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted,status,keys_count,cart,created_at,fulfilled_at&` +
       `provider=eq.${encodeURIComponent(String(claimRow.provider || ""))}&` +
       `provider_session_id=eq.${encodeURIComponent(String(claimRow.session_id || ""))}&limit=1`,
       { headers: supabaseHeaders(SRV) },
@@ -194,7 +359,8 @@ export async function onRequestPost({ request, env }) {
     const consumed = await consumeClaimToken(SUPABASE_URL, SRV, claim, nowIso);
     if (!consumed.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
     if (!consumed.consumed) return invalidClaimResponse(404);
-    return jsonNoStore({ ok: true, keys: [] }, 200, getNoStoreHeaders());
+    const items = await buildPurchasedItems(SUPABASE_URL, SRV, order, []);
+    return jsonNoStore({ ok: true, keys: [], items }, 200, getNoStoreHeaders());
   }
 
   if (!order) {
@@ -204,7 +370,7 @@ export async function onRequestPost({ request, env }) {
     order = recheck.order;
   }
 
-  if (!order.keys_encrypted) {
+  if (!order?.keys_encrypted) {
     await tryTriggerInternalFulfill(request, env, claimRow);
     const recheck = await fetchOrderForClaim(SUPABASE_URL, SRV, claimRow);
     if (!recheck.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
@@ -214,7 +380,8 @@ export async function onRequestPost({ request, env }) {
       const consumed = await consumeClaimToken(SUPABASE_URL, SRV, claim, nowIso);
       if (!consumed.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
       if (!consumed.consumed) return invalidClaimResponse(404);
-      return jsonNoStore({ ok: true, keys: [] }, 200, getNoStoreHeaders());
+      const items = await buildPurchasedItems(SUPABASE_URL, SRV, order, []);
+      return jsonNoStore({ ok: true, keys: [], items }, 200, getNoStoreHeaders());
     }
 
     if (!order || !order.keys_encrypted) {
@@ -246,5 +413,7 @@ export async function onRequestPost({ request, env }) {
     product_variant_id: item?.product_variant_id ? String(item.product_variant_id) : null,
   })).filter((item) => item.key);
 
-  return jsonNoStore({ ok: true, keys: normalizedKeys }, 200, getNoStoreHeaders());
+  const items = await buildPurchasedItems(SUPABASE_URL, SRV, order, normalizedKeys);
+
+  return jsonNoStore({ ok: true, keys: normalizedKeys, items }, 200, getNoStoreHeaders());
 }

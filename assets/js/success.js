@@ -32,6 +32,13 @@ function renderMuted(text) {
   orderItems.appendChild(muted);
 }
 
+function formatExpiry(value) {
+  if (!value) return "";
+  const dt = new Date(String(value));
+  if (Number.isNaN(dt.getTime())) return "";
+  return dt.toLocaleString();
+}
+
 async function postJson(url, body) {
   const res = await fetch(url, {
     method: "POST",
@@ -49,46 +56,79 @@ async function postJson(url, body) {
   return { ok: res.ok, status: res.status, data: parsed };
 }
 
-function renderKeys(keys) {
+function normalizeFallbackItems(keys) {
+  if (!Array.isArray(keys)) return [];
+  return keys.map((row) => ({
+    product_id: row?.product_id ? String(row.product_id) : null,
+    product_variant_id: row?.product_variant_id ? String(row.product_variant_id) : null,
+    product_title: row?.product_id ? `Product ${String(row.product_id)}` : "Purchased item",
+    key: row?.key ? String(row.key) : "",
+    duration_days: null,
+    expires_at: null,
+  }));
+}
+
+function renderPurchasedItems(payload) {
   if (!orderItems) return;
   orderItems.replaceChildren();
 
-  if (!Array.isArray(keys) || keys.length === 0) {
-    renderMuted("No keys were found for this claim token.");
+  const apiItems = Array.isArray(payload?.items) ? payload.items : [];
+  const fallbackItems = normalizeFallbackItems(payload?.keys || []);
+  const items = apiItems.length ? apiItems : fallbackItems;
+
+  if (!items.length) {
+    renderMuted("No purchased items were found for this claim token.");
     if (dashboardCta) dashboardCta.style.display = "none";
     return;
   }
 
   if (dashboardCta) dashboardCta.style.display = "inline-flex";
 
-  for (const row of keys) {
+  for (const row of items) {
     const box = document.createElement("div");
     box.className = "delivery-box";
+
+    const title = document.createElement("div");
+    title.className = "item-name";
+    title.textContent = String(row?.product_title || row?.product_id || "Purchased item");
+    box.appendChild(title);
 
     const line = document.createElement("div");
     line.className = "delivery-row";
 
-    const keyEl = document.createElement("span");
-    keyEl.className = "delivery-key";
-    keyEl.textContent = `Delivery: ${String(row.key || "")}`;
+    const keyValue = String(row?.key || "");
+    if (keyValue) {
+      const keyEl = document.createElement("span");
+      keyEl.className = "delivery-key";
+      keyEl.textContent = `Delivery: ${keyValue}`;
 
-    const button = document.createElement("button");
-    button.className = "copy-btn";
-    button.type = "button";
-    button.setAttribute("data-copy", String(row.key || ""));
-    button.textContent = "Copy";
+      const button = document.createElement("button");
+      button.className = "copy-btn";
+      button.type = "button";
+      button.setAttribute("data-copy", keyValue);
+      button.textContent = "Copy";
 
-    line.appendChild(keyEl);
-    line.appendChild(button);
+      line.appendChild(keyEl);
+      line.appendChild(button);
+    } else {
+      const noKey = document.createElement("span");
+      noKey.className = "muted";
+      noKey.textContent = "No license key required for this item.";
+      line.appendChild(noKey);
+    }
 
     box.appendChild(line);
 
-    if (row.product_id || row.product_variant_id) {
+    const duration = Number(row?.duration_days);
+    const expiryText = formatExpiry(row?.expires_at);
+    if ((Number.isFinite(duration) && duration > 0) || expiryText || row?.product_id || row?.product_variant_id) {
       const meta = document.createElement("div");
-      meta.className = "muted";
+      meta.className = "item-meta";
       const parts = [];
-      if (row.product_id) parts.push(`Product: ${row.product_id}`);
-      if (row.product_variant_id) parts.push(`Variant: ${row.product_variant_id}`);
+      if (Number.isFinite(duration) && duration > 0) parts.push(`Duration: ${duration} days`);
+      if (expiryText) parts.push(`Expires: ${expiryText}`);
+      if (row?.product_id) parts.push(`Product ID: ${row.product_id}`);
+      if (row?.product_variant_id) parts.push(`Variant ID: ${row.product_variant_id}`);
       meta.textContent = parts.join(" | ");
       box.appendChild(meta);
     }
@@ -117,18 +157,18 @@ async function run() {
       const isPending = response.status === 202 || response.status === 409 || response.data?.pending === true;
 
       if (response.ok && !isPending) {
-        renderKeys(response.data?.keys || []);
+        renderPurchasedItems(response.data || {});
         return;
       }
 
       if (isPending) {
         if (attempt < maxPendingRetries) {
-          renderMuted("Keys are being prepared. Please wait a moment...");
+          renderMuted("Items are being prepared. Please wait a moment...");
           setTimeout(() => {
             claimOnce(attempt + 1);
           }, pendingRetryDelayMs(attempt));
         } else {
-          renderMuted("Keys are still being prepared. Please refresh in a few seconds.");
+          renderMuted("Items are still being prepared. Please refresh in a few seconds.");
         }
         return;
       }
@@ -138,17 +178,17 @@ async function run() {
       } else if (response.status === 429) {
         renderMuted("Too many attempts. Please retry in a minute.");
       } else {
-        renderMuted("Unable to load keys right now.");
+        renderMuted("Unable to load purchased items right now.");
       }
     } catch (_) {
-      renderMuted("Unable to load keys right now.");
+      renderMuted("Unable to load purchased items right now.");
     }
   };
 
   try {
     await claimOnce(0);
   } catch (_) {
-    renderMuted("Unable to load keys right now.");
+    renderMuted("Unable to load purchased items right now.");
   }
 }
 

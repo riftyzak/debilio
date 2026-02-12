@@ -104,6 +104,11 @@
       align-items: center;
       gap: 10px;
     }
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+    }
 
     .back-button:hover {
       border-color: #4a90e2;
@@ -641,7 +646,12 @@
   <div class="background-text" id="bgText"></div>
 
   <div class="container">
-    <a href="/rosina-shop/" class="back-button">← Back to shop</a>
+    <a href="/rosina-shop/" class="back-button">
+      <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span>Back to shop</span>
+    </a>
 
     <div class="header">
       <div class="title">Dashboard</div>
