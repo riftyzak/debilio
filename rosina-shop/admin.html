@@ -724,7 +724,7 @@
       gap: 8px
     }
 
-    .upload-btn svg {
+    .upload-btn i {
       width: 16px;
       height: 16px
     }
@@ -1873,10 +1873,7 @@
                   <div class="upload-row">
                     <input id="dashboard_icon_file" type="file" accept="image/*" style="display:none" />
                     <button id="dashboardIconUploadBtn" type="button" class="ghost upload-btn" aria-label="Upload dashboard icon">
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" fill="none" stroke="currentColor" stroke-width="2"
-                          stroke-linecap="round" stroke-linejoin="round" />
-                      </svg>
+                      <i class="fas fa-upload" aria-hidden="true"></i>
                       <span>Upload</span>
                     </button>
                     <span id="dashboardIconFileName" class="muted">No file selected</span>
@@ -1900,10 +1897,7 @@
               <div class="upload-row">
                 <input id="image_file" type="file" accept="image/*" style="display:none" />
                 <button id="imageUploadBtn" type="button" class="ghost upload-btn" aria-label="Upload image">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" fill="none" stroke="currentColor" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
+                  <i class="fas fa-upload" aria-hidden="true"></i>
                   <span>Upload</span>
                 </button>
                 <span id="imageFileName" class="muted">No file selected</span>
@@ -1951,9 +1945,7 @@
       <div class="modal-head">
         <div id="deleteTitle" class="modal-title">Delete product</div>
         <button id="deleteCloseBtn" class="modal-close" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
-          </svg>
+          <i class="fas fa-times" aria-hidden="true"></i>
         </button>
       </div>
       <div class="modal-body">

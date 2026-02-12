@@ -8,11 +8,12 @@
   <meta http-equiv="Expires" content="0" />
   <meta
     http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
   />
   <title>Success - Rosina Shop</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Georama:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/styles/tailwind.css">
 
   <style>
@@ -102,7 +103,7 @@
       text-decoration: none;
     }
     .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74,144,226,0.4); }
-    .btn-icon { width: 18px; height: 18px; flex: 0 0 18px; }
+    .btn-icon { width: 18px; height: 18px; flex: 0 0 18px; display: inline-flex; align-items: center; justify-content: center; }
 
     @media (max-width: 480px) {
       body { padding: 80px 14px 20px; }
@@ -127,15 +128,11 @@
       <div id="orderItems" class="order-items"></div>
 
       <a class="btn" id="dashboardCta" href="/dashboard/">
-        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M14.5 3a5.5 5.5 0 0 0-4.86 8.06L3 17.7V21h3.3l1.2-1.2h1.8l1.2-1.2v-1.8l.63-.63A5.5 5.5 0 1 0 14.5 3zm3.2 4.3a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z" fill="currentColor"/>
-        </svg>
+        <i class="fas fa-key btn-icon" aria-hidden="true"></i>
         <span>Go to dashboard to redeem</span>
       </a>
       <a class="btn" href="/rosina-shop/">
-        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M14.5 5L8 12l6.5 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <i class="fas fa-arrow-left btn-icon" aria-hidden="true"></i>
         <span>Back to shop</span>
       </a>
 

@@ -50,15 +50,11 @@ function renderCopyButton(button, copied) {
   if (!button) return;
   button.innerHTML = copied
     ? `
-      <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
+      <i class="fas fa-check copy-icon" aria-hidden="true"></i>
       <span>Copied</span>
     `
     : `
-      <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M9 9h11v11H9zM4 4h11v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" />
-      </svg>
+      <i class="far fa-copy copy-icon" aria-hidden="true"></i>
       <span>Copy</span>
     `;
 }
