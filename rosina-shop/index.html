@@ -578,7 +578,25 @@
 
         .sk-btn {
             height: 44px;
-            margin-top: 8px;
+            margin-top: 0;
+        }
+
+        .sk-title {
+            width: 72%;
+        }
+
+        .sk-desc-wrap {
+            display: grid;
+            gap: 8px;
+        }
+
+        .sk-desc-2 {
+            width: 88%;
+        }
+
+        .sk-price {
+            width: 44%;
+            height: 16px;
         }
     </style>
 </head>
@@ -718,15 +736,15 @@ let productsLoading = true;
         function renderGridSkeleton(count = 8) {
             const grid = document.getElementById('productsGrid');
             grid.innerHTML = Array.from({ length: count }).map(() => `
-                <div class="product-card skeleton skeleton-card">
+                <div class="product-card skeleton-card">
                     <div class="sk-image skeleton"></div>
-                    <div class="sk-stack">
-                        <div class="sk-line lg"></div>
+                    <div class="product-name"><div class="sk-line sk-title"></div></div>
+                    <div class="product-description sk-desc-wrap">
                         <div class="sk-line"></div>
-                        <div class="sk-line md"></div>
-                        <div class="sk-line sm"></div>
-                        <div class="sk-btn skeleton"></div>
+                        <div class="sk-line sk-desc-2"></div>
                     </div>
+                    <div class="product-price"><div class="sk-line sk-price"></div></div>
+                    <div class="add-to-cart skeleton sk-btn"></div>
                 </div>
             `).join('');
         }

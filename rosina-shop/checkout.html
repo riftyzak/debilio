@@ -210,6 +210,19 @@
       filter: saturate(.6);
     }
 
+    .btn.is-loading {
+      cursor: progress;
+      opacity: .9;
+    }
+
+    .btn .spin {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .btn.secondary { background: #111; border: 2px solid #333; box-shadow: none; }
     .btn.secondary:hover { border-color: #4a90e2; transform: translateY(-2px); }
 
@@ -287,7 +300,7 @@
     .sk-line.sm { width: 42%; height: 12px; }
     .sk-line.md { width: 64%; }
     .sk-line.lg { width: 80%; height: 16px; }
-    .sk-row { height: 58px; margin-bottom: 10px; }
+    .sk-row { min-height: 70px; margin-bottom: 10px; }
     .sk-total { height: 18px; margin-bottom: 10px; }
 
     .fade-in {
@@ -384,6 +397,8 @@
       sebastian: { type: "discount", rate: 0.1337 },
       robrt007main: { type: "fixed", fixedTotal: 777 }
     };
+
+    let checkoutInFlight = false;
 
     function supaHeaders() {
       return {
@@ -484,8 +499,40 @@
     function setPaymentButtonsEnabled(enabled) {
       const payStripe = document.getElementById("payStripe");
       const payCrypto = document.getElementById("payCrypto");
-      if (payStripe) payStripe.disabled = !enabled;
-      if (payCrypto) payCrypto.disabled = !enabled;
+      const canUse = enabled && !checkoutInFlight;
+      if (payStripe) payStripe.disabled = !canUse;
+      if (payCrypto) payCrypto.disabled = !canUse;
+    }
+
+    function setCheckoutButtonLoading(provider, loading) {
+      const payStripe = document.getElementById("payStripe");
+      const payCrypto = document.getElementById("payCrypto");
+      if (!payStripe || !payCrypto) return;
+
+      if (!payStripe.dataset.defaultHtml) payStripe.dataset.defaultHtml = payStripe.innerHTML;
+      if (!payCrypto.dataset.defaultHtml) payCrypto.dataset.defaultHtml = payCrypto.innerHTML;
+
+      checkoutInFlight = loading;
+
+      if (loading) {
+        payStripe.disabled = true;
+        payCrypto.disabled = true;
+        payStripe.classList.toggle("is-loading", provider === "stripe");
+        payCrypto.classList.toggle("is-loading", provider === "coinbase");
+        if (provider === "stripe") {
+          payStripe.innerHTML = `<i class="fas fa-spinner spin" aria-hidden="true"></i> Preparing card checkout...`;
+          payCrypto.innerHTML = `<i class="fas fa-hourglass-half" aria-hidden="true"></i> Please wait...`;
+        } else {
+          payCrypto.innerHTML = `<i class="fas fa-spinner spin" aria-hidden="true"></i> Preparing crypto checkout...`;
+          payStripe.innerHTML = `<i class="fas fa-hourglass-half" aria-hidden="true"></i> Please wait...`;
+        }
+        return;
+      }
+
+      payStripe.classList.remove("is-loading");
+      payCrypto.classList.remove("is-loading");
+      payStripe.innerHTML = payStripe.dataset.defaultHtml;
+      payCrypto.innerHTML = payCrypto.dataset.defaultHtml;
     }
 
     function triggerFadeIn(element) {
@@ -501,15 +548,33 @@
       if (!itemsEl || !totalsEl) return;
 
       itemsEl.innerHTML = `
-        <div class="item skeleton sk-row"></div>
-        <div class="item skeleton sk-row"></div>
-        <div class="item skeleton sk-row"></div>
+        <div class="item sk-row">
+          <div>
+            <div class="sk-line lg"></div>
+            <div class="sk-line md" style="margin-top:8px;"></div>
+          </div>
+          <div class="sk-line sm" style="width:84px;"></div>
+        </div>
+        <div class="item sk-row">
+          <div>
+            <div class="sk-line lg" style="width:68%;"></div>
+            <div class="sk-line md" style="margin-top:8px;width:58%;"></div>
+          </div>
+          <div class="sk-line sm" style="width:84px;"></div>
+        </div>
+        <div class="item sk-row">
+          <div>
+            <div class="sk-line lg" style="width:74%;"></div>
+            <div class="sk-line md" style="margin-top:8px;width:52%;"></div>
+          </div>
+          <div class="sk-line sm" style="width:84px;"></div>
+        </div>
       `;
 
       totalsEl.innerHTML = `
-        <div class="skeleton sk-total"></div>
-        <div class="skeleton sk-total"></div>
-        <div class="skeleton sk-total" style="width:56%;"></div>
+        <div class="sk-total sk-line" style="width:100%;"></div>
+        <div class="sk-total sk-line" style="width:76%;"></div>
+        <div class="sk-total sk-line" style="width:58%;"></div>
       `;
     }
 
@@ -657,6 +722,8 @@
         return;
       }
 
+      setCheckoutButtonLoading(provider, true);
+
       let products = [];
       let variants = [];
       try {
@@ -686,6 +753,8 @@
           location.href = hosted_url;
         }
       } catch (e) {
+        setCheckoutButtonLoading(provider, false);
+        setPaymentButtonsEnabled(true);
         setStatus("Something went wrong. Please try again.");
       }
     }
