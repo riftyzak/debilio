@@ -572,7 +572,6 @@
         async function fetchActiveProducts() {
             const base = `${SUPABASE_URL}/rest/v1/products`;
             const selects = [
-                "id,title,slug,price_eur,description,image_url,is_active,created_at,time_based_enabled",
                 "id,title,slug,price_eur,description,image_url,is_active,created_at"
             ];
 
