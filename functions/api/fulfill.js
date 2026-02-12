@@ -327,6 +327,10 @@ export async function onRequestPost({ request, env }) {
   const provider = String(body?.provider || "").trim().toLowerCase();
   const session_id = String(body?.session_id || "").trim();
   const charge_id = String(body?.charge_id || "").trim();
+  const webhookVerified = body?.webhook_verified === true;
+  const webhookStripeSession = body?.stripe_session && typeof body.stripe_session === "object"
+    ? body.stripe_session
+    : null;
   const providerSessionId = provider === "stripe" ? session_id : charge_id;
 
   if (!provider || !providerSessionId || (provider !== "stripe" && provider !== "coinbase")) {
@@ -398,21 +402,26 @@ export async function onRequestPost({ request, env }) {
   let coinbaseCharge = null;
 
   if (provider === "stripe") {
-    const STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
-    if (!STRIPE_SECRET_KEY) {
-      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    let session = null;
+    if (webhookVerified && webhookStripeSession && String(webhookStripeSession.id || "") === providerSessionId) {
+      session = webhookStripeSession;
+    } else {
+      const STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
+      if (!STRIPE_SECRET_KEY) {
+        return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+      }
+
+      const stripeRes = await fetch(
+        `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(providerSessionId)}`,
+        { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
+      );
+      if (!stripeRes.ok) {
+        console.error("Stripe session verification failed", { status: stripeRes.status, body: await stripeRes.text() });
+        return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+      }
+      session = await safeJson(stripeRes);
     }
 
-    const stripeRes = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(providerSessionId)}`,
-      { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
-    );
-    if (!stripeRes.ok) {
-      console.error("Stripe session verification failed", { status: stripeRes.status, body: await stripeRes.text() });
-      return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
-    }
-
-    const session = await safeJson(stripeRes);
     stripeSessionRaw = session || null;
     const paid = session?.payment_status === "paid" || session?.status === "complete";
     if (!paid) {

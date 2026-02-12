@@ -67,20 +67,40 @@ async function safeJson(res) {
   }
 }
 
-async function insertProcessingEvent(SUPABASE_URL, SRV, eventId) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/processed_events?on_conflict=event_id`, {
+async function postProcessedEvent(SUPABASE_URL, SRV, payload) {
+  return fetch(`${SUPABASE_URL}/rest/v1/processed_events?on_conflict=event_id`, {
     method: "POST",
     headers: supabaseHeaders(SRV, {
       "Content-Type": "application/json",
       Prefer: "resolution=ignore-duplicates,return=representation",
     }),
-    body: JSON.stringify([{
-      event_id: eventId,
-    }]),
+    body: JSON.stringify([payload]),
+  });
+}
+
+async function insertProcessingEvent(SUPABASE_URL, SRV, eventId, eventType) {
+  let res = await postProcessedEvent(SUPABASE_URL, SRV, {
+    event_id: eventId,
+    provider: "stripe",
+    event_type: eventType || null,
   });
 
   if (!res.ok) {
-    console.error("Processed event insert failed", { status: res.status, body: await res.text() });
+    const body = await res.text();
+    const missingColumn =
+      res.status === 400
+      && (body.includes("provider") || body.includes("event_type"));
+
+    if (missingColumn) {
+      res = await postProcessedEvent(SUPABASE_URL, SRV, { event_id: eventId });
+    } else {
+      console.error("Processed event insert failed", { status: res.status, body });
+      return { ok: false, duplicate: false };
+    }
+  }
+
+  if (!res.ok) {
+    console.error("Processed event fallback insert failed", { status: res.status, body: await res.text() });
     return { ok: false, duplicate: false };
   }
 
@@ -186,7 +206,7 @@ export async function onRequestPost({ request, env }) {
     return jsonNoStore({ ok: true, skipped: "not_paid" }, 200);
   }
 
-  const processState = await insertProcessingEvent(SUPABASE_URL, SRV, eventId);
+  const processState = await insertProcessingEvent(SUPABASE_URL, SRV, eventId, eventType);
   if (!processState.ok) {
     return jsonNoStore({ error: "Server error" }, 500);
   }
@@ -204,6 +224,16 @@ export async function onRequestPost({ request, env }) {
     body: JSON.stringify({
       provider: "stripe",
       session_id: sessionId,
+      webhook_verified: true,
+      stripe_session: {
+        id: session?.id || null,
+        payment_status: session?.payment_status || null,
+        status: session?.status || null,
+        amount_total: session?.amount_total || null,
+        currency: session?.currency || null,
+        customer_email: session?.customer_details?.email || session?.customer_email || null,
+        metadata: session?.metadata || null,
+      },
     }),
   });
 
