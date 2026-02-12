@@ -43,7 +43,7 @@ function invalidClaimResponse(status = 404) {
 }
 
 function pendingClaimResponse() {
-  return jsonNoStore({ error: "Keys are being prepared" }, 409, getNoStoreHeaders());
+  return jsonNoStore({ ok: false, pending: true, message: "Keys are being prepared" }, 202, getNoStoreHeaders());
 }
 
 export async function onRequestPost({ request, env }) {

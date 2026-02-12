@@ -99,28 +99,50 @@ function renderKeys(keys) {
 async function run() {
   const params = new URLSearchParams(window.location.search);
   const claim = String(params.get("claim") || "").trim();
+  const maxPendingRetries = 30;
+  const pendingRetryDelayMs = 2000;
 
   if (!claim) {
     renderMuted("Missing claim token. Use the secure link sent by email.");
     return;
   }
 
-  try {
-    const response = await postJson("/api/claim", { claim });
-    if (!response.ok) {
+  const claimOnce = async (attempt) => {
+    try {
+      const response = await postJson("/api/claim", { claim });
+      const isPending = response.status === 202 || response.status === 409 || response.data?.pending === true;
+
+      if (response.ok && !isPending) {
+        renderKeys(response.data?.keys || []);
+        return;
+      }
+
+      if (isPending) {
+        if (attempt < maxPendingRetries) {
+          renderMuted("Keys are being prepared. Please wait a moment...");
+          setTimeout(() => {
+            claimOnce(attempt + 1);
+          }, pendingRetryDelayMs);
+        } else {
+          renderMuted("Keys are still being prepared. Please refresh in a few seconds.");
+        }
+        return;
+      }
+
       if (response.status === 400 || response.status === 404) {
         renderMuted("Invalid or expired claim token.");
-      } else if (response.status === 409) {
-        renderMuted("Keys are being prepared. Please refresh in a few seconds.");
       } else if (response.status === 429) {
         renderMuted("Too many attempts. Please retry in a minute.");
       } else {
         renderMuted("Unable to load keys right now.");
       }
-      return;
+    } catch (_) {
+      renderMuted("Unable to load keys right now.");
     }
+  };
 
-    renderKeys(response.data?.keys || []);
+  try {
+    await claimOnce(0);
   } catch (_) {
     renderMuted("Unable to load keys right now.");
   }
