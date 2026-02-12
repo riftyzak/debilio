@@ -492,8 +492,9 @@
 
     function setStatus(msg) {
       const el = document.getElementById("status");
-      el.textContent = msg;
-      el.classList.add("show");
+      const text = String(msg || "").trim();
+      el.textContent = text;
+      el.classList.toggle("show", text.length > 0);
     }
 
     function setPaymentButtonsEnabled(enabled) {
@@ -535,6 +536,15 @@
       payCrypto.innerHTML = payCrypto.dataset.defaultHtml;
     }
 
+    function setCheckoutFormBusy(busy) {
+      const email = document.getElementById("buyerEmail");
+      const promo = document.getElementById("promoCode");
+      const promoBtn = document.getElementById("promoBtn");
+      if (email) email.disabled = !!busy;
+      if (promo) promo.disabled = !!busy;
+      if (promoBtn) promoBtn.disabled = !!busy;
+    }
+
     function triggerFadeIn(element) {
       if (!element) return;
       element.classList.remove("is-ready");
@@ -552,20 +562,6 @@
           <div>
             <div class="sk-line lg"></div>
             <div class="sk-line md" style="margin-top:8px;"></div>
-          </div>
-          <div class="sk-line sm" style="width:84px;"></div>
-        </div>
-        <div class="item sk-row">
-          <div>
-            <div class="sk-line lg" style="width:68%;"></div>
-            <div class="sk-line md" style="margin-top:8px;width:58%;"></div>
-          </div>
-          <div class="sk-line sm" style="width:84px;"></div>
-        </div>
-        <div class="item sk-row">
-          <div>
-            <div class="sk-line lg" style="width:74%;"></div>
-            <div class="sk-line md" style="margin-top:8px;width:52%;"></div>
           </div>
           <div class="sk-line sm" style="width:84px;"></div>
         </div>
@@ -706,7 +702,8 @@
     }
 
     async function start(provider) {
-      setStatus("Creating checkout…");
+      if (checkoutInFlight) return;
+      setStatus("");
 
       const emailInput = document.getElementById("buyerEmail");
       const buyerEmail = emailInput ? emailInput.value.trim() : "";
@@ -723,6 +720,7 @@
       }
 
       setCheckoutButtonLoading(provider, true);
+      setCheckoutFormBusy(true);
 
       let products = [];
       let variants = [];
@@ -754,6 +752,7 @@
         }
       } catch (e) {
         setCheckoutButtonLoading(provider, false);
+        setCheckoutFormBusy(false);
         setPaymentButtonsEnabled(true);
         setStatus("Something went wrong. Please try again.");
       }
