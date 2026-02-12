@@ -202,6 +202,14 @@
     }
     .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); }
 
+    .btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      filter: saturate(.6);
+    }
+
     .btn.secondary { background: #111; border: 2px solid #333; box-shadow: none; }
     .btn.secondary:hover { border-color: #4a90e2; transform: translateY(-2px); }
 
@@ -245,6 +253,53 @@
       transition: all 0.3s ease;
     }
     .checkout-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); }
+
+    .skeleton {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skeleton::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(74, 144, 226, 0.18) 50%, rgba(255, 255, 255, 0) 100%);
+      animation: skeleton-shimmer 1.35s ease-in-out infinite;
+    }
+
+    @keyframes skeleton-shimmer {
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    .sk-line {
+      height: 14px;
+      border-radius: 8px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+    }
+
+    .sk-line.sm { width: 42%; height: 12px; }
+    .sk-line.md { width: 64%; }
+    .sk-line.lg { width: 80%; height: 16px; }
+    .sk-row { height: 58px; margin-bottom: 10px; }
+    .sk-total { height: 18px; margin-bottom: 10px; }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 250ms ease, transform 250ms ease;
+    }
+
+    .fade-in.is-ready {
+      opacity: 1;
+      transform: translateY(0);
+    }
   
 
     @media (max-width: 480px){
@@ -283,8 +338,8 @@
             style="width:100%;background:rgba(0,0,0,.5);border:2px solid #333;color:#fff;padding:10px 15px;border-radius:10px;font-family:'Georama',sans-serif;font-size:14px;" />
         </div>
 
-        <button class="btn" id="payStripe"><i class="fas fa-lock"></i> Pay with Card</button>
-        <button class="btn secondary" id="payCrypto"><i class="fab fa-bitcoin"></i> Pay with Crypto</button>
+        <button class="btn" id="payStripe" disabled><i class="fas fa-lock"></i> Pay with Card</button>
+        <button class="btn secondary" id="payCrypto" disabled><i class="fab fa-bitcoin"></i> Pay with Crypto</button>
 
         <div class="line"></div>
 
@@ -426,6 +481,38 @@
       el.classList.add("show");
     }
 
+    function setPaymentButtonsEnabled(enabled) {
+      const payStripe = document.getElementById("payStripe");
+      const payCrypto = document.getElementById("payCrypto");
+      if (payStripe) payStripe.disabled = !enabled;
+      if (payCrypto) payCrypto.disabled = !enabled;
+    }
+
+    function triggerFadeIn(element) {
+      if (!element) return;
+      element.classList.remove("is-ready");
+      element.classList.add("fade-in");
+      requestAnimationFrame(() => element.classList.add("is-ready"));
+    }
+
+    function renderCheckoutSkeleton() {
+      const itemsEl = document.getElementById("items");
+      const totalsEl = document.getElementById("totals");
+      if (!itemsEl || !totalsEl) return;
+
+      itemsEl.innerHTML = `
+        <div class="item skeleton sk-row"></div>
+        <div class="item skeleton sk-row"></div>
+        <div class="item skeleton sk-row"></div>
+      `;
+
+      totalsEl.innerHTML = `
+        <div class="skeleton sk-total"></div>
+        <div class="skeleton sk-total"></div>
+        <div class="skeleton sk-total" style="width:56%;"></div>
+      `;
+    }
+
     async function postJson(url, body) {
       const res = await fetch(url, {
         method: "POST",
@@ -493,6 +580,10 @@
     async function renderSummary() {
       const itemsEl = document.getElementById("items");
       const totalsEl = document.getElementById("totals");
+      renderCheckoutSkeleton();
+      setPaymentButtonsEnabled(false);
+
+      try {
 
       const cart = loadCart();
       if (!cart.length) {
@@ -540,6 +631,13 @@
         ${promoResult.lineHtml}
         <div class="total-row final"><span>Total</span><span>${moneyEUR(promoResult.total)}</span></div>
       `;
+      triggerFadeIn(itemsEl);
+      triggerFadeIn(totalsEl);
+      setPaymentButtonsEnabled(true);
+      } catch (_) {
+        itemsEl.innerHTML = `<div style="color:#888;padding:12px 0;">Unable to load checkout summary right now.</div>`;
+        totalsEl.innerHTML = "";
+      }
     }
 
     async function start(provider) {
@@ -595,7 +693,7 @@
     document.getElementById("payStripe").onclick = () => start("stripe");
     document.getElementById("payCrypto").onclick = () => start("coinbase");
 
-    renderSummary();
+    renderSummary().catch(()=>{});
 
     const emailInput = document.getElementById("buyerEmail");
     if (emailInput) {

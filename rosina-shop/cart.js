@@ -190,6 +190,31 @@ function injectCartStyles() {
       color:#4a90e2;
     }
 
+    @keyframes rosinaCartShimmer {
+      0% { background-position: -280px 0; }
+      100% { background-position: 280px 0; }
+    }
+
+    #cartItems .cart-loading-row {
+      height: 74px;
+      border: 2px solid #333;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      background: linear-gradient(90deg, #111 0%, #1c2a3f 50%, #111 100%);
+      background-size: 280px 100%;
+      animation: rosinaCartShimmer 1.2s linear infinite;
+    }
+
+    #cartTotal .cart-loading-line {
+      height: 18px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #2a2a2a;
+      background: linear-gradient(90deg, #111 0%, #1c2a3f 50%, #111 100%);
+      background-size: 280px 100%;
+      animation: rosinaCartShimmer 1.2s linear infinite;
+    }
+
     /* Optional toast (if present on the page) */
     .toast {
       position: fixed;
@@ -297,6 +322,22 @@ function findProductByIdGeneric(id) {
   return null;
 }
 
+function renderCartLoadingSkeleton() {
+  const itemsEl = document.getElementById("cartItems");
+  const totalEl = document.getElementById("cartTotal");
+  if (!itemsEl || !totalEl) return;
+
+  itemsEl.innerHTML = `
+    <div class="cart-loading-row"></div>
+    <div class="cart-loading-row"></div>
+    <div class="cart-loading-row"></div>
+  `;
+  totalEl.innerHTML = `
+    <div class="cart-loading-line"></div>
+    <div class="cart-loading-line" style="width:72%"></div>
+  `;
+}
+
 // ===== cart UI =====
 async function toggleCart() {
   injectCartStyles();
@@ -315,6 +356,7 @@ async function toggleCart() {
   }
 
   if (opening) {
+    renderCartLoadingSkeleton();
     try {
       await refreshCartProductsFromSupabase();
     } catch (e) {

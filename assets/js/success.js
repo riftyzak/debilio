@@ -5,8 +5,17 @@ const providerEl = document.getElementById("provider");
 const dashboardCta = document.getElementById("dashboardCta");
 const claimRunnerKey = "__rosina_claim_runner_started__";
 
+function triggerFadeIn(element) {
+  if (!element) return;
+  element.classList.remove("is-ready");
+  element.classList.add("fade-in");
+  requestAnimationFrame(() => element.classList.add("is-ready"));
+}
+
 if (timeEl) {
+  timeEl.classList.remove("skeleton", "sk-inline");
   timeEl.textContent = new Date().toLocaleString();
+  triggerFadeIn(timeEl);
 }
 
 if (bgText) {
@@ -31,6 +40,7 @@ function renderMuted(text) {
   muted.className = "muted";
   muted.textContent = text;
   orderItems.appendChild(muted);
+  triggerFadeIn(muted);
 }
 
 function normalizeProviderName(value) {
@@ -43,7 +53,9 @@ function normalizeProviderName(value) {
 
 function setProvider(value) {
   if (!providerEl) return;
+  providerEl.classList.remove("skeleton", "sk-inline");
   providerEl.textContent = normalizeProviderName(value);
+  triggerFadeIn(providerEl);
 }
 
 function renderCopyButton(button, copied, label = "Copy all") {
@@ -171,7 +183,7 @@ function renderPurchasedItems(payload) {
 
   for (const row of groupedItems) {
     const box = document.createElement("div");
-    box.className = "delivery-box";
+    box.className = "delivery-box fade-in";
 
     const titleRow = document.createElement("div");
     titleRow.className = "item-title-row";
@@ -238,6 +250,10 @@ function renderPurchasedItems(payload) {
 
     orderItems.appendChild(box);
   }
+
+  requestAnimationFrame(() => {
+    orderItems.querySelectorAll(".fade-in").forEach((el) => el.classList.add("is-ready"));
+  });
 }
 
 async function run() {
