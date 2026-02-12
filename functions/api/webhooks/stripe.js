@@ -123,6 +123,31 @@ async function deleteProcessingEvent(SUPABASE_URL, SRV, eventId) {
   }
 }
 
+function isOrderReady(order) {
+  if (!order || typeof order !== "object") return false;
+  if (order.keys_encrypted) return true;
+  const status = String(order.status || "").toLowerCase();
+  const keysCount = Number(order.keys_count || 0);
+  return (status === "fulfilled" || status === "emailed") && keysCount === 0;
+}
+
+async function fetchOrderState(SUPABASE_URL, SRV, sessionId) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/checkout_orders?select=status,keys_encrypted,keys_count&` +
+    `provider=eq.stripe&provider_session_id=eq.${encodeURIComponent(sessionId)}&limit=1`,
+    { headers: supabaseHeaders(SRV) },
+  );
+
+  if (!res.ok) {
+    console.error("Webhook order state lookup failed", { status: res.status, body: await res.text(), sessionId });
+    return { ok: false, ready: false };
+  }
+
+  const rows = await safeJson(res);
+  const order = Array.isArray(rows) ? rows[0] : null;
+  return { ok: true, ready: isOrderReady(order) };
+}
+
 function shouldHandleType(type) {
   return type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded";
 }
@@ -211,31 +236,45 @@ export async function onRequestPost({ request, env }) {
     return jsonNoStore({ error: "Server error" }, 500);
   }
   if (processState.duplicate) {
-    return jsonNoStore({ ok: true, duplicate: true }, 200);
+    const state = await fetchOrderState(SUPABASE_URL, SRV, sessionId);
+    if (!state.ok) {
+      return jsonNoStore({ error: "Server error" }, 500);
+    }
+    if (state.ready) {
+      return jsonNoStore({ ok: true, duplicate: true }, 200);
+    }
+    console.warn("Stripe webhook duplicate had unfulfilled order, retrying fulfill", { eventId, sessionId });
   }
 
   const origin = new URL(request.url).origin;
-  const fulfillRes = await fetch(`${origin}/api/fulfill`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Fulfill-Secret": FULFILL_INTERNAL_SECRET,
-    },
-    body: JSON.stringify({
-      provider: "stripe",
-      session_id: sessionId,
-      webhook_verified: true,
-      stripe_session: {
-        id: session?.id || null,
-        payment_status: session?.payment_status || null,
-        status: session?.status || null,
-        amount_total: session?.amount_total || null,
-        currency: session?.currency || null,
-        customer_email: session?.customer_details?.email || session?.customer_email || null,
-        metadata: session?.metadata || null,
+  let fulfillRes;
+  try {
+    fulfillRes = await fetch(`${origin}/api/fulfill`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Fulfill-Secret": FULFILL_INTERNAL_SECRET,
       },
-    }),
-  });
+      body: JSON.stringify({
+        provider: "stripe",
+        session_id: sessionId,
+        webhook_verified: true,
+        stripe_session: {
+          id: session?.id || null,
+          payment_status: session?.payment_status || null,
+          status: session?.status || null,
+          amount_total: session?.amount_total || null,
+          currency: session?.currency || null,
+          customer_email: session?.customer_details?.email || session?.customer_email || null,
+          metadata: session?.metadata || null,
+        },
+      }),
+    });
+  } catch (err) {
+    console.error("Stripe webhook fulfill request failed", { eventId, sessionId, err: String(err?.message || err) });
+    await deleteProcessingEvent(SUPABASE_URL, SRV, eventId);
+    return jsonNoStore({ error: "Server error" }, 500);
+  }
 
   if (!fulfillRes.ok) {
     const body = await fulfillRes.text();

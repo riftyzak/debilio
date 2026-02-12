@@ -229,7 +229,9 @@ async function patchOrderBySession(SUPABASE_URL, SRV, providerSessionId, patchBo
     },
   );
   if (!res.ok) {
-    console.error("Order patch failed", { status: res.status, body: await res.text() });
+    const body = await res.text();
+    console.error("Order patch failed", { status: res.status, body, providerSessionId });
+    throw new Error("Order update failed");
   }
 }
 

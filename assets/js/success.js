@@ -2,6 +2,7 @@ const bgText = document.getElementById("bgText");
 const orderItems = document.getElementById("orderItems");
 const timeEl = document.getElementById("time");
 const dashboardCta = document.getElementById("dashboardCta");
+const claimRunnerKey = "__rosina_claim_runner_started__";
 
 if (timeEl) {
   timeEl.textContent = new Date().toLocaleString();
@@ -97,10 +98,13 @@ function renderKeys(keys) {
 }
 
 async function run() {
+  if (window[claimRunnerKey]) return;
+  window[claimRunnerKey] = true;
+
   const params = new URLSearchParams(window.location.search);
   const claim = String(params.get("claim") || "").trim();
-  const maxPendingRetries = 30;
-  const pendingRetryDelayMs = 2000;
+  const maxPendingRetries = 15;
+  const pendingRetryDelayMs = (attempt) => Math.min(10000, 1500 + attempt * 700);
 
   if (!claim) {
     renderMuted("Missing claim token. Use the secure link sent by email.");
@@ -122,7 +126,7 @@ async function run() {
           renderMuted("Keys are being prepared. Please wait a moment...");
           setTimeout(() => {
             claimOnce(attempt + 1);
-          }, pendingRetryDelayMs);
+          }, pendingRetryDelayMs(attempt));
         } else {
           renderMuted("Keys are still being prepared. Please refresh in a few seconds.");
         }

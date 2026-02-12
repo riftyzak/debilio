@@ -46,6 +46,98 @@ function pendingClaimResponse() {
   return jsonNoStore({ ok: false, pending: true, message: "Keys are being prepared" }, 202, getNoStoreHeaders());
 }
 
+function isFulfilledWithoutKeys(order) {
+  if (!order || typeof order !== "object") return false;
+  const status = String(order.status || "").toLowerCase();
+  const keysCount = Number(order.keys_count || 0);
+  return (status === "fulfilled" || status === "emailed") && keysCount === 0;
+}
+
+async function fetchOrderForClaim(SUPABASE_URL, SRV, claimRow) {
+  let orderRes;
+  if (claimRow.order_id) {
+    orderRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted,status,keys_count&` +
+      `id=eq.${encodeURIComponent(String(claimRow.order_id))}&limit=1`,
+      { headers: supabaseHeaders(SRV) },
+    );
+  } else {
+    orderRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted,status,keys_count&` +
+      `provider=eq.${encodeURIComponent(String(claimRow.provider || ""))}&` +
+      `provider_session_id=eq.${encodeURIComponent(String(claimRow.session_id || ""))}&limit=1`,
+      { headers: supabaseHeaders(SRV) },
+    );
+  }
+
+  if (!orderRes.ok) {
+    console.error("Claim order lookup failed", { status: orderRes.status, body: await orderRes.text() });
+    return { ok: false, order: null };
+  }
+
+  const orderRows = await safeJson(orderRes);
+  const order = Array.isArray(orderRows) ? orderRows[0] : null;
+  return { ok: true, order };
+}
+
+async function consumeClaimToken(SUPABASE_URL, SRV, claim, nowIso) {
+  const consumeRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/claim_tokens?token=eq.${encodeURIComponent(claim)}&` +
+    `used_at=is.null&expires_at=gt.${encodeURIComponent(nowIso)}`,
+    {
+      method: "PATCH",
+      headers: supabaseHeaders(SRV, {
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      }),
+      body: JSON.stringify({ used_at: nowIso }),
+    },
+  );
+
+  if (!consumeRes.ok) {
+    console.error("Claim consume failed", { status: consumeRes.status, body: await consumeRes.text() });
+    return { ok: false, consumed: false };
+  }
+
+  const consumedRows = await safeJson(consumeRes);
+  if (!Array.isArray(consumedRows) || consumedRows.length === 0) {
+    return { ok: true, consumed: false };
+  }
+
+  return { ok: true, consumed: true };
+}
+
+async function tryTriggerInternalFulfill(request, env, claimRow) {
+  const secret = env.FULFILL_INTERNAL_SECRET;
+  if (!secret) return;
+
+  const provider = String(claimRow.provider || "");
+  const sessionId = String(claimRow.session_id || "");
+  if (!provider || !sessionId) return;
+
+  const origin = new URL(request.url).origin;
+  const payload = provider === "stripe"
+    ? { provider: "stripe", session_id: sessionId }
+    : { provider: "coinbase", charge_id: sessionId };
+
+  try {
+    const fulfillRes = await fetch(`${origin}/api/fulfill`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Fulfill-Secret": secret,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!fulfillRes.ok) {
+      console.error("Claim-triggered fulfill failed", { status: fulfillRes.status, provider, sessionId });
+    }
+  } catch (err) {
+    console.error("Claim-triggered fulfill exception", err);
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   const rate = checkRateLimit(request, "claim", 30, 60 * 1000);
   if (!rate.allowed) {
@@ -91,59 +183,50 @@ export async function onRequestPost({ request, env }) {
     return invalidClaimResponse(404);
   }
 
-  let orderRes;
-  if (claimRow.order_id) {
-    orderRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted&` +
-      `id=eq.${encodeURIComponent(String(claimRow.order_id))}&limit=1`,
-      { headers: supabaseHeaders(SRV) },
-    );
-  } else {
-    orderRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/checkout_orders?select=id,keys_encrypted&` +
-      `provider=eq.${encodeURIComponent(String(claimRow.provider || ""))}&` +
-      `provider_session_id=eq.${encodeURIComponent(String(claimRow.session_id || ""))}&limit=1`,
-      { headers: supabaseHeaders(SRV) },
-    );
-  }
-
-  if (!orderRes.ok) {
-    console.error("Claim order lookup failed", { status: orderRes.status, body: await orderRes.text() });
+  const initialOrderLookup = await fetchOrderForClaim(SUPABASE_URL, SRV, claimRow);
+  if (!initialOrderLookup.ok) {
     return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
   }
 
-  const orderRows = await safeJson(orderRes);
-  const order = Array.isArray(orderRows) ? orderRows[0] : null;
+  let order = initialOrderLookup.order;
+
+  if (isFulfilledWithoutKeys(order)) {
+    const consumed = await consumeClaimToken(SUPABASE_URL, SRV, claim, nowIso);
+    if (!consumed.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    if (!consumed.consumed) return invalidClaimResponse(404);
+    return jsonNoStore({ ok: true, keys: [] }, 200, getNoStoreHeaders());
+  }
+
   if (!order) {
-    // Webhook/order creation may still be in flight right after redirect.
-    return pendingClaimResponse();
+    await tryTriggerInternalFulfill(request, env, claimRow);
+    const recheck = await fetchOrderForClaim(SUPABASE_URL, SRV, claimRow);
+    if (!recheck.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    order = recheck.order;
   }
 
   if (!order.keys_encrypted) {
-    // Claim is valid but fulfillment hasn't stored encrypted keys yet.
-    return pendingClaimResponse();
+    await tryTriggerInternalFulfill(request, env, claimRow);
+    const recheck = await fetchOrderForClaim(SUPABASE_URL, SRV, claimRow);
+    if (!recheck.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+    order = recheck.order;
+
+    if (isFulfilledWithoutKeys(order)) {
+      const consumed = await consumeClaimToken(SUPABASE_URL, SRV, claim, nowIso);
+      if (!consumed.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
+      if (!consumed.consumed) return invalidClaimResponse(404);
+      return jsonNoStore({ ok: true, keys: [] }, 200, getNoStoreHeaders());
+    }
+
+    if (!order || !order.keys_encrypted) {
+      return pendingClaimResponse();
+    }
   }
 
-  const consumeRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/claim_tokens?token=eq.${encodeURIComponent(claim)}&` +
-    `used_at=is.null&expires_at=gt.${encodeURIComponent(nowIso)}`,
-    {
-      method: "PATCH",
-      headers: supabaseHeaders(SRV, {
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      }),
-      body: JSON.stringify({ used_at: nowIso }),
-    },
-  );
-
-  if (!consumeRes.ok) {
-    console.error("Claim consume failed", { status: consumeRes.status, body: await consumeRes.text() });
+  const consumed = await consumeClaimToken(SUPABASE_URL, SRV, claim, nowIso);
+  if (!consumed.ok) {
     return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
   }
-
-  const consumedRows = await safeJson(consumeRes);
-  if (!Array.isArray(consumedRows) || consumedRows.length === 0) {
+  if (!consumed.consumed) {
     return invalidClaimResponse(404);
   }
 
