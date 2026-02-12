@@ -2,7 +2,23 @@ function toHex(buffer) {
   return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function hmacHex(secret, message) {
+function hexToBytes(hex) {
+  if (!hex || hex.length % 2) return new Uint8Array();
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return out;
+}
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+async function hmacHexBytes(secret, bytes) {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -10,7 +26,7 @@ async function hmacHex(secret, message) {
     false,
     ["sign"]
   );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  const sig = await crypto.subtle.sign("HMAC", key, bytes);
   return toHex(sig);
 }
 
@@ -51,14 +67,17 @@ export async function onRequestPost({ request, env }) {
   }
 
   const signature = request.headers.get("X-CC-Webhook-Signature") || "";
-  const rawBody = await request.text();
-  const expected = await hmacHex(WEBHOOK_SECRET, rawBody);
-  if (!signature || signature !== expected) {
+  const rawBodyBytes = new Uint8Array(await request.arrayBuffer());
+  const expected = await hmacHexBytes(WEBHOOK_SECRET, rawBodyBytes);
+  const expectedBytes = hexToBytes(expected);
+  const signatureBytes = hexToBytes(signature);
+  if (!signature || !timingSafeEqual(signatureBytes, expectedBytes)) {
     return jsonResponse({ error: "Invalid signature" }, 401);
   }
 
   let event = null;
   try {
+    const rawBody = new TextDecoder().decode(rawBodyBytes);
     event = JSON.parse(rawBody);
   } catch (err) {
     console.error("Coinbase webhook invalid JSON", err);

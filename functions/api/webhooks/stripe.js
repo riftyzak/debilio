@@ -19,7 +19,7 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
-async function hmacHex(secret, message) {
+async function hmacHexBytes(secret, bytes) {
   const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
@@ -27,8 +27,15 @@ async function hmacHex(secret, message) {
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
+  const sig = await crypto.subtle.sign("HMAC", key, bytes);
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function concatBytes(a, b) {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
 }
 
 function parseSignatureHeader(sigHeader) {
@@ -118,7 +125,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const sigHeader = request.headers.get("Stripe-Signature") || "";
-  const rawBody = await request.text();
+  const rawBodyBytes = new Uint8Array(await request.arrayBuffer());
   const parsedSig = parseSignatureHeader(sigHeader);
 
   if (!parsedSig.t || !parsedSig.v1.length) {
@@ -135,7 +142,11 @@ export async function onRequestPost({ request, env }) {
     return jsonNoStore({ error: "Invalid signature" }, 400);
   }
 
-  const expected = await hmacHex(WEBHOOK_SECRET, `${parsedSig.t}.${rawBody}`);
+  const signedPayloadBytes = concatBytes(
+    encoder.encode(`${parsedSig.t}.`),
+    rawBodyBytes,
+  );
+  const expected = await hmacHexBytes(WEBHOOK_SECRET, signedPayloadBytes);
   const expectedBytes = hexToBytes(expected);
   const valid = parsedSig.v1.some((sig) => timingSafeEqual(hexToBytes(sig), expectedBytes));
   if (!valid) {
@@ -144,6 +155,7 @@ export async function onRequestPost({ request, env }) {
 
   let event = null;
   try {
+    const rawBody = new TextDecoder().decode(rawBodyBytes);
     event = JSON.parse(rawBody);
   } catch (err) {
     console.error("Stripe webhook JSON parse error", err);
