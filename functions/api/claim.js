@@ -42,8 +42,12 @@ function invalidClaimResponse(status = 404) {
   return jsonNoStore({ error: "Invalid or expired claim token" }, status, getNoStoreHeaders());
 }
 
-function pendingClaimResponse() {
-  return jsonNoStore({ ok: false, pending: true, message: "Keys are being prepared" }, 202, getNoStoreHeaders());
+function pendingClaimResponse(provider = "") {
+  return jsonNoStore(
+    { ok: false, pending: true, provider: String(provider || ""), message: "Keys are being prepared" },
+    202,
+    getNoStoreHeaders(),
+  );
 }
 
 function isFulfilledWithoutKeys(order) {
@@ -347,6 +351,7 @@ export async function onRequestPost({ request, env }) {
   if (!claimRow) {
     return invalidClaimResponse(404);
   }
+  const provider = String(claimRow.provider || "");
 
   const initialOrderLookup = await fetchOrderForClaim(SUPABASE_URL, SRV, claimRow);
   if (!initialOrderLookup.ok) {
@@ -360,7 +365,7 @@ export async function onRequestPost({ request, env }) {
     if (!consumed.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
     if (!consumed.consumed) return invalidClaimResponse(404);
     const items = await buildPurchasedItems(SUPABASE_URL, SRV, order, []);
-    return jsonNoStore({ ok: true, keys: [], items }, 200, getNoStoreHeaders());
+    return jsonNoStore({ ok: true, provider, keys: [], items }, 200, getNoStoreHeaders());
   }
 
   if (!order) {
@@ -381,11 +386,11 @@ export async function onRequestPost({ request, env }) {
       if (!consumed.ok) return jsonNoStore({ error: "Server error" }, 500, getNoStoreHeaders());
       if (!consumed.consumed) return invalidClaimResponse(404);
       const items = await buildPurchasedItems(SUPABASE_URL, SRV, order, []);
-      return jsonNoStore({ ok: true, keys: [], items }, 200, getNoStoreHeaders());
+      return jsonNoStore({ ok: true, provider, keys: [], items }, 200, getNoStoreHeaders());
     }
 
     if (!order || !order.keys_encrypted) {
-      return pendingClaimResponse();
+      return pendingClaimResponse(provider);
     }
   }
 
@@ -415,5 +420,5 @@ export async function onRequestPost({ request, env }) {
 
   const items = await buildPurchasedItems(SUPABASE_URL, SRV, order, normalizedKeys);
 
-  return jsonNoStore({ ok: true, keys: normalizedKeys, items }, 200, getNoStoreHeaders());
+  return jsonNoStore({ ok: true, provider, keys: normalizedKeys, items }, 200, getNoStoreHeaders());
 }

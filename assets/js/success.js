@@ -1,6 +1,7 @@
 const bgText = document.getElementById("bgText");
 const orderItems = document.getElementById("orderItems");
 const timeEl = document.getElementById("time");
+const providerEl = document.getElementById("provider");
 const dashboardCta = document.getElementById("dashboardCta");
 const claimRunnerKey = "__rosina_claim_runner_started__";
 
@@ -30,6 +31,36 @@ function renderMuted(text) {
   muted.className = "muted";
   muted.textContent = text;
   orderItems.appendChild(muted);
+}
+
+function normalizeProviderName(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "-";
+  if (raw === "stripe") return "Stripe";
+  if (raw === "coinbase") return "Coinbase";
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function setProvider(value) {
+  if (!providerEl) return;
+  providerEl.textContent = normalizeProviderName(value);
+}
+
+function renderCopyButton(button, copied) {
+  if (!button) return;
+  button.innerHTML = copied
+    ? `
+      <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span>Copied</span>
+    `
+    : `
+      <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 9h11v11H9zM4 4h11v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </svg>
+      <span>Copy</span>
+    `;
 }
 
 function formatExpiry(value) {
@@ -106,7 +137,7 @@ function renderPurchasedItems(payload) {
       button.className = "copy-btn";
       button.type = "button";
       button.setAttribute("data-copy", keyValue);
-      button.textContent = "Copy";
+      renderCopyButton(button, false);
 
       line.appendChild(keyEl);
       line.appendChild(button);
@@ -154,6 +185,7 @@ async function run() {
   const claimOnce = async (attempt) => {
     try {
       const response = await postJson("/api/claim", { claim });
+      if (response.data?.provider) setProvider(response.data.provider);
       const isPending = response.status === 202 || response.status === 409 || response.data?.pending === true;
 
       if (response.ok && !isPending) {
@@ -200,10 +232,10 @@ document.addEventListener("click", async (event) => {
   try {
     await navigator.clipboard.writeText(value);
     button.classList.add("is-copied");
-    button.textContent = "Copied";
+    renderCopyButton(button, true);
     setTimeout(() => {
       button.classList.remove("is-copied");
-      button.textContent = "Copy";
+      renderCopyButton(button, false);
     }, 1200);
   } catch (_) {}
 });

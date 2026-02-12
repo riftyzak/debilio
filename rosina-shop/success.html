@@ -63,8 +63,7 @@
       background-clip: text;
       animation: gradient-shift 3s ease infinite;
     }
-    .sub { color: #888; margin-bottom: 6px; }
-    .thank-note { color: #a7bfdc; margin-bottom: 26px; font-size: 15px; }
+    .sub { color: #a7bfdc; margin-bottom: 26px; font-size: 15px; }
     .card { background: rgba(20, 20, 20, 0.95); border: 2px solid #333; border-radius: 14px; padding: 22px; text-align: left; }
     .section-title { margin-top: 18px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
     .order-items { margin-top: 10px; display: grid; gap: 12px; }
@@ -73,9 +72,10 @@
     .item-name { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
     .delivery-key { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "JetBrains Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 0.2px; }
     .item-meta { color: #b8cceb; font-size: 12px; margin-top: 6px; }
-    .copy-btn { border: 1px solid #333; background: rgba(0,0,0,0.4); color: #fff; border-radius: 8px; padding: 4px 8px; cursor: pointer; transition: border-color .2s ease; }
+    .copy-btn { border: 1px solid #333; background: rgba(0,0,0,0.4); color: #fff; border-radius: 8px; padding: 4px 8px; cursor: pointer; transition: border-color .2s ease; display: inline-flex; align-items: center; gap: 6px; }
     .copy-btn:hover { border-color: #4a90e2; }
     .copy-btn.is-copied { border-color: rgba(70,200,140,0.6); color: #7fe3b3; }
+    .copy-icon { width: 14px; height: 14px; flex: 0 0 14px; }
     .muted { color: #888; font-size: 12px; }
 
     .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222; flex-wrap: wrap; }
@@ -117,11 +117,10 @@
 
   <div class="container">
     <div class="title">Order successful</div>
-    <div class="sub">Use the secure claim token from your email to view purchased items.</div>
-    <div class="thank-note">Sebastian Rosina personally thanks you for your order.</div>
+    <div class="sub">Sebastian Rosina personally thanks you for your order.</div>
 
     <div class="card">
-      <div class="row"><div class="k">Access</div><div class="v" id="provider">Claim Token</div></div>
+      <div class="row"><div class="k">Provider</div><div class="v" id="provider">-</div></div>
       <div class="row"><div class="k">Time</div><div class="v" id="time">-</div></div>
 
       <div class="section-title">Purchased items</div>
@@ -129,14 +128,13 @@
 
       <a class="btn" id="dashboardCta" href="/dashboard/">
         <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 13h6v7H4v-7zm10-9h6v16h-6V4zM4 4h6v7H4V4z" fill="currentColor"/>
+          <path d="M14.5 3a5.5 5.5 0 0 0-4.86 8.06L3 17.7V21h3.3l1.2-1.2h1.8l1.2-1.2v-1.8l.63-.63A5.5 5.5 0 1 0 14.5 3zm3.2 4.3a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z" fill="currentColor"/>
         </svg>
         <span>Go to dashboard to redeem</span>
       </a>
       <a class="btn" href="/rosina-shop/">
         <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3l8 4v5c0 5.25-3.5 10.12-8 11-4.5-.88-8-5.75-8-11V7l8-4z" fill="none" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M9 12.5l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14.5 5L8 12l6.5 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span>Back to shop</span>
       </a>
