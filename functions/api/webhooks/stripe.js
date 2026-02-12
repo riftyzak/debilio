@@ -67,7 +67,7 @@ async function safeJson(res) {
   }
 }
 
-async function insertProcessingEvent(SUPABASE_URL, SRV, eventId, eventType) {
+async function insertProcessingEvent(SUPABASE_URL, SRV, eventId) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/processed_events?on_conflict=event_id`, {
     method: "POST",
     headers: supabaseHeaders(SRV, {
@@ -76,8 +76,6 @@ async function insertProcessingEvent(SUPABASE_URL, SRV, eventId, eventType) {
     }),
     body: JSON.stringify([{
       event_id: eventId,
-      provider: "stripe",
-      event_type: eventType,
     }]),
   });
 
@@ -121,6 +119,12 @@ export async function onRequestPost({ request, env }) {
   const FULFILL_INTERNAL_SECRET = env.FULFILL_INTERNAL_SECRET;
 
   if (!WEBHOOK_SECRET || !SUPABASE_URL || !SRV || !FULFILL_INTERNAL_SECRET) {
+    console.error("Stripe webhook missing env", {
+      has_webhook_secret: Boolean(WEBHOOK_SECRET),
+      has_supabase_url: Boolean(SUPABASE_URL),
+      has_service_role: Boolean(SRV),
+      has_fulfill_secret: Boolean(FULFILL_INTERNAL_SECRET),
+    });
     return jsonNoStore({ error: "Server error" }, 500);
   }
 
@@ -182,7 +186,7 @@ export async function onRequestPost({ request, env }) {
     return jsonNoStore({ ok: true, skipped: "not_paid" }, 200);
   }
 
-  const processState = await insertProcessingEvent(SUPABASE_URL, SRV, eventId, eventType);
+  const processState = await insertProcessingEvent(SUPABASE_URL, SRV, eventId);
   if (!processState.ok) {
     return jsonNoStore({ error: "Server error" }, 500);
   }

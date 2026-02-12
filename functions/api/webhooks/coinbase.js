@@ -63,6 +63,12 @@ export async function onRequestPost({ request, env }) {
   const FULFILL_INTERNAL_SECRET = env.FULFILL_INTERNAL_SECRET;
 
   if (!SUPABASE_URL || !SRV || !WEBHOOK_SECRET || !FULFILL_INTERNAL_SECRET) {
+    console.error("Coinbase webhook missing env", {
+      has_supabase_url: Boolean(SUPABASE_URL),
+      has_service_role: Boolean(SRV),
+      has_webhook_secret: Boolean(WEBHOOK_SECRET),
+      has_fulfill_secret: Boolean(FULFILL_INTERNAL_SECRET),
+    });
     return jsonResponse({ error: "Server error" }, 500);
   }
 
